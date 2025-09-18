@@ -409,10 +409,11 @@ router.delete('/:id', auth, authorize('sales','delete'), (req, res) => {
   }
 });
 
-// Get Customers for dropdown
+// Get Customers for dropdown with search
 router.get('/customers', auth, authorize('sales','create'), (req, res) => {
   const userId = req.user.id;
   const userRoleId = req.user.role_id;
+  const { search = '', limit = 50 } = req.query;
   
   // Check if user is sales role (role_id = 3) - they should NOT see customers
   if (userRoleId === 3) {
@@ -426,10 +427,16 @@ router.get('/customers', auth, authorize('sales','create'), (req, res) => {
       FROM customers c
       INNER JOIN customer_assignments ca ON c.id = ca.customer_id
       WHERE ca.upseller_id = ? AND ca.status = 'active'
+      ${search ? 'AND (c.name LIKE ? OR c.email LIKE ? OR c.phone LIKE ?)' : ''}
       ORDER BY c.name
+      LIMIT ?
     `;
     
-    db.query(sql, [userId], (err, results) => {
+    const params = search 
+      ? [userId, `%${search}%`, `%${search}%`, `%${search}%`, parseInt(limit)]
+      : [userId, parseInt(limit)];
+    
+    db.query(sql, params, (err, results) => {
       if (err) return res.status(500).json(err);
       res.json(results);
     });
@@ -437,16 +444,28 @@ router.get('/customers', auth, authorize('sales','create'), (req, res) => {
   }
   
   // For other roles (admin, front-sales-manager, upseller-manager), show all customers
-  const sql = 'SELECT id, name, email, phone FROM customers ORDER BY name';
-  db.query(sql, (err, results) => {
+  const sql = `
+    SELECT id, name, email, phone 
+    FROM customers 
+    ${search ? 'WHERE name LIKE ? OR email LIKE ? OR phone LIKE ?' : ''}
+    ORDER BY name 
+    LIMIT ?
+  `;
+  
+  const params = search 
+    ? [`%${search}%`, `%${search}%`, `%${search}%`, parseInt(limit)]
+    : [parseInt(limit)];
+  
+  db.query(sql, params, (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
   });
 });
 
-// Get Leads for dropdown
+// Get Leads for dropdown with search
 router.get('/leads', auth, authorize('sales','create'), (req, res) => {
   const userRoleId = req.user.role_id;
+  const { search = '', limit = 50 } = req.query;
   
   // Check if user is upseller role (role_id = 5) - they should NOT see leads
   if (userRoleId === 5) {
@@ -454,8 +473,19 @@ router.get('/leads', auth, authorize('sales','create'), (req, res) => {
   }
   
   // For other roles (admin, sales, front-sales-manager, upseller-manager), show all leads
-  const sql = 'SELECT id, name, email, phone FROM leads ORDER BY name';
-  db.query(sql, (err, results) => {
+  const sql = `
+    SELECT id, name, email, phone 
+    FROM leads 
+    ${search ? 'WHERE name LIKE ? OR email LIKE ? OR phone LIKE ?' : ''}
+    ORDER BY name 
+    LIMIT ?
+  `;
+  
+  const params = search 
+    ? [`%${search}%`, `%${search}%`, `%${search}%`, parseInt(limit)]
+    : [parseInt(limit)];
+  
+  db.query(sql, params, (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
   });

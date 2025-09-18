@@ -243,4 +243,213 @@ router.delete('/recurring/:recurringId', auth, authorize('payments', 'delete'), 
   });
 });
 
+// Get all payments data - comprehensive view
+router.get('/all', auth, authorize('payments', 'read'), (req, res) => {
+  const { 
+    page = 1, 
+    limit = 50, 
+    status, 
+    paymentType, 
+    customerId, 
+    startDate, 
+    endDate,
+    search 
+  } = req.query;
+  
+  const offset = (page - 1) * limit;
+  let whereConditions = [];
+  let queryParams = [];
+  
+  // Build where conditions based on filters
+  if (status) {
+    whereConditions.push('(pi.status = ? OR pr.status = ? OR s.payment_status = ?)');
+    queryParams.push(status, status, status);
+  }
+  
+  if (paymentType) {
+    whereConditions.push('s.payment_type = ?');
+    queryParams.push(paymentType);
+  }
+  
+  if (customerId) {
+    whereConditions.push('s.customer_id = ?');
+    queryParams.push(customerId);
+  }
+  
+  if (startDate) {
+    whereConditions.push('s.created_at >= ?');
+    queryParams.push(startDate);
+  }
+  
+  if (endDate) {
+    whereConditions.push('s.created_at <= ?');
+    queryParams.push(endDate);
+  }
+  
+  if (search) {
+    whereConditions.push('(s.customer_name LIKE ? OR s.customer_email LIKE ? OR s.services LIKE ?)');
+    queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  }
+  
+  const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+  
+  // Get total count for pagination
+  const countSql = `
+    SELECT COUNT(DISTINCT s.id) as total
+    FROM sales s
+    LEFT JOIN payment_installments pi ON s.id = pi.sale_id
+    LEFT JOIN payment_recurring pr ON s.id = pr.sale_id
+    ${whereClause}
+  `;
+  
+  db.query(countSql, queryParams, (err, countResult) => {
+    if (err) {
+      console.error('Error counting payments:', err);
+      return res.status(500).json({ message: 'Error counting payments' });
+    }
+    
+    const total = countResult[0].total;
+    
+    // Get all sales with their payment details
+    const salesSql = `
+      SELECT 
+        s.*,
+        c.name as customer_name,
+        c.email as customer_email,
+        c.phone as customer_phone,
+        u.name as created_by_name,
+        u2.name as assigned_upseller_name
+      FROM sales s
+      LEFT JOIN customers c ON s.customer_id = c.id
+      LEFT JOIN users u ON s.created_by = u.id
+      LEFT JOIN customer_assignments ca ON s.customer_id = ca.customer_id AND ca.status = 'active'
+      LEFT JOIN users u2 ON ca.upseller_id = u2.id
+      ${whereClause}
+      ORDER BY s.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+    
+    db.query(salesSql, [...queryParams, parseInt(limit), offset], (err, salesResults) => {
+      if (err) {
+        console.error('Error fetching sales:', err);
+        return res.status(500).json({ message: 'Error fetching sales data' });
+      }
+      
+      if (salesResults.length === 0) {
+        return res.json({
+          payments: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+      
+      const saleIds = salesResults.map(sale => sale.id);
+      
+      // Get installments for these sales
+      const installmentsSql = `
+        SELECT 
+          pi.*,
+          s.customer_name,
+          s.customer_email,
+          s.services,
+          s.payment_type
+        FROM payment_installments pi
+        JOIN sales s ON pi.sale_id = s.id
+        WHERE pi.sale_id IN (${saleIds.map(() => '?').join(',')})
+        ORDER BY pi.sale_id, pi.installment_number
+      `;
+      
+      // Get recurring payments for these sales
+      const recurringSql = `
+        SELECT 
+          pr.*,
+          s.customer_name,
+          s.customer_email,
+          s.services,
+          s.payment_type
+        FROM payment_recurring pr
+        JOIN sales s ON pr.sale_id = s.id
+        WHERE pr.sale_id IN (${saleIds.map(() => '?').join(',')})
+        ORDER BY pr.sale_id, pr.id
+      `;
+      
+      // Get payment transactions for these sales
+      const transactionsSql = `
+        SELECT 
+          pt.*,
+          s.customer_name,
+          s.customer_email,
+          s.services,
+          u.name as created_by_name,
+          u2.name as received_by_name,
+          pi.installment_number,
+          pr.frequency as recurring_frequency
+        FROM payment_transactions pt
+        JOIN sales s ON pt.sale_id = s.id
+        LEFT JOIN users u ON pt.created_by = u.id
+        LEFT JOIN users u2 ON pt.received_by = u2.id
+        LEFT JOIN payment_installments pi ON pt.installment_id = pi.id
+        LEFT JOIN payment_recurring pr ON pt.recurring_id = pr.id
+        WHERE pt.sale_id IN (${saleIds.map(() => '?').join(',')})
+        ORDER BY pt.created_at DESC
+      `;
+      
+      Promise.all([
+        new Promise((resolve, reject) => {
+          db.query(installmentsSql, saleIds, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(recurringSql, saleIds, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(transactionsSql, saleIds, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        })
+      ]).then(([installments, recurring, transactions]) => {
+        // Group data by sale
+        const paymentsData = salesResults.map(sale => {
+          const saleInstallments = installments.filter(inst => inst.sale_id === sale.id);
+          const saleRecurring = recurring.filter(rec => rec.sale_id === sale.id);
+          const saleTransactions = transactions.filter(trans => trans.sale_id === sale.id);
+          
+          return {
+            ...sale,
+            installments: saleInstallments,
+            recurring: saleRecurring,
+            transactions: saleTransactions,
+            totalInstallments: saleInstallments.length,
+            totalRecurring: saleRecurring.length,
+            totalTransactions: saleTransactions.length
+          };
+        });
+        
+        res.json({
+          payments: paymentsData,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: total,
+            pages: Math.ceil(total / limit)
+          }
+        });
+      }).catch(err => {
+        console.error('Error fetching payment details:', err);
+        res.status(500).json({ message: 'Error fetching payment details' });
+      });
+    });
+  });
+});
+
 module.exports = router;
