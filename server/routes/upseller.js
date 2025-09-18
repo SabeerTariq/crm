@@ -13,37 +13,50 @@ router.get('/dashboard', auth, authorize('assignments', 'read'), async (req, res
     // Get assigned customers count and details
     const assignedCustomers = await CustomerAssignmentService.getAssignedCustomers(upsellerId, 'active');
     
+    // Get current month target and performance data
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    // Get current month target
+    const targetSql = `
+      SELECT ut.target_value,
+             COALESCE(up.metric_value, 0) as actual_cash_in,
+             CASE 
+               WHEN ut.target_value > 0 THEN ROUND((COALESCE(up.metric_value, 0) / ut.target_value) * 100, 2)
+               ELSE 0 
+             END as progress_percentage
+      FROM upseller_targets ut
+      LEFT JOIN upseller_performance up ON up.user_id = ut.user_id 
+        AND up.metric_type = 'revenue_generated'
+        AND up.period_year = ut.target_year 
+        AND up.period_month = ut.target_month
+      WHERE ut.user_id = ? 
+        AND ut.target_year = ? 
+        AND ut.target_month = ?
+    `;
+    
+    const targetResults = await new Promise((resolve, reject) => {
+      db.query(targetSql, [upsellerId, currentYear, currentMonth], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+    
+    const targetData = targetResults.length > 0 ? targetResults[0] : {
+      target_value: 0,
+      actual_cash_in: 0,
+      progress_percentage: 0
+    };
+    
     // Get financial data for assigned customers
     const customerIds = assignedCustomers.map(customer => customer.customer_id);
     let financialData = { 
-      totalCashIn: 0, 
+      totalCashIn: parseFloat(targetData.actual_cash_in || 0), 
       receivables: 0
     };
     
     if (customerIds.length > 0) {
-      // Get total cash in from upseller performance table (current month)
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth() + 1;
-      
-      const performanceSql = `
-        SELECT COALESCE(metric_value, 0) as total_cash_in
-        FROM upseller_performance 
-        WHERE user_id = ? AND metric_type = 'revenue_generated' 
-        AND period_year = ? AND period_month = ?
-      `;
-      
-      const performanceResults = await new Promise((resolve, reject) => {
-        db.query(performanceSql, [upsellerId, currentYear, currentMonth], (err, results) => {
-          if (err) reject(err);
-          else resolve(results);
-        });
-      });
-      
-      if (performanceResults.length > 0) {
-        financialData.totalCashIn = parseFloat(performanceResults[0].total_cash_in || 0);
-      }
-      
       // Get receivables - remaining amount of ALL assigned customers (regardless of who created the sales)
       const receivablesSql = `
         SELECT COALESCE(SUM(remaining), 0) as receivables
@@ -63,6 +76,97 @@ router.get('/dashboard', auth, authorize('assignments', 'read'), async (req, res
       }
     }
     
+    // Get past months performance (last 12 months)
+    const pastMonthsSql = `
+      SELECT 
+        ut.target_year as year,
+        ut.target_month as month,
+        CASE ut.target_month
+          WHEN 1 THEN 'January'
+          WHEN 2 THEN 'February'
+          WHEN 3 THEN 'March'
+          WHEN 4 THEN 'April'
+          WHEN 5 THEN 'May'
+          WHEN 6 THEN 'June'
+          WHEN 7 THEN 'July'
+          WHEN 8 THEN 'August'
+          WHEN 9 THEN 'September'
+          WHEN 10 THEN 'October'
+          WHEN 11 THEN 'November'
+          WHEN 12 THEN 'December'
+        END as month_name,
+        ut.target_value as target,
+        COALESCE(up.metric_value, 0) as achieved,
+        CASE 
+          WHEN ut.target_value > 0 THEN ROUND((COALESCE(up.metric_value, 0) / ut.target_value) * 100, 2)
+          ELSE 0 
+        END as progress_percentage
+      FROM upseller_targets ut
+      LEFT JOIN upseller_performance up ON up.user_id = ut.user_id 
+        AND up.metric_type = 'revenue_generated'
+        AND up.period_year = ut.target_year 
+        AND up.period_month = ut.target_month
+      WHERE ut.user_id = ? 
+        AND (
+          (ut.target_year = ? AND ut.target_month < ?) OR
+          (ut.target_year < ?)
+        )
+      ORDER BY ut.target_year DESC, ut.target_month DESC
+      LIMIT 12
+    `;
+    
+    const pastMonthsResults = await new Promise((resolve, reject) => {
+      db.query(pastMonthsSql, [upsellerId, currentYear, currentMonth, currentYear], (err, results) => {
+        if (err) reject(err);
+        else resolve(results || []);
+      });
+    });
+    
+    // Get team performance data
+    const teamPerformanceSql = `
+      SELECT 
+        u.id as user_id,
+        u.name as user_name,
+        u.email,
+        utm.role as team_role,
+        ut.target_value as target,
+        COALESCE(up.metric_value, 0) as achieved,
+        CASE 
+          WHEN ut.target_value > 0 THEN ROUND((COALESCE(up.metric_value, 0) / ut.target_value) * 100, 2)
+          ELSE 0 
+        END as progress_percentage,
+        ROW_NUMBER() OVER (ORDER BY 
+          CASE 
+            WHEN ut.target_value > 0 THEN (COALESCE(up.metric_value, 0) / ut.target_value) * 100
+            ELSE 0 
+          END DESC
+        ) as team_rank
+      FROM upseller_team_members utm
+      JOIN users u ON utm.user_id = u.id
+      JOIN upseller_teams ut_team ON utm.team_id = ut_team.id
+      LEFT JOIN upseller_targets ut ON ut.user_id = u.id 
+        AND ut.target_year = ? 
+        AND ut.target_month = ?
+      LEFT JOIN upseller_performance up ON up.user_id = u.id 
+        AND up.metric_type = 'revenue_generated'
+        AND up.period_year = ? 
+        AND up.period_month = ?
+      WHERE utm.team_id = (
+        SELECT utm2.team_id 
+        FROM upseller_team_members utm2 
+        WHERE utm2.user_id = ?
+      )
+      GROUP BY u.id, u.name, u.email, utm.role, ut.target_value
+      ORDER BY progress_percentage DESC, u.name
+    `;
+    
+    const teamPerformanceResults = await new Promise((resolve, reject) => {
+      db.query(teamPerformanceSql, [currentYear, currentMonth, currentYear, currentMonth, upsellerId], (err, results) => {
+        if (err) reject(err);
+        else resolve(results || []);
+      });
+    });
+    
     // Get recent assignments
     const recentAssignments = await CustomerAssignmentService.getRecentAssignments(upsellerId, 5);
     
@@ -75,6 +179,35 @@ router.get('/dashboard', auth, authorize('assignments', 'read'), async (req, res
         assignedCustomersCount: assignedCustomers.length,
         assignedCustomers: assignedCustomers,
         financialData: financialData,
+        targetData: {
+          target: parseFloat(targetData.target_value || 0),
+          achieved: parseFloat(targetData.actual_cash_in || 0),
+          remaining: Math.max(0, parseFloat(targetData.target_value || 0) - parseFloat(targetData.actual_cash_in || 0)),
+          progressPercentage: parseFloat(targetData.progress_percentage || 0)
+        },
+        currentPeriod: {
+          year: currentYear,
+          month: currentMonth,
+          monthName: currentDate.toLocaleString('default', { month: 'long' })
+        },
+        pastMonths: pastMonthsResults.map(month => ({
+          year: month.year,
+          month: month.month,
+          monthName: month.month_name,
+          target: parseFloat(month.target || 0),
+          achieved: parseFloat(month.achieved || 0),
+          progressPercentage: parseFloat(month.progress_percentage || 0)
+        })),
+        teamPerformance: teamPerformanceResults.map(member => ({
+          userId: member.user_id,
+          userName: member.user_name,
+          email: member.email,
+          teamRole: member.team_role,
+          target: parseFloat(member.target || 0),
+          achieved: parseFloat(member.achieved || 0),
+          progressPercentage: parseFloat(member.progress_percentage || 0),
+          teamRank: member.team_rank || 0
+        })),
         recentAssignments: recentAssignments,
         upcomingPayments: upcomingPayments
       }
