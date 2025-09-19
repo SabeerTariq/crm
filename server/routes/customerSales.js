@@ -45,17 +45,19 @@ router.get('/:id/payment-history', auth, authorize('customers','read'), async (r
 router.post('/sales/:saleId/process-payment', auth, authorize('sales','update'), async (req, res) => {
   try {
     const { saleId } = req.params;
-    const { amount, paymentMethod, paymentSource, notes, receivedBy } = req.body;
+    const { amount, paymentSource, notes } = req.body;
     const createdBy = req.user.id;
     
-    if (!amount || !paymentMethod || !paymentSource) {
-      return res.status(400).json({ message: 'Amount, payment method, and payment source are required' });
+    if (!amount || !paymentSource) {
+      return res.status(400).json({ message: 'Amount and payment source are required' });
     }
+    
+    // Auto-set receivedBy to the user processing the payment
+    const receivedBy = req.user.id;
     
     const result = await CustomerSalesService.processPayment(
       saleId, 
       amount, 
-      paymentMethod, 
       paymentSource, 
       createdBy, 
       notes,

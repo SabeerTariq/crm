@@ -151,7 +151,7 @@ router.get('/dashboard', auth, authorize('assignments', 'read'), async (req, res
         AND up.metric_type = 'revenue_generated'
         AND up.period_year = ? 
         AND up.period_month = ?
-      WHERE utm.team_id = (
+      WHERE utm.team_id IN (
         SELECT utm2.team_id 
         FROM upseller_team_members utm2 
         WHERE utm2.user_id = ?

@@ -313,13 +313,12 @@ class CustomerSalesService {
    * Process payment for a sale
    * @param {number} saleId - Sale ID
    * @param {number} amount - Payment amount
-   * @param {string} paymentMethod - Payment method
    * @param {string} paymentSource - Payment source
    * @param {number} createdBy - User ID
    * @param {string} notes - Payment notes
    * @param {number} receivedBy - User ID who received the payment (optional)
    */
-  static async processPayment(saleId, amount, paymentMethod, paymentSource, createdBy, notes = null, receivedBy = null) {
+  static async processPayment(saleId, amount, paymentSource, createdBy, notes = null, receivedBy = null) {
     return new Promise((resolve, reject) => {
       // Start transaction
       db.beginTransaction((err) => {
@@ -361,7 +360,6 @@ class CustomerSalesService {
             PaymentService.recordPayment({
               saleId: saleId,
               amount: amount,
-              paymentMethod: paymentMethod,
               paymentSource: paymentSource,
               notes: notes,
               createdBy: createdBy,

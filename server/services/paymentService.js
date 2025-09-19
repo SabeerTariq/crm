@@ -96,7 +96,6 @@ class PaymentService {
         installmentId = null,
         recurringId = null,
         amount,
-        paymentMethod,
         paymentSource,
         transactionReference = null,
         notes = null,
@@ -106,13 +105,13 @@ class PaymentService {
       
       const sql = `
         INSERT INTO payment_transactions 
-        (sale_id, installment_id, recurring_id, amount, payment_method, payment_source, 
+        (sale_id, installment_id, recurring_id, amount, payment_source, 
          transaction_reference, notes, created_by, received_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
       db.query(sql, [
-        saleId, installmentId, recurringId, amount, paymentMethod, paymentSource,
+        saleId, installmentId, recurringId, amount, paymentSource,
         transactionReference, notes, createdBy, receivedBy
       ], (err, result) => {
         if (err) return reject(err);
@@ -125,12 +124,11 @@ class PaymentService {
    * Process installment payment
    * @param {number} installmentId - Installment ID
    * @param {number} amount - Amount being paid
-   * @param {string} paymentMethod - Payment method
    * @param {string} paymentSource - Payment source
    * @param {number} createdBy - User ID who processed the payment
    * @param {number} receivedBy - User ID who received the payment (optional)
    */
-  static async processInstallmentPayment(installmentId, amount, paymentMethod, paymentSource, createdBy, receivedBy = null) {
+  static async processInstallmentPayment(installmentId, amount, paymentSource, createdBy, receivedBy = null) {
     return new Promise((resolve, reject) => {
       // Start transaction
       db.beginTransaction((err) => {
@@ -146,8 +144,33 @@ class PaymentService {
           }
           
           const installment = installmentResults[0];
-          const newPaidAmount = parseFloat(installment.paid_amount) + parseFloat(amount);
-          const isFullyPaid = newPaidAmount >= parseFloat(installment.amount);
+          const installmentAmount = parseFloat(installment.amount);
+          const currentPaidAmount = parseFloat(installment.paid_amount);
+          const paymentAmount = parseFloat(amount);
+          const newPaidAmount = currentPaidAmount + paymentAmount;
+          
+          // Validate payment amount
+          if (paymentAmount <= 0) {
+            return db.rollback(() => reject(new Error('Payment amount must be greater than 0')));
+          }
+          
+          // Check if installment is already fully paid
+          if (installment.status === 'paid') {
+            return db.rollback(() => reject(new Error('This installment is already fully paid')));
+          }
+          
+          // Check for overpayment
+          if (newPaidAmount > installmentAmount) {
+            return db.rollback(() => reject(new Error(`Payment amount exceeds remaining balance. Remaining: $${(installmentAmount - currentPaidAmount).toFixed(2)}`)));
+          }
+          
+          // For installments, ensure the payment amount exactly matches the remaining balance
+          const remainingBalance = installmentAmount - currentPaidAmount;
+          if (Math.abs(paymentAmount - remainingBalance) > 0.01) { // Allow for small floating point differences
+            return db.rollback(() => reject(new Error(`For installment payments, you must pay the exact remaining balance of $${remainingBalance.toFixed(2)}`)));
+          }
+          
+          const isFullyPaid = newPaidAmount >= installmentAmount;
           
           // Update installment
           const updateInstallmentSql = `
@@ -167,7 +190,6 @@ class PaymentService {
               saleId: installment.sale_id,
               installmentId: installmentId,
               amount: amount,
-              paymentMethod: paymentMethod,
               paymentSource: paymentSource,
               createdBy: createdBy,
               receivedBy: receivedBy
@@ -232,12 +254,11 @@ class PaymentService {
    * Process recurring payment
    * @param {number} recurringId - Recurring payment ID
    * @param {number} amount - Amount being paid
-   * @param {string} paymentMethod - Payment method
    * @param {string} paymentSource - Payment source
    * @param {number} createdBy - User ID who processed the payment
    * @param {number} receivedBy - User ID who received the payment (optional)
    */
-  static async processRecurringPayment(recurringId, amount, paymentMethod, paymentSource, createdBy, receivedBy = null) {
+  static async processRecurringPayment(recurringId, amount, paymentSource, createdBy, receivedBy = null) {
     return new Promise((resolve, reject) => {
       // Start transaction
       db.beginTransaction((err) => {
@@ -293,7 +314,6 @@ class PaymentService {
               saleId: recurring.sale_id,
               recurringId: recurringId,
               amount: amount,
-              paymentMethod: paymentMethod,
               paymentSource: paymentSource,
               createdBy: createdBy,
               receivedBy: receivedBy

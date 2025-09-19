@@ -63,27 +63,56 @@ router.get('/:id', auth, authorize('teams', 'read'), (req, res) => {
 router.post('/', auth, authorize('teams', 'create'), (req, res) => {
   const { name, description, member_ids = [] } = req.body;
   
-  const sql = 'INSERT INTO teams (name, description, created_by) VALUES (?, ?, ?)';
-  const params = [name, description, req.user.id];
-  
-  db.query(sql, params, (err, result) => {
-    if (err) return res.status(500).json(err);
+  // Check if any users are already in other teams
+  if (member_ids.length > 0) {
+    const checkSql = `
+      SELECT u.name, t.name as team_name
+      FROM users u
+      JOIN team_members tm ON u.id = tm.user_id
+      JOIN teams t ON tm.team_id = t.id
+      WHERE u.id IN (${member_ids.map(() => '?').join(',')})
+    `;
     
-    const teamId = result.insertId;
-    
-    // Add members to team
-    if (member_ids.length > 0) {
-      const memberValues = member_ids.map(userId => [teamId, userId]);
-      const memberSql = 'INSERT INTO team_members (team_id, user_id) VALUES ?';
+    db.query(checkSql, member_ids, (err, results) => {
+      if (err) return res.status(500).json(err);
       
-      db.query(memberSql, [memberValues], (err) => {
-        if (err) return res.status(500).json(err);
+      if (results.length > 0) {
+        const conflicts = results.map(r => `${r.name} (already in ${r.team_name})`).join(', ');
+        return res.status(400).json({ 
+          message: `Cannot add users who are already in other teams: ${conflicts}` 
+        });
+      }
+      
+      // Proceed with team creation
+      createTeam();
+    });
+  } else {
+    createTeam();
+  }
+  
+  function createTeam() {
+    const sql = 'INSERT INTO teams (name, description, created_by) VALUES (?, ?, ?)';
+    const params = [name, description, req.user.id];
+    
+    db.query(sql, params, (err, result) => {
+      if (err) return res.status(500).json(err);
+      
+      const teamId = result.insertId;
+      
+      // Add members to team
+      if (member_ids.length > 0) {
+        const memberValues = member_ids.map(userId => [teamId, userId]);
+        const memberSql = 'INSERT INTO team_members (team_id, user_id) VALUES ?';
+        
+        db.query(memberSql, [memberValues], (err) => {
+          if (err) return res.status(500).json(err);
+          res.json({ message: 'Team created successfully', teamId });
+        });
+      } else {
         res.json({ message: 'Team created successfully', teamId });
-      });
-    } else {
-      res.json({ message: 'Team created successfully', teamId });
-    }
-  });
+      }
+    });
+  }
 });
 
 // Update team
@@ -91,31 +120,61 @@ router.put('/:id', auth, authorize('teams', 'update'), (req, res) => {
   const teamId = req.params.id;
   const { name, description, member_ids = [] } = req.body;
   
-  const sql = 'UPDATE teams SET name = ?, description = ? WHERE id = ?';
-  const params = [name, description, teamId];
-  
-  db.query(sql, params, (err) => {
-    if (err) return res.status(500).json(err);
+  // Check if any users are already in other teams (excluding current team)
+  if (member_ids.length > 0) {
+    const checkSql = `
+      SELECT u.name, t.name as team_name
+      FROM users u
+      JOIN team_members tm ON u.id = tm.user_id
+      JOIN teams t ON tm.team_id = t.id
+      WHERE u.id IN (${member_ids.map(() => '?').join(',')})
+      AND tm.team_id != ?
+    `;
     
-    // Update team members
-    // First, remove all existing members
-    db.query('DELETE FROM team_members WHERE team_id = ?', [teamId], (err) => {
+    db.query(checkSql, [...member_ids, teamId], (err, results) => {
       if (err) return res.status(500).json(err);
       
-      // Add new members
-      if (member_ids.length > 0) {
-        const memberValues = member_ids.map(userId => [teamId, userId]);
-        const memberSql = 'INSERT INTO team_members (team_id, user_id) VALUES ?';
-        
-        db.query(memberSql, [memberValues], (err) => {
-          if (err) return res.status(500).json(err);
-          res.json({ message: 'Team updated successfully' });
+      if (results.length > 0) {
+        const conflicts = results.map(r => `${r.name} (already in ${r.team_name})`).join(', ');
+        return res.status(400).json({ 
+          message: `Cannot add users who are already in other teams: ${conflicts}` 
         });
-      } else {
-        res.json({ message: 'Team updated successfully' });
       }
+      
+      // Proceed with team update
+      updateTeam();
     });
-  });
+  } else {
+    updateTeam();
+  }
+  
+  function updateTeam() {
+    const sql = 'UPDATE teams SET name = ?, description = ? WHERE id = ?';
+    const params = [name, description, teamId];
+    
+    db.query(sql, params, (err) => {
+      if (err) return res.status(500).json(err);
+      
+      // Update team members
+      // First, remove all existing members
+      db.query('DELETE FROM team_members WHERE team_id = ?', [teamId], (err) => {
+        if (err) return res.status(500).json(err);
+        
+        // Add new members
+        if (member_ids.length > 0) {
+          const memberValues = member_ids.map(userId => [teamId, userId]);
+          const memberSql = 'INSERT INTO team_members (team_id, user_id) VALUES ?';
+          
+          db.query(memberSql, [memberValues], (err) => {
+            if (err) return res.status(500).json(err);
+            res.json({ message: 'Team updated successfully' });
+          });
+        } else {
+          res.json({ message: 'Team updated successfully' });
+        }
+      });
+    });
+  }
 });
 
 // Delete team
@@ -180,6 +239,34 @@ router.get('/available-users', auth, authorize('teams', 'read'), (req, res) => {
   `;
   
   db.query(sql, (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results);
+  });
+});
+
+// Get users for team assignment (includes users already in this team)
+router.get('/:id/users', auth, authorize('teams', 'read'), (req, res) => {
+  const teamId = req.params.id;
+  
+  const sql = `
+    SELECT 
+      u.id, 
+      u.name, 
+      u.email, 
+      r.name as role_name,
+      CASE 
+        WHEN tm.user_id IS NOT NULL THEN 1 
+        ELSE 0 
+      END as is_member,
+      tm.role as team_role
+    FROM users u
+    JOIN roles r ON u.role_id = r.id
+    LEFT JOIN team_members tm ON u.id = tm.user_id AND tm.team_id = ?
+    WHERE r.name = 'sales'
+    ORDER BY is_member DESC, u.name
+  `;
+  
+  db.query(sql, [teamId], (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
   });

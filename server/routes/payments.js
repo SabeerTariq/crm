@@ -59,13 +59,22 @@ router.post('/recurring', auth, authorize('payments', 'create'), (req, res) => {
 // Process installment payment
 router.post('/installment/:installmentId/pay', auth, authorize('payments', 'update'), checkCustomerAssignment, (req, res) => {
   const installmentId = req.params.installmentId;
-  const { amount, paymentMethod, paymentSource, notes, receivedBy } = req.body;
+  const { amount, paymentSource, notes } = req.body;
   
-  if (!amount || !paymentMethod || !paymentSource) {
+  if (!amount || !paymentSource) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
   
-  PaymentService.processInstallmentPayment(installmentId, amount, paymentMethod, paymentSource, req.user.id, receivedBy)
+  // Validate amount
+  const paymentAmount = parseFloat(amount);
+  if (isNaN(paymentAmount) || paymentAmount <= 0) {
+    return res.status(400).json({ message: 'Amount must be a positive number' });
+  }
+  
+  // Auto-set receivedBy to the user processing the payment
+  const receivedBy = req.user.id;
+  
+  PaymentService.processInstallmentPayment(installmentId, amount, paymentSource, req.user.id, receivedBy)
     .then(result => {
       res.json({ 
         message: 'Payment processed successfully', 
@@ -81,13 +90,16 @@ router.post('/installment/:installmentId/pay', auth, authorize('payments', 'upda
 // Process recurring payment
 router.post('/recurring/:recurringId/pay', auth, authorize('payments', 'update'), checkCustomerAssignment, (req, res) => {
   const recurringId = req.params.recurringId;
-  const { amount, paymentMethod, paymentSource, notes, receivedBy } = req.body;
+  const { amount, paymentSource, notes } = req.body;
   
-  if (!amount || !paymentMethod || !paymentSource) {
+  if (!amount || !paymentSource) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
   
-  PaymentService.processRecurringPayment(recurringId, amount, paymentMethod, paymentSource, req.user.id, receivedBy)
+  // Auto-set receivedBy to the user processing the payment
+  const receivedBy = req.user.id;
+  
+  PaymentService.processRecurringPayment(recurringId, amount, paymentSource, req.user.id, receivedBy)
     .then(result => {
       res.json({ 
         message: 'Payment processed successfully', 

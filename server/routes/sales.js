@@ -10,11 +10,13 @@ const CustomerSalesService = require('../services/customerSalesService');
 
 // Get Sales
 router.get('/', auth, authorize('sales','read'), (req, res) => {
-  // Check if user is admin
+  // Check if user is admin, front-sales-manager, or upseller-manager
   const isAdmin = req.user.role_id === 1;
+  const isFrontSalesManager = req.user.role_id === 4;
+  const isUpsellerManager = req.user.role_id === 6;
   
-  if (isAdmin) {
-    // Admin can see all sales
+  if (isAdmin || isFrontSalesManager || isUpsellerManager) {
+    // Admin, front-sales-manager, and upseller-manager can see all sales
     const sql = `
       SELECT s.*, 
              u.name as created_by_name,
@@ -76,7 +78,7 @@ router.get('/', auth, authorize('sales','read'), (req, res) => {
     return;
   }
   
-  // For other roles (front-sales-manager, upseller-manager), show only their own sales
+  // For other roles, show only their own sales
   const sql = `
     SELECT s.*, 
            u.name as created_by_name,
@@ -336,9 +338,11 @@ router.put('/:id', auth, authorize('sales','update'), (req, res) => {
   const net_value = gross_value;
   const remaining = net_value - cash_in;
   
-  // Check if user owns this sale (unless admin)
+  // Check if user owns this sale (unless admin, front-sales-manager, or upseller-manager)
   const isAdmin = req.user.role_id === 1;
-  if (!isAdmin) {
+  const isFrontSalesManager = req.user.role_id === 4;
+  const isUpsellerManager = req.user.role_id === 6;
+  if (!isAdmin && !isFrontSalesManager && !isUpsellerManager) {
     const checkSql = 'SELECT created_by FROM sales WHERE id = ?';
     db.query(checkSql, [saleId], (err, results) => {
       if (err) return res.status(500).json(err);
@@ -382,9 +386,11 @@ router.put('/:id', auth, authorize('sales','update'), (req, res) => {
 router.delete('/:id', auth, authorize('sales','delete'), (req, res) => {
   const saleId = req.params.id;
   
-  // Check if user owns this sale (unless admin)
+  // Check if user owns this sale (unless admin, front-sales-manager, or upseller-manager)
   const isAdmin = req.user.role_id === 1;
-  if (!isAdmin) {
+  const isFrontSalesManager = req.user.role_id === 4;
+  const isUpsellerManager = req.user.role_id === 6;
+  if (!isAdmin && !isFrontSalesManager && !isUpsellerManager) {
     const checkSql = 'SELECT created_by FROM sales WHERE id = ?';
     db.query(checkSql, [saleId], (err, results) => {
       if (err) return res.status(500).json(err);
