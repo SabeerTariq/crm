@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 18, 2025 at 07:55 AM
+-- Generation Time: Sep 19, 2025 at 11:29 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -30,13 +30,18 @@ SET time_zone = "+00:00";
 CREATE TABLE `customers` (
   `id` int(11) NOT NULL,
   `name` varchar(100) DEFAULT NULL,
+  `company_name` varchar(255) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
   `phone` varchar(20) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `service_required` text DEFAULT NULL,
   `source` varchar(100) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `assigned_to` int(11) DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   `converted_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `total_sales` decimal(12,2) DEFAULT 0.00,
   `total_paid` decimal(12,2) DEFAULT 0.00,
   `total_remaining` decimal(12,2) DEFAULT 0.00,
@@ -47,9 +52,11 @@ CREATE TABLE `customers` (
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`id`, `name`, `email`, `phone`, `source`, `notes`, `assigned_to`, `created_by`, `converted_at`, `total_sales`, `total_paid`, `total_remaining`, `last_payment_date`) VALUES
-(71, 'Kadeem Pruitt', 'cykepu@mailinator.com', '+1 (649) 818-7152', 'Sed voluptas quo id ', 'Id placeat laborum ', 7, 7, '2025-09-18 03:31:31', 17800.00, 17800.00, 0.00, '2025-09-18'),
-(72, 'Knox Byers', 'fucolety@mailinator.com', '+1 (753) 227-7868', 'Aut ut quaerat ex qu', 'Aut quos possimus a', 7, 7, '2025-09-18 04:08:22', 10000.00, 6400.00, 3600.00, '2025-09-18');
+INSERT INTO `customers` (`id`, `name`, `company_name`, `email`, `phone`, `city`, `state`, `service_required`, `source`, `notes`, `assigned_to`, `created_by`, `converted_at`, `updated_at`, `total_sales`, `total_paid`, `total_remaining`, `last_payment_date`) VALUES
+(73, 'Hasad Cox', NULL, 'puxenebi@mailinator.com', '+1 (773) 912-9584', NULL, NULL, NULL, 'Aut rerum sed facili', 'Nulla non illo et at', 7, 7, '2025-09-18 06:43:17', '2025-09-18 18:10:14', 5000.00, 2000.00, 3000.00, NULL),
+(74, 'Hannah Keith', NULL, 'dufiniz@mailinator.com', '+1 (888) 506-1438', NULL, NULL, NULL, 'Eligendi ad debitis ', 'Quis laboriosam acc', 9, 9, '2025-09-18 18:54:44', '2025-09-19 20:04:28', 1000.00, 600.00, 400.00, '2025-09-19'),
+(75, 'meo', NULL, 'test@gmail.com', '1231231231', NULL, NULL, NULL, 'facebook', '', 8, 8, '2025-09-18 19:33:14', '2025-09-18 19:33:14', 10000.00, 2000.00, 8000.00, NULL),
+(76, 'Jon', NULL, 'jon@test.com', '', NULL, NULL, NULL, 'facebook', '', 8, 8, '2025-09-18 19:36:25', '2025-09-18 19:36:25', 500.00, 500.00, 0.00, NULL);
 
 -- --------------------------------------------------------
 
@@ -75,9 +82,7 @@ CREATE TABLE `customer_assignments` (
 --
 
 INSERT INTO `customer_assignments` (`id`, `customer_id`, `upseller_id`, `assigned_date`, `assignment_type`, `status`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
-(9, 71, 10, '2025-09-18 03:33:25', 'manual', 'active', '', 13, '2025-09-18 03:33:25', '2025-09-18 03:33:25'),
-(10, 72, 12, '2025-09-18 04:08:39', 'manual', 'transferred', ' | Transferred to new upseller', 13, '2025-09-18 04:08:39', '2025-09-18 04:08:54'),
-(11, 72, 10, '2025-09-18 04:08:54', 'manual', 'active', '', 13, '2025-09-18 04:08:54', '2025-09-18 04:08:54');
+(12, 74, 10, '2025-09-18 19:01:33', 'manual', 'active', '', 13, '2025-09-18 19:01:33', '2025-09-18 19:01:33');
 
 -- --------------------------------------------------------
 
@@ -132,18 +137,14 @@ CREATE TABLE `invoices` (
 --
 
 INSERT INTO `invoices` (`id`, `customer_id`, `sale_id`, `invoice_number`, `invoice_date`, `due_date`, `total_amount`, `paid_amount`, `remaining_amount`, `status`, `services`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
-(38, NULL, 44, 'INV-1758166291785-44', '2025-09-18', '2025-10-18', 5000.00, 0.00, 5000.00, 'draft', '[{\"id\":1758166291777,\"name\":\"Website\",\"details\":\"132\"}]', 'Invoice for sale #44', 7, '2025-09-18 03:31:31', '2025-09-18 03:31:31'),
-(39, 71, 44, 'INV-1758166291811-44', '2025-09-18', '2025-10-18', 5000.00, 0.00, 5000.00, 'draft', '[{\"id\":1758166291777,\"name\":\"Website\",\"details\":\"132\"}]', 'Invoice for sale #44', 7, '2025-09-18 03:31:31', '2025-09-18 03:31:31'),
-(40, 71, 45, 'INV-1758167278796-45', '2025-09-18', '2025-10-18', 100.00, 0.00, 100.00, 'draft', '[{\"id\":1758167278768,\"name\":\"Hosting\",\"details\":\"Dedicated Server\"}]', 'Invoice for sale #45', 10, '2025-09-18 03:47:58', '2025-09-18 03:47:58'),
-(41, 71, 46, 'INV-1758168427965-46', '2025-09-18', '2025-10-18', 1500.00, 0.00, 1500.00, 'draft', '[{\"id\":1758168427944,\"name\":\"web app\",\"details\":\"portal\"}]', 'Invoice for sale #46', 10, '2025-09-18 04:07:07', '2025-09-18 04:07:07'),
-(42, NULL, 47, 'INV-1758168502119-47', '2025-09-18', '2025-10-18', 5000.00, 0.00, 5000.00, 'draft', '[{\"id\":1758168502112,\"name\":\"WEbsite\",\"details\":\"Fresh website\"}]', 'Invoice for sale #47', 7, '2025-09-18 04:08:22', '2025-09-18 04:08:22'),
-(43, 72, 47, 'INV-1758168502144-47', '2025-09-18', '2025-10-18', 5000.00, 0.00, 5000.00, 'draft', '[{\"id\":1758168502112,\"name\":\"WEbsite\",\"details\":\"Fresh website\"}]', 'Invoice for sale #47', 7, '2025-09-18 04:08:22', '2025-09-18 04:08:22'),
-(44, 71, 48, 'INV-1758169613991-48', '2025-09-18', '2025-10-18', 1500.00, 0.00, 1500.00, 'draft', '[{\"id\":1758169613968,\"name\":\"hosting\",\"details\":\"Server\"}]', 'Invoice for sale #48', 10, '2025-09-18 04:26:53', '2025-09-18 04:26:53'),
-(45, 71, 49, 'INV-1758173834185-49', '2025-09-18', '2025-10-18', 1500.00, 0.00, 1500.00, 'draft', '[{\"id\":1758173834143,\"name\":\"Domain\",\"details\":\"Domain\"}]', 'Invoice for sale #49', 10, '2025-09-18 05:37:14', '2025-09-18 05:37:14'),
-(46, 71, 50, 'INV-1758173878932-50', '2025-09-18', '2025-10-18', 800.00, 0.00, 800.00, 'draft', '[{\"id\":1758173878919,\"name\":\"Marketing\",\"details\":\"Smm\"}]', 'Invoice for sale #50', 10, '2025-09-18 05:37:58', '2025-09-18 05:37:58'),
-(47, 71, 51, 'INV-1758174008258-51', '2025-09-18', '2025-10-18', 1500.00, 0.00, 1500.00, 'draft', '[{\"id\":1758174008231,\"name\":\"Seo\",\"details\":\"Seo\"}]', 'Invoice for sale #51', 10, '2025-09-18 05:40:08', '2025-09-18 05:40:08'),
-(48, 71, 52, 'INV-1758174028260-52', '2025-09-18', '2025-10-18', 5000.00, 0.00, 5000.00, 'draft', '[{\"id\":1758174028248,\"name\":\"Hosting\",\"details\":\"Dedicated Server\"}]', 'Invoice for sale #52', 10, '2025-09-18 05:40:28', '2025-09-18 05:40:28'),
-(49, 72, 53, 'INV-1758174398768-53', '2025-09-18', '2025-10-18', 5000.00, 0.00, 5000.00, 'draft', '[{\"id\":1758174398753,\"name\":\"Seo\",\"details\":\"Seo\"}]', 'Invoice for sale #53', 10, '2025-09-18 05:46:38', '2025-09-18 05:46:38');
+(50, NULL, 54, 'INV-1758177797304-54', '2025-09-18', '2025-10-18', 5000.00, 0.00, 5000.00, 'draft', '[{\"id\":1758177797294,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Invoice for sale #54', 7, '2025-09-18 06:43:17', '2025-09-18 06:43:17'),
+(51, 73, 54, 'INV-1758177797337-54', '2025-09-18', '2025-10-18', 5000.00, 0.00, 5000.00, 'draft', '[{\"id\":1758177797294,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Invoice for sale #54', 7, '2025-09-18 06:43:17', '2025-09-18 06:43:17'),
+(52, NULL, 55, 'INV-1758221684443-55', '2025-09-18', '2025-10-18', 1000.00, 0.00, 1000.00, 'draft', '[{\"id\":1758221596673,\"name\":\"Business Website\",\"details\":\"5 pages basic website\"}]', 'Invoice for sale #55', 9, '2025-09-18 18:54:44', '2025-09-18 18:54:44'),
+(53, 74, 55, 'INV-1758221684470-55', '2025-09-18', '2025-10-18', 1000.00, 0.00, 1000.00, 'draft', '[{\"id\":1758221596673,\"name\":\"Business Website\",\"details\":\"5 pages basic website\"}]', 'Invoice for sale #55', 9, '2025-09-18 18:54:44', '2025-09-18 18:54:44'),
+(54, NULL, 56, 'INV-1758223994705-56', '2025-09-18', '2025-10-18', 10000.00, 0.00, 10000.00, 'draft', '[{\"id\":1758223994577,\"name\":\"web app\",\"details\":\"Like youtube\"}]', 'Invoice for sale #56', 8, '2025-09-18 19:33:14', '2025-09-18 19:33:14'),
+(55, 75, 56, 'INV-1758223994733-56', '2025-09-18', '2025-10-18', 10000.00, 0.00, 10000.00, 'draft', '[{\"id\":1758223994577,\"name\":\"web app\",\"details\":\"Like youtube\"}]', 'Invoice for sale #56', 8, '2025-09-18 19:33:14', '2025-09-18 19:33:14'),
+(56, NULL, 57, 'INV-1758224185538-57', '2025-09-18', '2025-10-18', 500.00, 0.00, 500.00, 'draft', '[{\"id\":1758224162791,\"name\":\"Domain\",\"details\":\"1 year\"}]', 'Invoice for sale #57', 8, '2025-09-18 19:36:25', '2025-09-18 19:36:25'),
+(57, 76, 57, 'INV-1758224185563-57', '2025-09-18', '2025-10-18', 500.00, 0.00, 500.00, 'draft', '[{\"id\":1758224162791,\"name\":\"Domain\",\"details\":\"1 year\"}]', 'Invoice for sale #57', 8, '2025-09-18 19:36:25', '2025-09-18 19:36:25');
 
 -- --------------------------------------------------------
 
@@ -154,8 +155,12 @@ INSERT INTO `invoices` (`id`, `customer_id`, `sale_id`, `invoice_number`, `invoi
 CREATE TABLE `leads` (
   `id` int(11) NOT NULL,
   `name` varchar(100) DEFAULT NULL,
+  `company_name` varchar(255) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
   `phone` varchar(20) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `service_required` text DEFAULT NULL,
   `source` varchar(100) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `assigned_to` int(11) DEFAULT NULL,
@@ -163,16 +168,19 @@ CREATE TABLE `leads` (
   `converted_by` int(11) DEFAULT NULL,
   `is_converted` tinyint(1) DEFAULT 0,
   `converted_at` timestamp NULL DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `leads`
 --
 
-INSERT INTO `leads` (`id`, `name`, `email`, `phone`, `source`, `notes`, `assigned_to`, `created_by`, `converted_by`, `is_converted`, `converted_at`, `created_at`) VALUES
-(64, 'Randall Dillard', 'nabinyme@mailinator.com', '+1 (176) 371-1157', 'Et soluta ratione in', 'Voluptas pariatur P', 6, 6, NULL, 0, NULL, '2025-09-18 03:30:08'),
-(66, 'Lunea Mcclure', 'wyquzox@mailinator.com', '+1 (886) 952-5794', 'Quasi assumenda moll', 'Quasi fugit est tem', 6, 6, NULL, 0, NULL, '2025-09-18 03:30:21');
+INSERT INTO `leads` (`id`, `name`, `company_name`, `email`, `phone`, `city`, `state`, `service_required`, `source`, `notes`, `assigned_to`, `created_by`, `converted_by`, `is_converted`, `converted_at`, `created_at`, `updated_at`) VALUES
+(69, 'Paki Fuller', NULL, 'cizu@mailinator.com', '+1 (786) 917-1863', NULL, NULL, NULL, 'Aut tenetur dignissi', 'Adipisci deserunt po', 6, 6, NULL, 0, NULL, '2025-09-18 06:42:13', '2025-09-18 18:09:56'),
+(70, 'Samson Vazquez', NULL, 'pegodytyz@mailinator.com', '+1 (194) 415-7129', NULL, NULL, NULL, 'Est aut molestiae ip', 'Blanditiis enim face', 7, 7, NULL, 0, NULL, '2025-09-18 07:34:31', '2025-09-18 18:09:56'),
+(72, 'Tanek Alvarez', 'Glass and Santana Traders', 'cafoberulo@mailinator.com', '+1 (735) 514-2846', 'Accusamus eaque occa', 'sdasdasd', 'sdasdsadsd', 'Quisquam cum quia qu', 'Bhai bhot baap lead hain lakho doller aae gy  is say ', 6, 6, NULL, 0, NULL, '2025-09-18 18:08:12', '2025-09-18 18:15:56'),
+(75, 'jess', '', 'jess@test.com', '3212312122', '', '', 'web', 'google', '', 6, 6, NULL, 0, NULL, '2025-09-18 18:42:53', '2025-09-18 18:42:53');
 
 -- --------------------------------------------------------
 
@@ -193,14 +201,22 @@ CREATE TABLE `lead_tracking` (
 --
 
 INSERT INTO `lead_tracking` (`id`, `user_id`, `lead_id`, `action`, `created_at`) VALUES
-(144, 6, 64, 'created', '2025-09-18 03:30:08'),
-(145, 6, 65, 'created', '2025-09-18 03:30:17'),
-(146, 6, 66, 'created', '2025-09-18 03:30:21'),
-(147, 6, 67, 'created', '2025-09-18 03:30:27'),
-(148, 7, 65, 'converted', '2025-09-18 03:31:31'),
-(149, 6, 65, 'converted', '2025-09-18 03:31:31'),
-(150, 7, 67, 'converted', '2025-09-18 04:08:22'),
-(151, 6, 67, 'converted', '2025-09-18 04:08:22');
+(152, 6, 68, 'created', '2025-09-18 06:41:59'),
+(153, 6, 69, 'created', '2025-09-18 06:42:13'),
+(154, 7, 68, 'converted', '2025-09-18 06:43:17'),
+(155, 6, 68, 'converted', '2025-09-18 06:43:17'),
+(156, 7, 70, 'created', '2025-09-18 07:34:31'),
+(157, 1, 71, 'created', '2025-09-18 18:07:55'),
+(158, 6, 72, 'created', '2025-09-18 18:08:12'),
+(159, 6, 73, 'created', '2025-09-18 18:39:42'),
+(160, 6, 74, 'created', '2025-09-18 18:40:42'),
+(161, 6, 75, 'created', '2025-09-18 18:42:53'),
+(162, 9, 71, 'converted', '2025-09-18 18:54:44'),
+(163, 1, 71, 'converted', '2025-09-18 18:54:44'),
+(164, 8, 74, 'converted', '2025-09-18 19:33:14'),
+(165, 6, 74, 'converted', '2025-09-18 19:33:14'),
+(166, 8, 73, 'converted', '2025-09-18 19:36:25'),
+(167, 6, 73, 'converted', '2025-09-18 19:36:25');
 
 -- --------------------------------------------------------
 
@@ -224,8 +240,11 @@ CREATE TABLE `monthly_lead_stats` (
 --
 
 INSERT INTO `monthly_lead_stats` (`id`, `user_id`, `year`, `month`, `leads_added`, `leads_converted`, `created_at`, `updated_at`) VALUES
-(32, 6, 2025, 9, 4, 2, '2025-09-18 03:30:08', '2025-09-18 04:08:22'),
-(33, 7, 2025, 9, 0, 2, '2025-09-18 03:31:31', '2025-09-18 04:08:22');
+(34, 6, 2025, 9, 6, 3, '2025-09-18 06:41:59', '2025-09-18 19:36:25'),
+(35, 7, 2025, 9, 1, 1, '2025-09-18 06:43:17', '2025-09-18 07:34:31'),
+(36, 1, 2025, 9, 1, 1, '2025-09-18 18:07:55', '2025-09-18 18:54:44'),
+(37, 9, 2025, 9, 0, 1, '2025-09-18 18:54:44', '2025-09-18 18:54:44'),
+(38, 8, 2025, 9, 0, 2, '2025-09-18 19:33:14', '2025-09-18 19:36:25');
 
 -- --------------------------------------------------------
 
@@ -252,10 +271,15 @@ CREATE TABLE `payment_installments` (
 --
 
 INSERT INTO `payment_installments` (`id`, `sale_id`, `installment_number`, `amount`, `due_date`, `paid_amount`, `status`, `paid_at`, `notes`, `created_at`, `updated_at`) VALUES
-(11, 48, 1, 500.00, '2025-09-18', 500.00, 'paid', '2025-09-18 05:29:36', NULL, '2025-09-18 04:26:53', '2025-09-18 05:29:36'),
-(12, 48, 2, 500.00, '2025-10-18', 500.00, 'paid', '2025-09-18 05:30:23', NULL, '2025-09-18 04:26:53', '2025-09-18 05:30:23'),
-(13, 51, 1, 500.00, '2025-09-18', 500.00, 'paid', '2025-09-18 05:44:54', NULL, '2025-09-18 05:40:08', '2025-09-18 05:44:54'),
-(14, 51, 2, 500.00, '2025-10-18', 500.00, 'paid', '2025-09-18 05:45:27', NULL, '2025-09-18 05:40:08', '2025-09-18 05:45:27');
+(15, 55, 1, 100.00, '2025-09-18', 100.00, 'paid', '2025-09-18 19:02:13', NULL, '2025-09-18 18:54:44', '2025-09-18 19:02:13'),
+(16, 55, 2, 100.00, '2025-10-18', 100.00, 'paid', '2025-09-19 20:02:56', NULL, '2025-09-18 18:54:44', '2025-09-19 20:02:56'),
+(17, 55, 3, 100.00, '2025-11-18', 100.00, 'paid', '2025-09-19 20:04:01', NULL, '2025-09-18 18:54:44', '2025-09-19 20:04:01'),
+(18, 55, 4, 100.00, '2025-12-18', 100.00, 'paid', '2025-09-19 20:04:18', NULL, '2025-09-18 18:54:44', '2025-09-19 20:04:18'),
+(19, 55, 5, 100.00, '2026-01-18', 0.00, 'pending', NULL, NULL, '2025-09-18 18:54:44', '2025-09-18 18:54:44'),
+(20, 55, 6, 100.00, '2026-02-18', 0.00, 'pending', NULL, NULL, '2025-09-18 18:54:44', '2025-09-18 18:54:44'),
+(21, 55, 7, 100.00, '2026-03-18', 0.00, 'pending', NULL, NULL, '2025-09-18 18:54:44', '2025-09-18 18:54:44'),
+(22, 55, 8, 100.00, '2026-04-18', 0.00, 'pending', NULL, NULL, '2025-09-18 18:54:44', '2025-09-18 18:54:44'),
+(23, 55, 9, 100.00, '2026-05-18', 0.00, 'pending', NULL, NULL, '2025-09-18 18:54:44', '2025-09-18 18:54:44');
 
 -- --------------------------------------------------------
 
@@ -279,14 +303,6 @@ CREATE TABLE `payment_recurring` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `payment_recurring`
---
-
-INSERT INTO `payment_recurring` (`id`, `sale_id`, `customer_id`, `amount`, `frequency`, `next_payment_date`, `last_payment_date`, `status`, `total_payments`, `payments_made`, `notes`, `created_at`, `updated_at`) VALUES
-(9, 45, 71, 100.00, 'monthly', '2025-10-18', '2025-09-18', 'active', NULL, 1, NULL, '2025-09-18 03:47:58', '2025-09-18 04:05:13'),
-(10, 50, 71, 800.00, 'monthly', '2025-10-18', '2025-09-18', 'active', NULL, 1, NULL, '2025-09-18 05:37:58', '2025-09-18 05:47:16');
-
 -- --------------------------------------------------------
 
 --
@@ -299,7 +315,6 @@ CREATE TABLE `payment_transactions` (
   `installment_id` int(11) DEFAULT NULL,
   `recurring_id` int(11) DEFAULT NULL,
   `amount` decimal(10,2) NOT NULL,
-  `payment_method` varchar(50) NOT NULL,
   `payment_source` varchar(50) NOT NULL,
   `transaction_reference` varchar(100) DEFAULT NULL,
   `notes` text DEFAULT NULL,
@@ -312,34 +327,13 @@ CREATE TABLE `payment_transactions` (
 -- Dumping data for table `payment_transactions`
 --
 
-INSERT INTO `payment_transactions` (`id`, `sale_id`, `installment_id`, `recurring_id`, `amount`, `payment_method`, `payment_source`, `transaction_reference`, `notes`, `created_by`, `received_by`, `created_at`) VALUES
-(46, 44, NULL, NULL, 1000.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 03:48:37'),
-(47, 44, NULL, NULL, 500.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 03:59:12'),
-(48, 44, NULL, NULL, 1000.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 04:01:27'),
-(49, 45, NULL, 9, 100.00, 'cash', 'wire', NULL, NULL, 10, NULL, '2025-09-18 04:05:13'),
-(50, 47, NULL, NULL, 1000.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 04:10:13'),
-(51, 47, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 04:12:10'),
-(52, 47, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 04:15:41'),
-(53, 47, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 04:19:35'),
-(54, 47, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, 10, '2025-09-18 04:24:47'),
-(55, 47, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, 10, '2025-09-18 04:25:23'),
-(56, 47, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 04:25:40'),
-(57, 47, NULL, NULL, 1900.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 04:25:56'),
-(58, 46, NULL, NULL, 1000.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 04:26:09'),
-(59, 48, 11, NULL, 500.00, 'cash', 'wire', NULL, NULL, 10, NULL, '2025-09-18 05:29:36'),
-(60, 48, 12, NULL, 500.00, 'cash', 'wire', NULL, NULL, 10, NULL, '2025-09-18 05:30:23'),
-(61, 49, NULL, NULL, 600.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 05:38:27'),
-(62, 49, NULL, NULL, 200.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 05:39:14'),
-(63, 49, NULL, NULL, 50.00, 'cash', 'test', NULL, 'Test remaining payment', 1, NULL, '2025-09-18 05:44:01'),
-(64, 51, 13, NULL, 500.00, 'cash', 'wire', NULL, NULL, 10, NULL, '2025-09-18 05:44:54'),
-(65, 51, 14, NULL, 500.00, 'cash', 'wire', NULL, NULL, 10, NULL, '2025-09-18 05:45:27'),
-(66, 49, NULL, NULL, 150.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 05:45:49'),
-(67, 52, NULL, NULL, 4000.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 05:46:06'),
-(68, 53, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 05:46:56'),
-(69, 50, NULL, 10, 800.00, 'cash', 'wire', NULL, NULL, 10, NULL, '2025-09-18 05:47:16'),
-(70, 53, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 05:49:22'),
-(71, 53, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 05:49:39'),
-(72, 53, NULL, NULL, 100.00, 'cash', 'wire', NULL, '', 10, NULL, '2025-09-18 05:49:55');
+INSERT INTO `payment_transactions` (`id`, `sale_id`, `installment_id`, `recurring_id`, `amount`, `payment_source`, `transaction_reference`, `notes`, `created_by`, `received_by`, `created_at`) VALUES
+(73, 55, 15, NULL, 100.00, 'wire', NULL, NULL, 10, NULL, '2025-09-18 19:02:13'),
+(74, 55, 16, NULL, 50.00, 'wire', NULL, NULL, 1, 1, '2025-09-19 20:00:15'),
+(75, 55, 16, NULL, 50.00, 'wire', NULL, NULL, 1, 1, '2025-09-19 20:02:56'),
+(76, 55, 17, NULL, 100.00, 'paypal', NULL, NULL, 10, 10, '2025-09-19 20:04:01'),
+(77, 55, 18, NULL, 100.00, 'wire', NULL, NULL, 10, 10, '2025-09-19 20:04:18'),
+(78, 55, NULL, NULL, 100.00, 'wire', NULL, '', 10, 10, '2025-09-19 20:04:28');
 
 -- --------------------------------------------------------
 
@@ -444,7 +438,7 @@ CREATE TABLE `roles` (
 INSERT INTO `roles` (`id`, `name`, `description`, `created_at`) VALUES
 (1, 'admin', 'Full access', '2025-09-14 07:56:06'),
 (2, 'lead-scraper', NULL, '2025-09-14 08:10:10'),
-(3, 'sales', NULL, '2025-09-14 08:27:03'),
+(3, 'sales', '', '2025-09-14 08:27:03'),
 (4, 'front-sales-manager', NULL, '2025-09-15 20:06:21'),
 (5, 'upseller', 'Create Upsells and Manage Projects', '2025-09-16 23:29:27'),
 (6, 'upseller-manager', 'Manage Upsell Teams and Performance', '2025-09-17 05:07:43');
@@ -534,22 +528,20 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (2, 2),
 (2, 3),
 (2, 18),
+(3, 1),
 (3, 2),
 (3, 3),
 (3, 5),
 (3, 6),
 (3, 7),
-(3, 17),
 (3, 18),
 (3, 29),
 (3, 30),
 (3, 31),
-(3, 32),
 (3, 33),
 (3, 65),
 (3, 66),
 (3, 67),
-(3, 69),
 (4, 1),
 (4, 2),
 (4, 3),
@@ -653,7 +645,6 @@ CREATE TABLE `sales` (
   `net_value` decimal(10,2) DEFAULT NULL,
   `cash_in` decimal(10,2) DEFAULT 0.00,
   `remaining` decimal(10,2) DEFAULT NULL,
-  `payment_method` varchar(50) DEFAULT NULL,
   `payment_type` enum('one_time','recurring','installments') DEFAULT NULL,
   `payment_source` enum('wire','cashapp','stripe','zelle','paypal','authorize','square','other') DEFAULT NULL,
   `payment_company` enum('american_digital_agency','logicworks','oscs','aztech','others') DEFAULT NULL,
@@ -673,17 +664,11 @@ CREATE TABLE `sales` (
 -- Dumping data for table `sales`
 --
 
-INSERT INTO `sales` (`id`, `customer_id`, `customer_name`, `customer_email`, `customer_phone`, `unit_price`, `gross_value`, `net_value`, `cash_in`, `remaining`, `payment_method`, `payment_type`, `payment_source`, `payment_company`, `brand`, `notes`, `services`, `service_details`, `created_by`, `created_at`, `updated_at`, `next_payment_date`, `last_payment_date`, `payment_status`) VALUES
-(44, 71, 'Kadeem Pruitt', 'cykepu@mailinator.com', '+1 (649) 818-7152', 5000.00, 5000.00, 5000.00, 5000.00, 0.00, 'cash', 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758166291777,\"name\":\"Website\",\"details\":\"132\"}]', '132', 7, '2025-09-18 03:31:31', '2025-09-18 04:01:26', NULL, '2025-09-18', 'completed'),
-(45, 71, 'Kadeem Pruitt', 'cykepu@mailinator.com', '+1 (649) 818-7152', 200.00, 100.00, 100.00, 200.00, 0.00, 'cash', 'recurring', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758167278768,\"name\":\"Hosting\",\"details\":\"Dedicated Server\"}]', 'Dedicated Server', 10, '2025-09-18 03:47:58', '2025-09-18 04:05:13', '2025-09-18', '2025-09-18', 'partial'),
-(46, 71, 'Kadeem Pruitt', 'cykepu@mailinator.com', '+1 (649) 818-7152', 1500.00, 1500.00, 1500.00, 1500.00, 0.00, 'cash', 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758168427944,\"name\":\"web app\",\"details\":\"portal\"}]', 'portal', 10, '2025-09-18 04:07:07', '2025-09-18 04:26:09', NULL, '2025-09-18', 'completed'),
-(47, 72, 'Knox Byers', 'fucolety@mailinator.com', '+1 (753) 227-7868', 5000.00, 5000.00, 5000.00, 5000.00, 0.00, 'cash', 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758168502112,\"name\":\"WEbsite\",\"details\":\"Fresh website\"}]', 'Fresh website', 7, '2025-09-18 04:08:22', '2025-09-18 04:25:56', NULL, '2025-09-18', 'completed'),
-(48, 71, 'Kadeem Pruitt', 'cykepu@mailinator.com', '+1 (649) 818-7152', 1500.00, 1500.00, 1500.00, 1500.00, 0.00, 'cash', 'installments', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758169613968,\"name\":\"hosting\",\"details\":\"Server\"}]', 'Server', 10, '2025-09-18 04:26:53', '2025-09-18 05:30:23', '2025-09-18', NULL, 'partial'),
-(49, 71, 'Kadeem Pruitt', 'cykepu@mailinator.com', '+1 (649) 818-7152', 1500.00, 1500.00, 1500.00, 1500.00, 0.00, 'cash', 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758173834143,\"name\":\"Domain\",\"details\":\"Domain\"}]', 'Domain', 10, '2025-09-18 05:37:14', '2025-09-18 05:45:49', NULL, '2025-09-18', 'completed'),
-(50, 71, 'Kadeem Pruitt', 'cykepu@mailinator.com', '+1 (649) 818-7152', 1600.00, 800.00, 800.00, 1600.00, 0.00, 'cash', 'recurring', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758173878919,\"name\":\"Marketing\",\"details\":\"Smm\"}]', 'Smm', 10, '2025-09-18 05:37:58', '2025-09-18 05:47:16', '2025-09-18', '2025-09-18', 'partial'),
-(51, 71, 'Kadeem Pruitt', 'cykepu@mailinator.com', '+1 (649) 818-7152', 1500.00, 1500.00, 1500.00, 1500.00, 0.00, 'cash', 'installments', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758174008231,\"name\":\"Seo\",\"details\":\"Seo\"}]', 'Seo', 10, '2025-09-18 05:40:08', '2025-09-18 05:45:27', '2025-09-18', NULL, 'partial'),
-(52, 71, 'Kadeem Pruitt', 'cykepu@mailinator.com', '+1 (649) 818-7152', 5000.00, 5000.00, 5000.00, 5000.00, 0.00, 'cash', 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758174028248,\"name\":\"Hosting\",\"details\":\"Dedicated Server\"}]', 'Dedicated Server', 10, '2025-09-18 05:40:28', '2025-09-18 05:46:06', NULL, '2025-09-18', 'completed'),
-(53, 72, 'Knox Byers', 'fucolety@mailinator.com', '+1 (753) 227-7868', 5000.00, 5000.00, 5000.00, 1400.00, 3600.00, 'cash', 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758174398753,\"name\":\"Seo\",\"details\":\"Seo\"}]', 'Seo', 10, '2025-09-18 05:46:38', '2025-09-18 05:49:55', NULL, '2025-09-18', 'partial');
+INSERT INTO `sales` (`id`, `customer_id`, `customer_name`, `customer_email`, `customer_phone`, `unit_price`, `gross_value`, `net_value`, `cash_in`, `remaining`, `payment_type`, `payment_source`, `payment_company`, `brand`, `notes`, `services`, `service_details`, `created_by`, `created_at`, `updated_at`, `next_payment_date`, `last_payment_date`, `payment_status`) VALUES
+(54, 73, 'Hasad Cox', 'puxenebi@mailinator.com', '+1 (773) 912-9584', 5000.00, 5000.00, 5000.00, 2000.00, 3000.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758177797294,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Fresh website', 7, '2025-09-18 06:43:17', '2025-09-18 06:43:17', NULL, NULL, 'partial'),
+(55, 74, 'Hannah Keith', 'dufiniz@mailinator.com', '+1 (888) 506-1438', 1000.00, 1000.00, 1000.00, 600.00, 400.00, 'installments', 'wire', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758221596673,\"name\":\"Business Website\",\"details\":\"5 pages basic website\"}]', '5 pages basic website', 9, '2025-09-18 18:54:44', '2025-09-19 20:04:28', '2025-09-18', '2025-09-19', 'partial'),
+(56, 75, 'meo', 'test@gmail.com', '1231231231', 10000.00, 10000.00, 10000.00, 2000.00, 8000.00, 'one_time', 'stripe', 'american_digital_agency', 'liberty_web_studio', 'best customer', '[{\"id\":1758223994577,\"name\":\"web app\",\"details\":\"Like youtube\"}]', 'Like youtube', 8, '2025-09-18 19:33:14', '2025-09-18 19:33:14', NULL, NULL, 'partial'),
+(57, 76, 'Jon', 'jon@test.com', '', 500.00, 500.00, 500.00, 500.00, 0.00, 'one_time', 'stripe', 'american_digital_agency', 'liberty_web_studio', '', '[{\"id\":1758224162791,\"name\":\"Domain\",\"details\":\"1 year\"}]', '1 year', 8, '2025-09-18 19:36:25', '2025-09-18 19:36:25', NULL, NULL, 'completed');
 
 -- --------------------------------------------------------
 
@@ -694,7 +679,7 @@ INSERT INTO `sales` (`id`, `customer_id`, `customer_name`, `customer_email`, `cu
 CREATE TABLE `targets` (
   `id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
-  `target_value` decimal(10,2) NOT NULL,
+  `target_value` int(11) NOT NULL,
   `target_month` int(11) NOT NULL,
   `target_year` int(11) NOT NULL,
   `created_by` int(11) DEFAULT NULL,
@@ -707,14 +692,15 @@ CREATE TABLE `targets` (
 --
 
 INSERT INTO `targets` (`id`, `user_id`, `target_value`, `target_month`, `target_year`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, 7, 800.00, 0, 0, 1, '2025-09-14 13:24:50', '2025-09-14 13:24:50'),
-(2, 7, 10.00, 1, 2025, 1, '2025-09-14 13:29:22', '2025-09-14 13:29:22'),
-(3, 7, 50.00, 9, 2025, 1, '2025-09-14 13:32:50', '2025-09-18 02:52:47'),
-(4, 7, 15.00, 10, 2025, 1, '2025-09-14 13:33:03', '2025-09-14 13:33:03'),
-(5, 7, 15.00, 10, 2025, 1, '2025-09-14 13:33:06', '2025-09-14 13:33:06'),
-(7, 7, 12.00, 1, 2025, 1, '2025-09-14 13:38:44', '2025-09-14 13:38:44'),
-(8, 7, 8.00, 12, 2024, 1, '2025-09-14 13:39:07', '2025-09-14 13:39:07'),
-(9, 8, 10.00, 9, 2025, 1, '2025-09-17 20:17:53', '2025-09-17 20:17:53');
+(3, 7, 40, 9, 2025, 1, '2025-09-14 13:32:50', '2025-09-18 06:57:18'),
+(4, 7, 15, 8, 2025, 1, '2025-09-14 13:33:03', '2025-09-18 06:57:27'),
+(5, 7, 15, 7, 2025, 1, '2025-09-14 13:33:06', '2025-09-18 06:57:33'),
+(7, 7, 12, 6, 2025, 1, '2025-09-14 13:38:44', '2025-09-18 06:57:36'),
+(9, 8, 2, 9, 2025, 1, '2025-09-17 20:17:53', '2025-09-18 19:27:43'),
+(10, 7, 40, 10, 2025, 9, '2025-09-18 19:27:56', '2025-09-18 19:27:56'),
+(11, 8, 2, 10, 2025, 9, '2025-09-18 19:27:56', '2025-09-18 19:27:56'),
+(12, 7, 40, 10, 2025, 9, '2025-09-18 19:28:00', '2025-09-18 19:28:00'),
+(13, 8, 2, 10, 2025, 9, '2025-09-18 19:28:00', '2025-09-18 19:28:00');
 
 -- --------------------------------------------------------
 
@@ -736,7 +722,7 @@ CREATE TABLE `teams` (
 --
 
 INSERT INTO `teams` (`id`, `name`, `description`, `created_by`, `created_at`, `updated_at`) VALUES
-(6, 'Team A', '', 9, '2025-09-17 20:08:20', '2025-09-17 20:08:20');
+(12, 'Team A', '', 1, '2025-09-19 20:23:55', '2025-09-19 20:23:55');
 
 -- --------------------------------------------------------
 
@@ -757,8 +743,8 @@ CREATE TABLE `team_members` (
 --
 
 INSERT INTO `team_members` (`id`, `team_id`, `user_id`, `role`, `joined_at`) VALUES
-(17, 6, 7, 'member', '2025-09-17 20:17:35'),
-(18, 6, 8, 'member', '2025-09-17 20:17:35');
+(37, 12, 7, 'member', '2025-09-19 20:45:30'),
+(38, 12, 8, 'member', '2025-09-19 20:45:30');
 
 -- --------------------------------------------------------
 
@@ -784,16 +770,10 @@ CREATE TABLE `upcoming_payments` (
 --
 
 INSERT INTO `upcoming_payments` (`id`, `customer_id`, `payment_type`, `source_id`, `amount`, `due_date`, `status`, `description`, `created_at`, `updated_at`) VALUES
-(26, 71, 'invoice', 39, 5000.00, '2025-10-18', 'pending', 'Invoice #INV-1758166291811-44 - [{\"id\":1758166291777,\"name\":\"Website\",\"details\":\"132\"}]', '2025-09-18 03:31:31', '2025-09-18 03:31:31'),
-(27, 71, 'invoice', 40, 100.00, '2025-10-18', 'pending', 'Invoice #INV-1758167278796-45 - [{\"id\":1758167278768,\"name\":\"Hosting\",\"details\":\"Dedicated Server\"}]', '2025-09-18 03:47:58', '2025-09-18 03:47:58'),
-(28, 71, 'invoice', 41, 1500.00, '2025-10-18', 'pending', 'Invoice #INV-1758168427965-46 - [{\"id\":1758168427944,\"name\":\"web app\",\"details\":\"portal\"}]', '2025-09-18 04:07:07', '2025-09-18 04:07:07'),
-(29, 72, 'invoice', 43, 5000.00, '2025-10-18', 'pending', 'Invoice #INV-1758168502144-47 - [{\"id\":1758168502112,\"name\":\"WEbsite\",\"details\":\"Fresh website\"}]', '2025-09-18 04:08:22', '2025-09-18 04:08:22'),
-(30, 71, 'invoice', 44, 1500.00, '2025-10-18', 'pending', 'Invoice #INV-1758169613991-48 - [{\"id\":1758169613968,\"name\":\"hosting\",\"details\":\"Server\"}]', '2025-09-18 04:26:53', '2025-09-18 04:26:53'),
-(31, 71, 'invoice', 45, 1500.00, '2025-10-18', 'pending', 'Invoice #INV-1758173834185-49 - [{\"id\":1758173834143,\"name\":\"Domain\",\"details\":\"Domain\"}]', '2025-09-18 05:37:14', '2025-09-18 05:37:14'),
-(32, 71, 'invoice', 46, 800.00, '2025-10-18', 'pending', 'Invoice #INV-1758173878932-50 - [{\"id\":1758173878919,\"name\":\"Marketing\",\"details\":\"Smm\"}]', '2025-09-18 05:37:58', '2025-09-18 05:37:58'),
-(33, 71, 'invoice', 47, 1500.00, '2025-10-18', 'pending', 'Invoice #INV-1758174008258-51 - [{\"id\":1758174008231,\"name\":\"Seo\",\"details\":\"Seo\"}]', '2025-09-18 05:40:08', '2025-09-18 05:40:08'),
-(34, 71, 'invoice', 48, 5000.00, '2025-10-18', 'pending', 'Invoice #INV-1758174028260-52 - [{\"id\":1758174028248,\"name\":\"Hosting\",\"details\":\"Dedicated Server\"}]', '2025-09-18 05:40:28', '2025-09-18 05:40:28'),
-(35, 72, 'invoice', 49, 5000.00, '2025-10-18', 'pending', 'Invoice #INV-1758174398768-53 - [{\"id\":1758174398753,\"name\":\"Seo\",\"details\":\"Seo\"}]', '2025-09-18 05:46:38', '2025-09-18 05:46:38');
+(36, 73, 'invoice', 51, 5000.00, '2025-10-18', 'pending', 'Invoice #INV-1758177797337-54 - [{\"id\":1758177797294,\"name\":\"Website\",\"details\":\"Fresh website\"}]', '2025-09-18 06:43:17', '2025-09-18 06:43:17'),
+(37, 74, 'invoice', 53, 1000.00, '2025-10-18', 'pending', 'Invoice #INV-1758221684470-55 - [{\"id\":1758221596673,\"name\":\"Business Website\",\"details\":\"5 pages basic website\"}]', '2025-09-18 18:54:44', '2025-09-18 18:54:44'),
+(38, 75, 'invoice', 55, 10000.00, '2025-10-18', 'pending', 'Invoice #INV-1758223994733-56 - [{\"id\":1758223994577,\"name\":\"web app\",\"details\":\"Like youtube\"}]', '2025-09-18 19:33:14', '2025-09-18 19:33:14'),
+(39, 76, 'invoice', 57, 500.00, '2025-10-18', 'pending', 'Invoice #INV-1758224185563-57 - [{\"id\":1758224162791,\"name\":\"Domain\",\"details\":\"1 year\"}]', '2025-09-18 19:36:25', '2025-09-18 19:36:25');
 
 -- --------------------------------------------------------
 
@@ -818,8 +798,7 @@ CREATE TABLE `upseller_performance` (
 --
 
 INSERT INTO `upseller_performance` (`id`, `user_id`, `team_id`, `metric_type`, `metric_value`, `period_month`, `period_year`, `created_at`, `updated_at`) VALUES
-(1, 10, NULL, 'revenue_generated', 22300.00, 9, 2025, '2025-09-18 04:05:13', '2025-09-18 05:49:55'),
-(2, 12, NULL, 'revenue_generated', 0.00, 9, 2025, '2025-09-18 05:28:10', '2025-09-18 05:28:10');
+(3, 10, NULL, 'revenue_generated', 1200.00, 9, 2025, '2025-09-18 19:02:13', '2025-09-19 20:04:28');
 
 -- --------------------------------------------------------
 
@@ -843,8 +822,12 @@ CREATE TABLE `upseller_targets` (
 --
 
 INSERT INTO `upseller_targets` (`id`, `user_id`, `target_value`, `target_month`, `target_year`, `created_by`, `created_at`, `updated_at`) VALUES
-(3, 10, 20000.00, 9, 2025, 13, '2025-09-18 05:16:04', '2025-09-18 05:16:04'),
-(4, 12, 15000.00, 9, 2025, 13, '2025-09-18 05:16:16', '2025-09-18 05:16:16');
+(5, 10, 15000.00, 9, 2025, 13, '2025-09-18 06:11:11', '2025-09-18 06:11:11'),
+(6, 12, 20000.00, 9, 2025, 13, '2025-09-18 06:11:17', '2025-09-18 06:11:17'),
+(7, 10, 15000.00, 8, 2025, 13, '2025-09-18 06:11:11', '2025-09-18 06:11:11'),
+(8, 10, 15000.00, 7, 2025, 13, '2025-09-18 06:11:11', '2025-09-18 06:11:11'),
+(9, 10, 20000.00, 6, 2025, 13, '2025-09-18 06:11:17', '2025-09-18 06:11:17'),
+(10, 10, 15000.00, 5, 2025, 13, '2025-09-18 06:11:11', '2025-09-18 06:11:11');
 
 -- --------------------------------------------------------
 
@@ -866,7 +849,8 @@ CREATE TABLE `upseller_teams` (
 --
 
 INSERT INTO `upseller_teams` (`id`, `name`, `description`, `created_by`, `created_at`, `updated_at`) VALUES
-(4, 'Team A', '', 13, '2025-09-18 04:34:21', '2025-09-18 04:34:21');
+(12, 'Team A', '', 1, '2025-09-19 20:44:40', '2025-09-19 20:44:40'),
+(13, 'Team B', '', 1, '2025-09-19 20:44:59', '2025-09-19 20:44:59');
 
 -- --------------------------------------------------------
 
@@ -887,8 +871,8 @@ CREATE TABLE `upseller_team_members` (
 --
 
 INSERT INTO `upseller_team_members` (`id`, `team_id`, `user_id`, `role`, `joined_at`) VALUES
-(4, 4, 10, 'member', '2025-09-18 04:34:21'),
-(5, 4, 12, 'member', '2025-09-18 04:34:21');
+(19, 12, 12, 'member', '2025-09-19 20:44:45'),
+(20, 13, 10, 'member', '2025-09-19 20:45:04');
 
 -- --------------------------------------------------------
 
@@ -1136,13 +1120,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
 
 --
 -- AUTO_INCREMENT for table `customer_assignments`
 --
 ALTER TABLE `customer_assignments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `customer_subscriptions`
@@ -1154,31 +1138,31 @@ ALTER TABLE `customer_subscriptions`
 -- AUTO_INCREMENT for table `invoices`
 --
 ALTER TABLE `invoices`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
 
 --
 -- AUTO_INCREMENT for table `lead_tracking`
 --
 ALTER TABLE `lead_tracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=152;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=168;
 
 --
 -- AUTO_INCREMENT for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `payment_installments`
 --
 ALTER TABLE `payment_installments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `payment_recurring`
@@ -1190,7 +1174,7 @@ ALTER TABLE `payment_recurring`
 -- AUTO_INCREMENT for table `payment_transactions`
 --
 ALTER TABLE `payment_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
 
 --
 -- AUTO_INCREMENT for table `permissions`
@@ -1208,55 +1192,55 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `targets`
 --
 ALTER TABLE `targets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `teams`
 --
 ALTER TABLE `teams`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `team_members`
 --
 ALTER TABLE `team_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `upcoming_payments`
 --
 ALTER TABLE `upcoming_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `upseller_performance`
 --
 ALTER TABLE `upseller_performance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `upseller_targets`
 --
 ALTER TABLE `upseller_targets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `upseller_teams`
 --
 ALTER TABLE `upseller_teams`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `upseller_team_members`
 --
 ALTER TABLE `upseller_team_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `users`
