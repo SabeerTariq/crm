@@ -1,0 +1,111 @@
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Leads from './pages/Leads';
+import Customers from './pages/Customers';
+import CustomerSalesProfile from './pages/CustomerSalesProfile';
+import Sales from './pages/Sales';
+import Users from './pages/Users';
+import Roles from './pages/Roles';
+import LeadScraperDashboard from './pages/LeadScraperDashboard';
+import FrontSellerDashboard from './pages/FrontSellerDashboard';
+import UpsellerDashboard from './pages/UpsellerDashboard';
+import UpsellerTeams from './pages/UpsellerTeams';
+import UpsellerTargets from './pages/UpsellerTargets';
+import UpsellerPerformance from './pages/UpsellerPerformance';
+import Teams from './pages/Teams';
+import Targets from './pages/Targets';
+import Performance from './pages/Performance';
+import Payments from './pages/Payments';
+import Assignments from './pages/Assignments';
+import ProtectedRoute from './components/ProtectedRoute';
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute module="users" action="read">
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/leads" element={
+          <ProtectedRoute module="leads">
+            <Leads />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers" element={
+          <ProtectedRoute module="customers">
+            <Customers />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/:customerId/sales-profile" element={
+          <ProtectedRoute module="customers">
+            <CustomerSalesProfile />
+          </ProtectedRoute>
+        } />
+        <Route path="/sales" element={
+          <ProtectedRoute module="sales">
+            <Sales />
+          </ProtectedRoute>
+        } />
+        <Route path="/users" element={
+          <ProtectedRoute module="users">
+            <Users />
+          </ProtectedRoute>
+        } />
+        <Route path="/roles" element={
+          <ProtectedRoute module="roles">
+            <Roles />
+          </ProtectedRoute>
+        } />
+        <Route path="/lead-scraper-dashboard" element={<LeadScraperDashboard />} />
+        <Route path="/front-seller-dashboard" element={<FrontSellerDashboard />} />
+        <Route path="/upseller-dashboard" element={<UpsellerDashboard />} />
+        <Route path="/upseller-teams" element={
+          <ProtectedRoute module="upseller_teams" action="view">
+            <UpsellerTeams />
+          </ProtectedRoute>
+        } />
+        <Route path="/upseller-targets" element={
+          <ProtectedRoute module="upseller_targets" action="view">
+            <UpsellerTargets />
+          </ProtectedRoute>
+        } />
+        <Route path="/upseller-performance" element={
+          <ProtectedRoute module="upseller_performance" action="view">
+            <UpsellerPerformance />
+          </ProtectedRoute>
+        } />
+        <Route path="/teams" element={
+          <ProtectedRoute module="teams">
+            <Teams />
+          </ProtectedRoute>
+        } />
+        <Route path="/targets" element={
+          <ProtectedRoute module="targets">
+            <Targets />
+          </ProtectedRoute>
+        } />
+        <Route path="/performance" element={
+          <ProtectedRoute module="targets">
+            <Performance />
+          </ProtectedRoute>
+        } />
+        <Route path="/payments" element={
+          <ProtectedRoute module="payments">
+            <Payments />
+          </ProtectedRoute>
+        } />
+        <Route path="/assignments" element={
+          <ProtectedRoute module="assignments">
+            <Assignments />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;

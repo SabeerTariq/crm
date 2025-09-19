@@ -1,0 +1,19 @@
+/* PageLayout component styles */
+:root {
+  --sidebar-width: 280px;
+}
+
+.main-content {
+  margin-left: var(--sidebar-width, 280px);
+  padding: 20px;
+  width: 100%;
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: var(--sidebar-width, 0px);
+  }
+}
