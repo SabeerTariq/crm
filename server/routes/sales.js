@@ -105,7 +105,6 @@ router.post('/', auth, authorize('sales','create'), (req, res) => {
     customer_phone, 
     unit_price, 
     cash_in = 0, 
-    payment_method, 
     notes,
     services,
     service_details,
@@ -142,15 +141,15 @@ router.post('/', auth, authorize('sales','create'), (req, res) => {
     INSERT INTO sales (
       customer_id, customer_name, customer_email, customer_phone, 
       unit_price, gross_value, net_value, cash_in, remaining, 
-      payment_method, notes, services, service_details, payment_type, 
+      notes, services, service_details, payment_type, 
       payment_source, payment_company, brand, created_by, payment_status, next_payment_date
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   
   const params = [
     customer_id || null, customer_name, customer_email, customer_phone,
     unit_price, gross_value, net_value, cash_in, remaining, 
-    payment_method, notes, services, service_details, payment_type,
+    notes, services, service_details, payment_type,
     payment_source, payment_company, brand, req.user.id, payment_status, next_payment_date
   ];
   
@@ -323,7 +322,6 @@ router.put('/:id', auth, authorize('sales','update'), (req, res) => {
     customer_phone, 
     unit_price, 
     cash_in = 0, 
-    payment_method, 
     notes,
     services,
     service_details,
@@ -362,7 +360,7 @@ router.put('/:id', auth, authorize('sales','update'), (req, res) => {
       UPDATE sales SET 
         customer_id = ?, customer_name = ?, customer_email = ?, customer_phone = ?,
         unit_price = ?, gross_value = ?, net_value = ?, cash_in = ?, remaining = ?, 
-        payment_method = ?, notes = ?, services = ?, service_details = ?, 
+        notes = ?, services = ?, service_details = ?, 
         payment_type = ?, payment_source = ?, payment_company = ?, brand = ?
       WHERE id = ?
     `;
@@ -370,7 +368,7 @@ router.put('/:id', auth, authorize('sales','update'), (req, res) => {
     const params = [
       customer_id || null, customer_name, customer_email, customer_phone,
       unit_price, gross_value, net_value, cash_in, remaining, 
-      payment_method, notes, services, service_details, payment_type,
+      notes, services, service_details, payment_type,
       payment_source, payment_company, brand, saleId
     ];
     

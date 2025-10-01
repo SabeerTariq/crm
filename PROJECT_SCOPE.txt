@@ -1,0 +1,450 @@
+================================================================================
+                           CRM SYSTEM PROJECT SCOPE
+================================================================================
+
+PROJECT OVERVIEW
+================
+This is a comprehensive Customer Relationship Management (CRM) system built with 
+Node.js/Express backend and React frontend. The system manages the complete sales 
+pipeline from lead generation to customer management, project delivery, and 
+payment processing.
+
+TECHNOLOGY STACK
+================
+Backend:
+- Node.js with Express.js framework
+- MySQL database with MariaDB
+- JWT authentication
+- bcryptjs for password hashing
+- CORS enabled for cross-origin requests
+
+Frontend:
+- React 19.1.1 with React Router DOM
+- Axios for API communication
+- Custom hooks for state management
+- Responsive design with CSS
+
+Database:
+- MySQL/MariaDB with comprehensive schema
+- Foreign key constraints and indexes
+- Migration system for schema updates
+
+CORE MODULES & FUNCTIONALITIES
+===============================
+
+1. AUTHENTICATION & AUTHORIZATION SYSTEM
+---------------------------------------
+- JWT-based authentication
+- Role-based access control (RBAC)
+- 6 predefined roles: admin, lead-scraper, sales, front-sales-manager, upseller, upseller-manager
+- Permission-based module access
+- Protected routes and middleware
+- User registration and login
+
+2. USER MANAGEMENT SYSTEM
+-------------------------
+- User CRUD operations
+- Role assignment and management
+- Permission management per role
+- User profile management
+- Team management capabilities
+
+3. LEAD MANAGEMENT SYSTEM
+-------------------------
+- Lead creation and tracking
+- Lead conversion to customers
+- Lead source tracking
+- Lead assignment to sales team
+- Lead statistics and analytics
+- Lead scraper dashboard
+
+4. CUSTOMER MANAGEMENT SYSTEM
+-----------------------------
+- Customer CRUD operations
+- Customer assignment to upsellers
+- Customer sales profile tracking
+- Customer payment history
+- Customer project management
+- Customer subscription management
+
+5. SALES MANAGEMENT SYSTEM
+--------------------------
+- Sales transaction recording
+- Multiple payment types (one-time, installments, recurring)
+- Sales role restrictions (sales role works with leads, upseller role works with customers)
+- Sales analytics and reporting
+- Sales target management
+
+6. PAYMENT SYSTEM
+-----------------
+- Multiple payment types support:
+  * One-time payments
+  * Installment payments with configurable frequency
+  * Recurring subscription payments
+- Payment transaction tracking
+- Payment status management (pending, paid, overdue)
+- Upcoming payments dashboard
+- Payment method tracking (wire, cashapp, stripe, etc.)
+- Invoice generation and management
+
+7. CUSTOMER ASSIGNMENT MODULE
+-----------------------------
+- Assign customers to upsellers
+- Assignment types: territory, product, manual, performance
+- Assignment status management (active, inactive, transferred)
+- Assignment history tracking
+- Upseller statistics and performance metrics
+- Access control for assigned customers only
+
+8. PROJECT MANAGEMENT SYSTEM
+----------------------------
+- Project creation and management
+- Project status tracking (planning, active, on_hold, completed, cancelled)
+- Project priority levels (low, medium, high, urgent)
+- Project budget tracking
+- Project manager assignment
+- Project timeline management
+
+9. TASK MANAGEMENT SYSTEM
+-------------------------
+- Task creation and assignment
+- Task status management
+- Task priority levels
+- Task due date tracking
+- Task board system (Kanban-style)
+- Task assignment to team members
+- Task progress tracking
+
+10. DEPARTMENT MANAGEMENT
+-------------------------
+- Department creation and management
+- Predefined departments: Design, Development, SEO, Content, Marketing
+- Department-based task organization
+- Department performance tracking
+
+11. TEAM MANAGEMENT SYSTEM
+--------------------------
+- Team creation and management
+- Team member assignment
+- Team leader designation
+- Upseller team management
+- Team performance tracking
+
+12. TARGET & PERFORMANCE MANAGEMENT
+----------------------------------
+- Sales target setting per user/month/year
+- Performance metrics tracking
+- Upseller performance analytics
+- Team performance comparison
+- Target achievement tracking
+
+13. DASHBOARD SYSTEM
+--------------------
+- Role-specific dashboards:
+  * Lead Scraper Dashboard
+  * Front Seller Dashboard
+  * Upseller Dashboard
+- Statistics and analytics
+- Upcoming payments display
+- Performance metrics
+- Monthly history charts
+
+14. BOARD MANAGEMENT SYSTEM
+---------------------------
+- Kanban-style task boards
+- Board creation and management
+- Task organization by status
+- Board assignment to users
+- Board-based task filtering
+
+DATABASE SCHEMA OVERVIEW
+========================
+
+Core Tables:
+- users: User accounts and authentication
+- roles: Role definitions
+- permissions: Available permissions
+- role_permissions: Role-permission mappings
+
+Lead Management:
+- leads: Lead information and tracking
+- lead_stats: Lead statistics and analytics
+
+Customer Management:
+- customers: Customer information
+- customer_assignments: Customer-upseller assignments
+- customer_subscriptions: Customer subscription management
+
+Sales & Payments:
+- sales: Sales transactions
+- payment_installments: Installment payment schedules
+- payment_recurring: Recurring payment schedules
+- payment_transactions: Payment transaction records
+- upcoming_payments: Upcoming payment tracking
+- invoices: Invoice management
+
+Project Management:
+- projects: Project information
+- tasks: Task management
+- task_statuses: Task status definitions
+- departments: Department management
+- boards: Task board management
+
+Team Management:
+- teams: Team definitions
+- upseller_teams: Upseller team management
+- upseller_team_members: Team member assignments
+- upseller_targets: Sales targets
+- upseller_performance: Performance metrics
+
+API ENDPOINTS STRUCTURE
+========================
+
+Authentication:
+- POST /api/auth/register
+- POST /api/auth/login
+
+User Management:
+- GET/POST/PUT/DELETE /api/users/*
+- GET/POST/PUT/DELETE /api/rbac/*
+
+Lead Management:
+- GET/POST/PUT/DELETE /api/leads/*
+
+Customer Management:
+- GET/POST/PUT/DELETE /api/customers/*
+- GET/POST/PUT/DELETE /api/customerSales/*
+
+Sales Management:
+- GET/POST/PUT/DELETE /api/sales/*
+
+Payment Management:
+- GET/POST/PUT/DELETE /api/payments/*
+- GET/POST/PUT/DELETE /api/finance/*
+
+Assignment Management:
+- GET/POST/PUT/DELETE /api/assignments/*
+
+Project Management:
+- GET/POST/PUT/DELETE /api/projects/*
+- GET/POST/PUT/DELETE /api/tasks/*
+- GET/POST/PUT/DELETE /api/departments/*
+- GET/POST/PUT/DELETE /api/boards/*
+- GET/POST/PUT/DELETE /api/statuses/*
+
+Team Management:
+- GET/POST/PUT/DELETE /api/teams/*
+- GET/POST/PUT/DELETE /api/upseller-teams/*
+- GET/POST/PUT/DELETE /api/upseller-targets/*
+- GET/POST/PUT/DELETE /api/upseller-performance/*
+
+Dashboard:
+- GET /api/dashboard/*
+
+FRONTEND COMPONENTS STRUCTURE
+=============================
+
+Pages (24 total):
+- Login: Authentication
+- Dashboard: Main dashboard
+- Leads: Lead management
+- Customers: Customer management
+- CustomerSalesProfile: Customer sales details
+- Sales: Sales management
+- Users: User management
+- Roles: Role management
+- LeadScraperDashboard: Lead scraper specific dashboard
+- FrontSellerDashboard: Front seller dashboard
+- UpsellerDashboard: Upseller dashboard
+- UpsellerTeams: Upseller team management
+- UpsellerTargets: Target management
+- UpsellerPerformance: Performance tracking
+- Teams: Team management
+- Targets: Target management
+- Performance: Performance analytics
+- Payments: Payment management
+- Assignments: Customer assignment management
+- Projects: Project management
+- ProjectDetails: Project detail view
+- Departments: Department management
+- TaskManagement: Task management with Kanban boards
+- Roles: Role management
+
+Components:
+- PageLayout: Common page layout wrapper
+- ProtectedRoute: Route protection based on permissions
+- Sidebar: Navigation sidebar with role-based menu
+- UpcomingPayments: Payment dashboard component
+- UserProfile: User profile management
+
+Hooks:
+- usePermissions: Permission checking hook
+- useUserBoards: Board management hook
+
+ROLE-BASED ACCESS CONTROL
+==========================
+
+Role Hierarchy:
+1. Admin (role_id: 1) - Full system access
+2. Lead Scraper (role_id: 2) - Lead creation and management
+3. Sales (role_id: 3) - Lead conversion to customers
+4. Front Sales Manager (role_id: 4) - Sales team management
+5. Upseller (role_id: 5) - Customer management and upselling
+6. Upseller Manager (role_id: 6) - Upseller team management
+
+Permission System:
+- Module-based permissions (users, leads, customers, sales, payments, etc.)
+- Action-based permissions (create, read, update, delete, view)
+- Role-permission mapping
+- Dynamic permission checking
+
+SECURITY FEATURES
+=================
+- JWT token-based authentication
+- Password hashing with bcryptjs
+- Role-based access control
+- Permission-based route protection
+- CORS configuration
+- Input validation and sanitization
+- SQL injection prevention
+- XSS protection
+
+BUSINESS LOGIC FEATURES
+=======================
+
+Sales Pipeline:
+1. Lead Generation → Lead Scraper creates leads
+2. Lead Conversion → Sales team converts leads to customers
+3. Customer Assignment → Customers assigned to upsellers
+4. Project Management → Projects created for customers
+5. Task Management → Tasks assigned and tracked
+6. Payment Processing → Multiple payment types supported
+7. Performance Tracking → Metrics and analytics
+
+Payment Processing:
+- One-time payments
+- Installment payments (weekly, monthly, quarterly)
+- Recurring subscriptions (weekly, monthly, quarterly, yearly)
+- Payment status tracking
+- Overdue payment detection
+- Payment method tracking
+
+Customer Assignment Logic:
+- One active assignment per customer
+- Automatic deactivation of previous assignments
+- Transfer tracking with history
+- Assignment type categorization
+- Performance-based assignment support
+
+CURRENT SYSTEM STATUS
+=====================
+
+✅ Completed Modules:
+- Authentication & Authorization
+- User Management
+- Lead Management
+- Customer Management
+- Sales Management
+- Payment System (architecturally complete)
+- Customer Assignment Module
+- Project Management
+- Task Management
+- Department Management
+- Team Management
+- Target & Performance Management
+- Dashboard System
+- Board Management
+- RBAC System
+
+⚠️ Known Issues:
+- Payment system needs customer data setup
+- Some orphaned sales records need customer linking
+- Data inconsistencies in payment amounts
+- Missing customer data for testing
+
+📊 Current Data:
+- 4 customers in database
+- 6 sales records (some orphaned)
+- 1 customer assignment active
+- Multiple payment types supported
+- Complete project and task management
+
+DEPLOYMENT REQUIREMENTS
+=======================
+
+Server Requirements:
+- Node.js 14+ 
+- MySQL/MariaDB 10.4+
+- Express.js framework
+- JWT token support
+
+Client Requirements:
+- Modern web browser
+- React 19.1.1
+- Axios for API communication
+
+Environment Variables:
+- Database connection string
+- JWT secret key
+- Server port configuration
+
+INTEGRATION POINTS
+==================
+
+External Integrations:
+- Payment processors (wire, cashapp, stripe)
+- Email services for notifications
+- File storage for documents
+- Reporting and analytics tools
+
+Internal Integrations:
+- Lead to customer conversion
+- Customer to project creation
+- Sales to payment processing
+- Task to project linking
+- Performance metrics calculation
+
+FUTURE ENHANCEMENTS
+===================
+
+Potential Features:
+- Mobile application
+- Advanced reporting and analytics
+- Email automation
+- Document management
+- Calendar integration
+- Advanced search functionality
+- Bulk operations
+- API webhooks
+- Real-time notifications
+- Advanced permission customization
+
+MAINTENANCE & MONITORING
+========================
+
+Database Maintenance:
+- Regular data cleanup
+- Performance monitoring
+- Backup procedures
+- Migration management
+
+Application Monitoring:
+- Error logging
+- Performance tracking
+- User activity monitoring
+- Security audit trails
+
+Business Metrics:
+- Sales performance tracking
+- Customer satisfaction metrics
+- Payment collection rates
+- Project completion rates
+- Team performance analytics
+
+================================================================================
+This CRM system provides a comprehensive solution for managing the complete 
+sales and customer relationship lifecycle, from initial lead generation through 
+project delivery and payment processing. The modular architecture allows for 
+easy maintenance and future enhancements while providing robust security and 
+role-based access control.
+================================================================================

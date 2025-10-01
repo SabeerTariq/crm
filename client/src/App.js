@@ -18,6 +18,10 @@ import Targets from './pages/Targets';
 import Performance from './pages/Performance';
 import Payments from './pages/Payments';
 import Assignments from './pages/Assignments';
+import Projects from './pages/Projects';
+import ProjectDetails from './pages/ProjectDetails';
+import Departments from './pages/Departments';
+import TaskManagement from './pages/TaskManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -101,6 +105,31 @@ function App() {
         <Route path="/assignments" element={
           <ProtectedRoute module="assignments">
             <Assignments />
+          </ProtectedRoute>
+        } />
+        <Route path="/projects" element={
+          <ProtectedRoute module="projects">
+            <Projects />
+          </ProtectedRoute>
+        } />
+        <Route path="/projects/:id" element={
+          <ProtectedRoute module="projects">
+            <ProjectDetails />
+          </ProtectedRoute>
+        } />
+        <Route path="/departments" element={
+          <ProtectedRoute module="departments">
+            <Departments />
+          </ProtectedRoute>
+        } />
+        <Route path="/task-management" element={
+          <ProtectedRoute module="tasks">
+            <TaskManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/task-management/board/:boardId" element={
+          <ProtectedRoute module="tasks">
+            <TaskManagement />
           </ProtectedRoute>
         } />
       </Routes>
