@@ -699,7 +699,7 @@ export default function Sales() {
         </div>
 
         {/* Search and Filters Section */}
-        <div style={{ 
+          <div style={{
           backgroundColor: '#ffffff', 
           borderRadius: '12px', 
           padding: '20px', 
@@ -726,7 +726,7 @@ export default function Sales() {
                     width: '100%',
                     padding: '12px 16px 12px 44px',
                     border: '1px solid #d1d5db',
-                    borderRadius: '8px',
+            borderRadius: '8px',
                     fontSize: '14px',
                     backgroundColor: '#ffffff',
                     transition: 'border-color 0.2s ease'
@@ -796,7 +796,7 @@ export default function Sales() {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '16px',
-              padding: '20px',
+            padding: '20px',
               backgroundColor: '#f8fafc',
               borderRadius: '8px',
               border: '1px solid #e5e7eb'
@@ -1012,7 +1012,7 @@ export default function Sales() {
               }}>
                 <h3 style={{ margin: 0, color: '#1f2937', fontSize: '18px', fontWeight: '600' }}>
                   {editingSale ? 'Edit Sale' : convertingLead ? 'Convert Lead to Sale' : 'Add New Sale'}
-                </h3>
+            </h3>
                 <button
                   onClick={resetForm}
                   style={{
@@ -1840,7 +1840,7 @@ export default function Sales() {
                 <i className="fas fa-chart-line"></i>
               </div>
               <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: '#374151' }}>
-                No sales found
+                  No sales found
               </h3>
               <p style={{ margin: '0', fontSize: '14px' }}>
                 Get started by creating your first sale
@@ -1862,7 +1862,7 @@ export default function Sales() {
               onMouseLeave={(e) => e.target.style.backgroundColor = '#ffffff'}>
                 
                 {/* Customer */}
-                <div>
+                    <div>
                   <div style={{ 
                     fontWeight: '600', 
                     fontSize: '14px', 
@@ -1870,7 +1870,7 @@ export default function Sales() {
                     marginBottom: '4px'
                   }}>
                     {sale.customer_name}
-                  </div>
+                    </div>
                   <div style={{ 
                     fontSize: '12px', 
                     color: '#6b7280' 
@@ -1881,10 +1881,10 @@ export default function Sales() {
 
                 {/* Services */}
                 <div>
-                  {(() => {
-                    try {
-                      const servicesData = JSON.parse(sale.services);
-                      if (Array.isArray(servicesData)) {
+                    {(() => {
+                      try {
+                        const servicesData = JSON.parse(sale.services);
+                        if (Array.isArray(servicesData)) {
                         return servicesData.map((s, idx) => (
                           <div key={idx} style={{ 
                             backgroundColor: '#f3f4f6', 
@@ -1899,10 +1899,10 @@ export default function Sales() {
                             {s.name}
                           </div>
                         ));
+                        }
+                      } catch (e) {
+                        // If not JSON, return as is
                       }
-                    } catch (e) {
-                      // If not JSON, return as is
-                    }
                     return sale.services ? (
                       <div style={{ 
                         backgroundColor: '#f3f4f6', 
@@ -1918,7 +1918,7 @@ export default function Sales() {
                     ) : (
                       <span style={{ color: '#9ca3af', fontSize: '12px' }}>N/A</span>
                     );
-                  })()}
+                    })()}
                 </div>
 
                 {/* Sale Amount */}
@@ -2005,16 +2005,16 @@ export default function Sales() {
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  {hasPermission('sales', 'update') && (
-                    <button 
-                      onClick={() => editSale(sale)}
-                      style={{
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
+                      {hasPermission('sales', 'update') && (
+                        <button 
+                          onClick={() => editSale(sale)}
+                          style={{
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
                         padding: '6px 12px',
                         borderRadius: '6px',
-                        cursor: 'pointer',
+                            cursor: 'pointer',
                         fontSize: '11px',
                         fontWeight: '600',
                         display: 'flex',
@@ -2032,19 +2032,19 @@ export default function Sales() {
                       }}
                     >
                       <i className="fas fa-edit"></i>
-                      Edit
-                    </button>
-                  )}
-                  {hasPermission('sales', 'delete') && (
-                    <button 
-                      onClick={() => deleteSale(sale.id)}
-                      style={{
-                        backgroundColor: '#dc2626',
-                        color: 'white',
-                        border: 'none',
+                          Edit
+                        </button>
+                      )}
+                      {hasPermission('sales', 'delete') && (
+                        <button 
+                          onClick={() => deleteSale(sale.id)}
+                          style={{
+                            backgroundColor: '#dc2626',
+                            color: 'white',
+                            border: 'none',
                         padding: '6px 12px',
                         borderRadius: '6px',
-                        cursor: 'pointer',
+                            cursor: 'pointer',
                         fontSize: '11px',
                         fontWeight: '600',
                         display: 'flex',
@@ -2062,14 +2062,14 @@ export default function Sales() {
                       }}
                     >
                       <i className="fas fa-trash"></i>
-                      Delete
-                    </button>
-                  )}
-                </div>
+                          Delete
+                        </button>
+                      )}
+                    </div>
               </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+      </div>
     </PageLayout>
   );
 }

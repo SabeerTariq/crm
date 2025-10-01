@@ -6,14 +6,16 @@
 .main-content {
   margin-left: var(--sidebar-width, 280px);
   padding: 20px;
-  width: 100%;
+  width: calc(100% - var(--sidebar-width, 280px));
   min-height: 100vh;
   transition: margin-left 0.3s ease;
+  box-sizing: border-box;
 }
 
 /* Mobile responsive */
 @media (max-width: 768px) {
   .main-content {
     margin-left: var(--sidebar-width, 0px);
+    width: 100%;
   }
 }

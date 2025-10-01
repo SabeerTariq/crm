@@ -453,6 +453,120 @@
   background: white;
 }
 
+/* Submenu Styles */
+.menu-chevron {
+  font-size: 12px;
+  transition: transform 0.3s ease;
+  margin-left: auto;
+}
+
+.submenu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 3px solid #694bfb;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 300px;
+  }
+}
+
+.submenu-item {
+  margin: 0;
+}
+
+.submenu-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 12px 40px;
+  color: #cccccc;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 400;
+  transition: all 0.3s ease;
+  position: relative;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+
+.submenu-link:hover {
+  background: rgba(105, 75, 251, 0.15);
+  color: #ffffff;
+  padding-left: 45px;
+}
+
+.submenu-link.active {
+  background: rgba(105, 75, 251, 0.3);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.submenu-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #694bfb;
+  border-radius: 0 2px 2px 0;
+}
+
+.submenu-icon {
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+  color: #694bfb;
+  transition: all 0.3s ease;
+}
+
+.submenu-link:hover .submenu-icon {
+  color: #ffffff;
+}
+
+.submenu-link.active .submenu-icon {
+  color: #ffffff;
+}
+
+.default-badge {
+  background: #10b981;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.submenu-item.loading {
+  padding: 12px 20px 12px 40px;
+  color: #999999;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* Collapsed sidebar submenu handling */
+.sidebar.collapsed .submenu {
+  display: none;
+}
+
+.sidebar.collapsed .menu-chevron {
+  display: none;
+}
+
 /* Focus states for accessibility */
 .menu-link:focus {
   outline: 2px solid #694bfb;

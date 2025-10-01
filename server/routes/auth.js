@@ -53,8 +53,21 @@ router.post('/login', (req, res) => {
       role_description: user.role_description // Role description
     };
     
-    const token = jwt.sign({ id: user.id, role_id: user.role_id }, process.env.JWT_SECRET);
+    const token = jwt.sign(
+      { id: user.id, role_id: user.role_id }, 
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' } // Token expires in 24 hours
+    );
     res.json({ token, user: userObj });
+  });
+});
+
+// Health check endpoint
+router.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 

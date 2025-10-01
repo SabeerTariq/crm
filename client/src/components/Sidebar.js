@@ -1,6 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { usePermissions } from '../hooks/usePermissions';
+import { useUserBoards } from '../hooks/useUserBoards';
 import { hasLeadScraperRole, hasSalesRole, hasUpsellerRole, isAdmin } from '../utils/roleUtils';
 import { getUserName, getUserRole } from '../utils/userUtils';
 import './Sidebar.css';
@@ -9,9 +10,11 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { hasPermission, loading } = usePermissions();
+  const { boards: userBoards, loading: boardsLoading } = useUserBoards();
   const [isOpen, setIsOpen] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState({});
 
   const logout = () => {
     localStorage.clear();
@@ -37,6 +40,17 @@ export default function Sidebar() {
       setIsOpen(false);
     }
     // On desktop, do nothing - sidebar should stay in its current state
+  };
+
+  const toggleSubmenu = (menuKey) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuKey]: !prev[menuKey]
+    }));
+  };
+
+  const isSubmenuExpanded = (menuKey) => {
+    return expandedMenus[menuKey] || false;
   };
 
   // Handle window resize and initial state
@@ -260,6 +274,80 @@ export default function Sidebar() {
               <i className="fas fa-link menu-icon"></i>
               {!isCollapsed && <span className="menu-text">Customer Assignments</span>}
             </Link>
+          </li>
+        )}
+        {hasPermission('projects', 'view') && (
+          <li className={`menu-item ${isActive('/projects') ? 'active' : ''}`}>
+            <Link to="/projects" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-project-diagram menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Projects</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('departments', 'view') && (
+          <li className={`menu-item ${isActive('/departments') ? 'active' : ''}`}>
+            <Link to="/departments" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-building menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Departments</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('tasks', 'view') && (
+          <li className={`menu-item ${isActive('/task-management') || location.pathname.startsWith('/task-management/board/') ? 'active' : ''}`}>
+            <div 
+              className="menu-link" 
+              onClick={() => {
+                if (!isCollapsed) {
+                  toggleSubmenu('taskManagement');
+                } else {
+                  // If collapsed, navigate to main task management page
+                  navigate('/task-management');
+                  handleMenuClick();
+                }
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <i className="fas fa-tasks menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Task Management</span>}
+              {!isCollapsed && (
+                <i className={`fas fa-chevron-${isSubmenuExpanded('taskManagement') ? 'up' : 'down'} menu-chevron`}></i>
+              )}
+            </div>
+            {!isCollapsed && isSubmenuExpanded('taskManagement') && (
+              <ul className="submenu">
+                <li className="submenu-item">
+                  <Link 
+                    to="/task-management" 
+                    className={`submenu-link ${isActive('/task-management') && !location.pathname.startsWith('/task-management/board/') ? 'active' : ''}`}
+                    onClick={handleMenuClick}
+                  >
+                    <i className="fas fa-th-large submenu-icon"></i>
+                    <span>All Boards</span>
+                  </Link>
+                </li>
+                {boardsLoading ? (
+                  <li className="submenu-item loading">
+                    <span>Loading boards...</span>
+                  </li>
+                ) : (
+                  userBoards.map(board => (
+                    <li key={board.id} className="submenu-item">
+                      <Link 
+                        to={`/task-management/board/${board.id}`}
+                        className={`submenu-link ${location.pathname === `/task-management/board/${board.id}` ? 'active' : ''}`}
+                        onClick={handleMenuClick}
+                      >
+                        <i className="fas fa-columns submenu-icon"></i>
+                        <span>{board.board_name}</span>
+                        {board.is_default && (
+                          <span className="default-badge">Default</span>
+                        )}
+                      </Link>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
           </li>
         )}
         {(() => {

@@ -94,7 +94,7 @@ export default function Customers() {
   if (permissionsLoading || loading) {
     return (
       <PageLayout>
-        <div>Loading...</div>
+          <div>Loading...</div>
       </PageLayout>
     );
   }
@@ -103,16 +103,16 @@ export default function Customers() {
   if (!hasPermission('customers', 'read')) {
     return (
       <PageLayout>
-        <div style={{ 
-          padding: '20px', 
-          backgroundColor: '#fef2f2', 
-          border: '1px solid #fecaca', 
-          borderRadius: '8px',
-          color: '#dc2626'
-        }}>
-          <h3>Access Denied</h3>
-          <p>You do not have permission to view customers.</p>
-        </div>
+          <div style={{ 
+            padding: '20px', 
+            backgroundColor: '#fef2f2', 
+            border: '1px solid #fecaca', 
+            borderRadius: '8px',
+            color: '#dc2626'
+          }}>
+            <h3>Access Denied</h3>
+            <p>You do not have permission to view customers.</p>
+          </div>
       </PageLayout>
     );
   }
@@ -312,7 +312,7 @@ export default function Customers() {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '16px',
-              padding: '20px',
+            padding: '20px', 
               backgroundColor: '#f8fafc',
               borderRadius: '8px',
               border: '1px solid #e5e7eb'
@@ -509,8 +509,8 @@ export default function Customers() {
                   : 'Customers will appear here when leads are converted'
                 }
               </p>
-            </div>
-          ) : (
+          </div>
+        ) : (
             filteredCustomers.map((customer, index) => (
               <div key={customer.id} style={{
                 display: 'grid',
@@ -622,15 +622,15 @@ export default function Customers() {
 
                 {/* Actions */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Link 
+                    <Link 
                     to={`/customers/${customer.id}/sales-profile`}
-                    style={{
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      textDecoration: 'none',
+                      style={{
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        textDecoration: 'none',
                       padding: '8px 16px',
                       borderRadius: '6px',
-                      fontSize: '12px',
+                        fontSize: '12px',
                       fontWeight: '600',
                       display: 'flex',
                       alignItems: 'center',
@@ -648,12 +648,12 @@ export default function Customers() {
                   >
                     <i className="fas fa-chart-line"></i>
                     View Profile
-                  </Link>
+                    </Link>
                 </div>
               </div>
             ))
-          )}
-        </div>
+        )}
+      </div>
     </PageLayout>
   );
 }

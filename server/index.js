@@ -19,6 +19,11 @@ const upsellerRoutes = require('./routes/upseller');
 const upsellerTeamRoutes = require('./routes/upsellerTeams');
 const upsellerTargetRoutes = require('./routes/upsellerTargets');
 const upsellerPerformanceRoutes = require('./routes/upsellerPerformance');
+const projectRoutes = require('./routes/projects');
+const departmentRoutes = require('./routes/departments');
+const taskRoutes = require('./routes/tasks');
+const statusRoutes = require('./routes/statuses');
+const boardRoutes = require('./routes/boards');
 
 const app = express();
 app.use(cors());
@@ -42,6 +47,11 @@ app.use('/api/upseller', upsellerRoutes);
 app.use('/api/upseller-teams', upsellerTeamRoutes);
 app.use('/api/upseller-targets', upsellerTargetRoutes);
 app.use('/api/upseller-performance', upsellerPerformanceRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/statuses', statusRoutes);
+app.use('/api/boards', boardRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

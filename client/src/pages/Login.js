@@ -33,7 +33,18 @@ export default function Login() {
       window.location.href = redirectUrl;
     } catch (error) {
       console.error('Login failed:', error);
-      alert('Login failed. Please check your credentials.');
+      
+      // Provide more specific error messages
+      if (error.response?.status === 400) {
+        const message = error.response.data?.message || 'Invalid credentials';
+        alert(`Login failed: ${message}`);
+      } else if (error.response?.status === 500) {
+        alert('Server error. Please try again later.');
+      } else if (error.code === 'ECONNREFUSED' || error.code === 'NETWORK_ERROR') {
+        alert('Cannot connect to server. Please check your connection.');
+      } else {
+        alert('Login failed. Please check your credentials.');
+      }
     }
   };
 
