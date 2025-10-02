@@ -7,11 +7,10 @@ class CustomerAssignmentService {
    * Assign a customer to an upseller
    * @param {number} customerId - Customer ID
    * @param {number} upsellerId - Upseller user ID
-   * @param {string} assignmentType - Type of assignment (territory, product, manual, performance)
    * @param {string} notes - Assignment notes
    * @param {number} createdBy - User ID who created the assignment
    */
-  static async assignCustomer(customerId, upsellerId, assignmentType = 'manual', notes = null, createdBy) {
+  static async assignCustomer(customerId, upsellerId, notes = null, createdBy) {
     return new Promise((resolve, reject) => {
       // Start transaction
       db.beginTransaction((err) => {
@@ -30,11 +29,11 @@ class CustomerAssignmentService {
           // Create new assignment
           const insertSql = `
             INSERT INTO customer_assignments 
-            (customer_id, upseller_id, assignment_type, notes, created_by)
-            VALUES (?, ?, ?, ?, ?)
+            (customer_id, upseller_id, notes, created_by)
+            VALUES (?, ?, ?, ?)
           `;
           
-          db.query(insertSql, [customerId, upsellerId, assignmentType, notes, createdBy], (err, result) => {
+          db.query(insertSql, [customerId, upsellerId, notes, createdBy], (err, result) => {
             if (err) return db.rollback(() => reject(err));
             
             db.commit((err) => {
@@ -143,10 +142,6 @@ class CustomerAssignmentService {
         sql += ' AND ca.status = "active"';
       }
       
-      if (filters.assignment_type) {
-        sql += ' AND ca.assignment_type = ?';
-        params.push(filters.assignment_type);
-      }
       
       if (filters.upseller_id) {
         sql += ' AND ca.upseller_id = ?';
@@ -246,8 +241,8 @@ class CustomerAssignmentService {
             // Create new assignment
             const insertSql = `
               INSERT INTO customer_assignments 
-              (customer_id, upseller_id, assignment_type, notes, created_by)
-              VALUES (?, ?, 'manual', ?, ?)
+              (customer_id, upseller_id, notes, created_by)
+              VALUES (?, ?, ?, ?)
             `;
             
             console.log('Creating new assignment:', { customerId, newUpsellerId, notes, createdBy });
@@ -414,7 +409,6 @@ class CustomerAssignmentService {
           c.last_payment_date,
           ca.id as assignment_id,
           ca.upseller_id,
-          ca.assignment_type,
           ca.status as assignment_status,
           ca.assigned_date,
           ca.notes as assignment_notes,

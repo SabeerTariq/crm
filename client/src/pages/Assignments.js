@@ -22,7 +22,6 @@ export default function Assignments() {
   const [assignForm, setAssignForm] = useState({
     customer_id: '',
     upseller_id: '',
-    assignment_type: 'manual',
     notes: ''
   });
 
@@ -73,7 +72,6 @@ export default function Assignments() {
           last_payment_date: assignment.last_payment_date,
           assigned_to: assignment.upseller_name,
           assignment_id: assignment.id,
-          assignment_type: assignment.assignment_type,
           status: assignment.status,
           assigned_date: assignment.assigned_date
         }));
@@ -118,7 +116,6 @@ export default function Assignments() {
           last_payment_date: customer.last_payment_date,
           assigned_to: customer.upseller_name,
           assignment_id: customer.assignment_id,
-          assignment_type: customer.assignment_type,
           status: customer.assignment_status || 'unassigned',
           assigned_date: customer.assigned_date
         }));
@@ -134,7 +131,7 @@ export default function Assignments() {
     }
   };
 
-  const handleAssignCustomer = async (customerId, upsellerId, assignmentType = 'manual', notes = '') => {
+  const handleAssignCustomer = async (customerId, upsellerId, notes = '') => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/assignments/assign', {
@@ -146,7 +143,6 @@ export default function Assignments() {
         body: JSON.stringify({
           customer_id: customerId,
           upseller_id: upsellerId,
-          assignment_type: assignmentType,
           notes: notes
         })
       });
@@ -226,7 +222,6 @@ export default function Assignments() {
     setAssignForm({
       customer_id: customer.id,
       upseller_id: '', // Let them choose a new upseller
-      assignment_type: 'manual',
       notes: ''
     });
     setShowAssignModal(true);
@@ -349,7 +344,6 @@ export default function Assignments() {
                 <th>Remaining</th>
                 <th>Last Payment</th>
                 {!isUpseller && <th>Assigned To</th>}
-                {!isUpseller && <th>Assignment Type</th>}
                 {!isUpseller && <th>Status</th>}
                 <th>Actions</th>
               </tr>
@@ -384,15 +378,6 @@ export default function Assignments() {
                   )}
                   {!isUpseller && (
                     <td>
-                      {customer.assignment_type && (
-                        <span className={`assignment-type ${customer.assignment_type}`}>
-                          {customer.assignment_type}
-                        </span>
-                      )}
-                    </td>
-                  )}
-                  {!isUpseller && (
-                    <td>
                       {customer.status && (
                         <span className={`status ${customer.status}`}>
                           {customer.status}
@@ -412,7 +397,6 @@ export default function Assignments() {
                                 setAssignForm({
                                   customer_id: customer.id,
                                   upseller_id: '',
-                                  assignment_type: 'manual',
                                   notes: ''
                                 });
                                 setShowAssignModal(true);
@@ -451,7 +435,7 @@ export default function Assignments() {
               if (selectedCustomer.assigned_to) {
                 handleTransferCustomer(assignForm.customer_id, assignForm.upseller_id, assignForm.notes);
               } else {
-                handleAssignCustomer(assignForm.customer_id, assignForm.upseller_id, assignForm.assignment_type, assignForm.notes);
+                handleAssignCustomer(assignForm.customer_id, assignForm.upseller_id, assignForm.notes);
               }
             }}>
               <div className="form-group">
@@ -480,21 +464,6 @@ export default function Assignments() {
                   ))}
                 </select>
               </div>
-              
-              {!selectedCustomer.assigned_to && (
-                <div className="form-group">
-                  <label>Assignment Type:</label>
-                  <select
-                    value={assignForm.assignment_type}
-                    onChange={(e) => setAssignForm({...assignForm, assignment_type: e.target.value})}
-                  >
-                    <option value="manual">Manual</option>
-                    <option value="territory">Territory</option>
-                    <option value="product">Product</option>
-                    <option value="performance">Performance</option>
-                  </select>
-                </div>
-              )}
               
               <div className="form-group">
                 <label>Notes:</label>

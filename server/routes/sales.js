@@ -7,6 +7,7 @@ const StatsService = require('../services/statsService');
 const PaymentService = require('../services/paymentService');
 const InvoiceService = require('../services/invoiceService');
 const CustomerSalesService = require('../services/customerSalesService');
+const salesUpload = require('../middleware/salesUpload');
 
 // Get Sales
 router.get('/', auth, authorize('sales','read'), (req, res) => {
@@ -97,7 +98,7 @@ router.get('/', auth, authorize('sales','read'), (req, res) => {
 });
 
 // Add Sale
-router.post('/', auth, authorize('sales','create'), (req, res) => {
+router.post('/', auth, authorize('sales','create'), salesUpload.single('agreement'), (req, res) => {
   const { 
     customer_id, 
     customer_name, 
@@ -121,6 +122,18 @@ router.post('/', auth, authorize('sales','create'), (req, res) => {
     payment_start_date
   } = req.body;
   
+  // Handle agreement file
+  let agreementData = {};
+  if (req.file) {
+    agreementData = {
+      agreement_file_name: req.file.originalname,
+      agreement_file_path: req.file.path,
+      agreement_file_size: req.file.size,
+      agreement_file_type: req.file.mimetype,
+      agreement_uploaded_at: new Date()
+    };
+  }
+  
   // Calculate values
   const gross_value = unit_price;
   const net_value = gross_value;
@@ -142,15 +155,21 @@ router.post('/', auth, authorize('sales','create'), (req, res) => {
       customer_id, customer_name, customer_email, customer_phone, 
       unit_price, gross_value, net_value, cash_in, remaining, 
       notes, services, service_details, payment_type, 
-      payment_source, payment_company, brand, created_by, payment_status, next_payment_date
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      payment_source, payment_company, brand, created_by, payment_status, next_payment_date,
+      agreement_file_name, agreement_file_path, agreement_file_size, agreement_file_type, agreement_uploaded_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   
   const params = [
     customer_id || null, customer_name, customer_email, customer_phone,
     unit_price, gross_value, net_value, cash_in, remaining, 
     notes, services, service_details, payment_type,
-    payment_source, payment_company, brand, req.user.id, payment_status, next_payment_date
+    payment_source, payment_company, brand, req.user.id, payment_status, next_payment_date,
+    agreementData.agreement_file_name || null,
+    agreementData.agreement_file_path || null,
+    agreementData.agreement_file_size || null,
+    agreementData.agreement_file_type || null,
+    agreementData.agreement_uploaded_at || null
   ];
   
   db.query(sql, params, async (err, result) => {
@@ -492,6 +511,55 @@ router.get('/leads', auth, authorize('sales','create'), (req, res) => {
   db.query(sql, params, (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
+  });
+});
+
+// Download agreement file
+router.get('/:id/agreement', auth, authorize('sales', 'read'), (req, res) => {
+  const saleId = req.params.id;
+  
+  const sql = 'SELECT agreement_file_name, agreement_file_path FROM sales WHERE id = ?';
+  
+  db.query(sql, [saleId], (err, results) => {
+    if (err) return res.status(500).json(err);
+    
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'Sale not found' });
+    }
+    
+    const sale = results[0];
+    
+    if (!sale.agreement_file_path) {
+      return res.status(404).json({ message: 'No agreement file found for this sale' });
+    }
+    
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Convert relative path to absolute path
+    const filePath = path.isAbsolute(sale.agreement_file_path) 
+      ? sale.agreement_file_path 
+      : path.join(__dirname, '..', sale.agreement_file_path);
+    
+    const normalizedPath = path.normalize(filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(normalizedPath)) {
+      return res.status(404).json({ message: 'Agreement file not found on server' });
+    }
+    
+    // Set appropriate headers
+    res.setHeader('Content-Disposition', `attachment; filename="${sale.agreement_file_name}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    
+    // Stream the file
+    const fileStream = fs.createReadStream(normalizedPath);
+    fileStream.pipe(res);
+    
+    fileStream.on('error', (error) => {
+      console.error('Error streaming file:', error);
+      res.status(500).json({ message: 'Error downloading file' });
+    });
   });
 });
 
