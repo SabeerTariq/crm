@@ -22,6 +22,7 @@ import Projects from './pages/Projects';
 import ProjectDetails from './pages/ProjectDetails';
 import Departments from './pages/Departments';
 import TaskManagement from './pages/TaskManagement';
+import Calendar from './pages/Calendar';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -130,6 +131,11 @@ function App() {
         <Route path="/task-management/board/:boardId" element={
           <ProtectedRoute module="tasks">
             <TaskManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/calendar" element={
+          <ProtectedRoute module="reminders">
+            <Calendar />
           </ProtectedRoute>
         } />
       </Routes>

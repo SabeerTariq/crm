@@ -213,11 +213,16 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
     // Update customer totals
     if (customerId) {
       try {
+        console.log(`📊 Updating customer totals for new sale - Customer ID: ${customerId}, Sale ID: ${saleId}`);
         await CustomerSalesService.updateCustomerTotals(customerId);
+        console.log(`✅ Customer totals updated successfully for customer ${customerId}`);
       } catch (customerError) {
-        console.error('Error updating customer totals:', customerError);
+        console.error('❌ ERROR updating customer totals:', customerError);
+        console.error('Customer ID:', customerId, 'Sale ID:', saleId);
         // Continue with sale creation even if customer totals update fails
       }
+    } else {
+      console.warn('⚠️ No customer ID provided, skipping customer totals update');
     }
     
     // Auto-generate invoice for the sale
@@ -246,10 +251,22 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
           
           // Create customer from lead
           const customerSql = `
-            INSERT INTO customers (name, email, phone, source, notes, assigned_to, created_by, converted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO customers (name, company_name, email, phone, city, state, source, service_required, notes, assigned_to, created_by, converted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
           `;
-          const customerParams = [lead.name, lead.email, lead.phone, lead.source, lead.notes, req.user.id, req.user.id];
+          const customerParams = [
+            lead.name, 
+            lead.company_name, 
+            lead.email, 
+            lead.phone, 
+            lead.city, 
+            lead.state, 
+            lead.source, 
+            lead.service_required, 
+            lead.notes, 
+            req.user.id, 
+            req.user.id
+          ];
           
           db.query(customerSql, customerParams, async (err, customerResult) => {
             if (err) return res.status(500).json({ message: 'Error creating customer' });

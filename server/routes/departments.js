@@ -8,7 +8,7 @@ const DepartmentService = require('../services/departmentService');
 router.get('/', auth, authorize('departments', 'read'), async (req, res) => {
   try {
     const departments = await DepartmentService.getAllDepartments();
-    res.json(departments);
+    res.json({ departments });
   } catch (error) {
     console.error('Error fetching departments:', error);
     res.status(500).json({ message: 'Error fetching departments' });

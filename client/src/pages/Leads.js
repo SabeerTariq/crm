@@ -28,7 +28,15 @@ export default function Leads() {
   });
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
+  const [schedulingLead, setSchedulingLead] = useState(null);
+  const [viewingLead, setViewingLead] = useState(null);
+  const [notesLead, setNotesLead] = useState(null);
+  const [leadNotes, setLeadNotes] = useState([]);
+  const [newNote, setNewNote] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -42,10 +50,96 @@ export default function Leads() {
     service_required: '',
     notes: '',
   });
+  const [scheduleData, setScheduleData] = useState({
+    schedule_date: '',
+    schedule_time: ''
+  });
   const { hasPermission, loading: permissionsLoading } = usePermissions();
+
+  // Helper function to check if current user has scheduled this lead
+  const hasUserScheduledLead = (lead) => {
+    if (!lead.scheduled_by_names) return false;
+    const currentUserName = localStorage.getItem('userName');
+    return lead.scheduled_by_names.includes(currentUserName);
+  };
 
   const handleFormChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleScheduleFormChange = (e) => {
+    setScheduleData({ ...scheduleData, [e.target.name]: e.target.value });
+  };
+
+  const openScheduleForm = (lead) => {
+    setSchedulingLead(lead);
+    // If user already has a schedule, populate with existing data
+    if (hasUserScheduledLead(lead)) {
+      // Parse the schedule data from the lead
+      const scheduleDates = lead.schedule_dates ? lead.schedule_dates.split(', ') : [];
+      const scheduleTimes = lead.schedule_times ? lead.schedule_times.split(', ') : [];
+      const scheduledByNames = lead.scheduled_by_names ? lead.scheduled_by_names.split(', ') : [];
+      
+      // Find the current user's schedule index
+      const currentUserName = localStorage.getItem('userName');
+      const userScheduleIndex = scheduledByNames.findIndex(name => name === currentUserName);
+      
+      setScheduleData({
+        schedule_date: userScheduleIndex >= 0 ? scheduleDates[userScheduleIndex] : '',
+        schedule_time: userScheduleIndex >= 0 ? scheduleTimes[userScheduleIndex] : ''
+      });
+    } else {
+      setScheduleData({
+        schedule_date: '',
+        schedule_time: ''
+      });
+    }
+    setShowScheduleForm(true);
+  };
+
+  const closeScheduleForm = () => {
+    setShowScheduleForm(false);
+    setSchedulingLead(null);
+    setScheduleData({
+      schedule_date: '',
+      schedule_time: ''
+    });
+  };
+
+  const closeViewModal = () => {
+    setShowViewModal(false);
+    setViewingLead(null);
+  };
+
+  const handleScheduleLead = async (e) => {
+    e.preventDefault();
+    if (!scheduleData.schedule_date) {
+      alert('Schedule date is required');
+      return;
+    }
+
+    try {
+      await api.post(`/leads/${schedulingLead.id}/schedule`, scheduleData);
+      alert('Lead scheduled successfully!');
+      closeScheduleForm();
+      loadLeads(); // Refresh the leads list
+    } catch (error) {
+      console.error('Error scheduling lead:', error);
+      alert('Error scheduling lead');
+    }
+  };
+
+  const handleCancelSchedule = async (leadId) => {
+    if (!window.confirm('Are you sure you want to cancel this schedule?')) return;
+
+    try {
+      await api.delete(`/leads/${leadId}/schedule`);
+      alert('Schedule cancelled successfully!');
+      loadLeads(); // Refresh the leads list
+    } catch (error) {
+      console.error('Error cancelling schedule:', error);
+      alert('Error cancelling schedule');
+    }
   };
 
   const submitLead = async (e) => {
@@ -90,6 +184,83 @@ export default function Leads() {
       notes: lead.notes || '',
     });
     setShowEditForm(true);
+  };
+
+  const handleViewLead = async (lead) => {
+    setViewingLead(lead);
+    setShowViewModal(true);
+    await fetchLeadNotes(lead.id);
+  };
+
+  const handleAddNote = async (lead) => {
+    setNotesLead(lead);
+    setShowNotesModal(true);
+    await fetchLeadNotes(lead.id);
+  };
+
+  const fetchLeadNotes = async (leadId) => {
+    try {
+      const response = await api.get(`/leads/${leadId}/notes`);
+      setLeadNotes(response.data);
+    } catch (error) {
+      console.error('Error fetching lead notes:', error);
+      setLeadNotes([]);
+    }
+  };
+
+  const handleAddNewNote = async (e) => {
+    e.preventDefault();
+    if (!newNote.trim()) {
+      alert('Please enter a note');
+      return;
+    }
+
+    try {
+      const response = await api.post(`/leads/${notesLead.id}/notes`, {
+        note: newNote.trim()
+      });
+      
+      setLeadNotes([response.data, ...leadNotes]);
+      setNewNote('');
+      alert('Note added successfully');
+    } catch (error) {
+      console.error('Error adding note:', error);
+      alert('Error adding note');
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm('Are you sure you want to delete this note?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/leads/notes/${noteId}`);
+      setLeadNotes(leadNotes.filter(note => note.id !== noteId));
+      alert('Note deleted successfully');
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      alert('Error deleting note');
+    }
+  };
+
+  const closeNotesModal = () => {
+    setShowNotesModal(false);
+    setNotesLead(null);
+    setLeadNotes([]);
+    setNewNote('');
+  };
+
+  const inputStyle = {
+    padding: '12px 16px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '8px',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'border-color 0.2s ease',
+    backgroundColor: '#ffffff',
+    width: '100%',
+    boxSizing: 'border-box'
   };
 
   const handleUpdateLead = async (e) => {
@@ -970,6 +1141,765 @@ export default function Leads() {
           </div>
         )}
 
+        {/* Schedule Lead Modal */}
+        {showScheduleForm && hasPermission('leads', 'update') && (
+          <div 
+            onClick={closeScheduleForm}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+          >
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '500px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={closeScheduleForm}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '6px',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+              >
+                ×
+              </button>
+
+              <h3 style={{ 
+                margin: '0 0 24px 0', 
+                color: '#1f2937',
+                fontSize: '24px',
+                fontWeight: '600',
+                paddingRight: '40px'
+              }}>
+                {schedulingLead?.scheduled_by ? 'Reschedule Lead' : 'Schedule Lead'}
+              </h3>
+              
+              <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#374151', fontSize: '16px' }}>
+                  {schedulingLead?.name}
+                </h4>
+                <p style={{ margin: '0', color: '#6b7280', fontSize: '14px' }}>
+                  {schedulingLead?.company_name && `${schedulingLead.company_name} • `}
+                  {schedulingLead?.phone && `${schedulingLead.phone} • `}
+                  {schedulingLead?.email}
+                </p>
+              </div>
+              
+              <form onSubmit={handleScheduleLead} style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '20px' 
+              }}>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: '#374151' 
+                  }}>
+                    Schedule Date *
+                  </label>
+                  <input 
+                    type="date" 
+                    name="schedule_date" 
+                    value={scheduleData.schedule_date} 
+                    onChange={handleScheduleFormChange} 
+                    required 
+                    style={inputStyle}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: '#374151' 
+                  }}>
+                    Schedule Time (Optional)
+                  </label>
+                  <input 
+                    type="time" 
+                    name="schedule_time" 
+                    value={scheduleData.schedule_time} 
+                    onChange={handleScheduleFormChange} 
+                    style={inputStyle}
+                  />
+                </div>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '12px', 
+                  justifyContent: 'flex-end',
+                  marginTop: '20px'
+                }}>
+                  <button 
+                    type="button"
+                    onClick={closeScheduleForm}
+                    style={{
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      transition: 'background-color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    style={{
+                      backgroundColor: '#8b5cf6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      transition: 'background-color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#7c3aed'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#8b5cf6'}
+                  >
+                    {schedulingLead?.scheduled_by ? 'Reschedule' : 'Schedule'} Lead
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* View Lead Modal */}
+        {showViewModal && viewingLead && (
+          <div 
+            onClick={closeViewModal}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                padding: '32px',
+                width: '90%',
+                maxWidth: '600px',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '24px',
+                paddingBottom: '16px',
+                borderBottom: '2px solid #f3f4f6'
+              }}>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  margin: 0
+                }}>
+                  Lead Details
+                </h2>
+                <button 
+                  onClick={closeViewModal}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '24px',
+                marginBottom: '24px'
+              }}>
+                {/* Basic Information */}
+                <div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '16px',
+                    paddingBottom: '8px',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Basic Information
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Name</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937', fontWeight: '500' }}>{viewingLead.name || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Company</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.company_name || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Email</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.email || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Phone</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.phone || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Location & Source */}
+                <div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '16px',
+                    paddingBottom: '8px',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Location & Source
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>City</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.city || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>State</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.state || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Source</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.source || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Created By</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.created_by_name || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Service Required */}
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '16px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  Service Required
+                </h3>
+                <div style={{
+                  backgroundColor: '#f9fafb',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  color: '#1f2937',
+                  lineHeight: '1.5',
+                  minHeight: '60px'
+                }}>
+                  {viewingLead.service_required || 'No service requirements specified'}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '16px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  Notes
+                </h3>
+                <div style={{
+                  backgroundColor: '#f9fafb',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  color: '#1f2937',
+                  lineHeight: '1.5',
+                  minHeight: '60px'
+                }}>
+                  {viewingLead.notes || 'No notes available'}
+                </div>
+              </div>
+
+              {/* Schedule Information */}
+              {!hasLeadScraperRole() && (
+                <div style={{ marginBottom: '24px' }}>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '16px',
+                    paddingBottom: '8px',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    Schedule Information
+                  </h3>
+                  <div style={{
+                    backgroundColor: '#f9fafb',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    color: '#1f2937',
+                    lineHeight: '1.5'
+                  }}>
+                    {viewingLead.scheduled_by_names ? (
+                      <div>
+                        <div style={{ marginBottom: '8px' }}>
+                          <strong>Scheduled by:</strong> {viewingLead.scheduled_by_names}
+                        </div>
+                        {viewingLead.schedule_dates && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <strong>Schedule dates:</strong> {viewingLead.schedule_dates}
+                          </div>
+                        )}
+                        {viewingLead.schedule_times && (
+                          <div>
+                            <strong>Schedule times:</strong> {viewingLead.schedule_times}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      'No schedules available'
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* User Notes */}
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '16px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  User Notes ({leadNotes.length})
+                </h3>
+                
+                {leadNotes.length === 0 ? (
+                  <div style={{
+                    backgroundColor: '#f9fafb',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    color: '#6b7280',
+                    textAlign: 'center'
+                  }}>
+                    No user notes yet
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {leadNotes.map((note) => (
+                      <div key={note.id} style={{
+                        backgroundColor: '#f9fafb',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '8px'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              color: '#1f2937',
+                              marginBottom: '2px'
+                            }}>
+                              {note.user_name}
+                            </div>
+                            <div style={{
+                              fontSize: '11px',
+                              color: '#6b7280'
+                            }}>
+                              {new Date(note.created_at).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#374151',
+                          lineHeight: '1.4',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {note.note}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Metadata */}
+              <div style={{
+                backgroundColor: '#f9fafb',
+                padding: '16px',
+                borderRadius: '8px',
+                borderTop: '1px solid #e5e7eb'
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '16px',
+                  fontSize: '14px',
+                  color: '#6b7280'
+                }}>
+                  <div>
+                    <strong>Created:</strong> {viewingLead.created_at ? new Date(viewingLead.created_at).toLocaleString() : 'N/A'}
+                  </div>
+                  <div>
+                    <strong>Last Updated:</strong> {viewingLead.updated_at ? new Date(viewingLead.updated_at).toLocaleString() : 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginTop: '24px',
+                paddingTop: '16px',
+                borderTop: '1px solid #e5e7eb'
+              }}>
+                <button 
+                  onClick={closeViewModal}
+                  style={{
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
+                >
+                  Close
+                </button>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* Notes Modal */}
+        {showNotesModal && notesLead && (
+          <div 
+            onClick={closeNotesModal}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                padding: '32px',
+                width: '90%',
+                maxWidth: '600px',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '24px',
+                paddingBottom: '16px',
+                borderBottom: '2px solid #f3f4f6'
+              }}>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  margin: 0
+                }}>
+                  Notes for {notesLead.name}
+                </h2>
+                <button 
+                  onClick={closeNotesModal}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Add New Note Form */}
+              {hasPermission('lead_notes', 'create') && (
+                <form onSubmit={handleAddNewNote} style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '8px', 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: '#374151' 
+                    }}>
+                      Add New Note
+                    </label>
+                    <textarea 
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      placeholder="Enter your note here..."
+                      rows={4}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        resize: 'vertical',
+                        minHeight: '100px',
+                        fontFamily: 'inherit'
+                      }}
+                    />
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '12px'
+                  }}>
+                    <button 
+                      type="button"
+                      onClick={closeNotesModal}
+                      style={{
+                        backgroundColor: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        padding: '12px 24px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      style={{
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        padding: '12px 24px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#d97706'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#f59e0b'}
+                    >
+                      Add Note
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Notes List */}
+              <div>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '16px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  Previous Notes ({leadNotes.length})
+                </h3>
+                
+                {leadNotes.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#6b7280',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '8px'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+                    <p style={{ margin: 0, fontSize: '16px' }}>No notes yet</p>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>Add the first note using the form above</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {leadNotes.map((note) => (
+                      <div key={note.id} style={{
+                        backgroundColor: '#f9fafb',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '8px'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              color: '#1f2937',
+                              marginBottom: '4px'
+                            }}>
+                              {note.user_name}
+                            </div>
+                            <div style={{
+                              fontSize: '12px',
+                              color: '#6b7280'
+                            }}>
+                              {new Date(note.created_at).toLocaleString()}
+                            </div>
+                          </div>
+                          {hasPermission('lead_notes', 'delete') && (
+                            <button 
+                              onClick={() => handleDeleteNote(note.id)}
+                              style={{
+                                backgroundColor: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                                transition: 'background-color 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#374151',
+                          lineHeight: '1.5',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {note.note}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Leads Table */}
         <div style={{
           backgroundColor: '#ffffff',
@@ -1018,7 +1948,7 @@ export default function Leads() {
               {/* Table Header */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1.5fr 1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
+                gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1fr 1fr 1fr 1fr' : '1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr',
                 gap: '12px',
                 padding: '20px',
                 backgroundColor: '#f8fafc',
@@ -1033,11 +1963,8 @@ export default function Leads() {
                 <div>Company</div>
                 <div>Email</div>
                 <div>Phone</div>
-                <div>Location</div>
-                <div>Service</div>
-                <div>Source</div>
-                <div>Created By</div>
                 <div>Date</div>
+                {!hasLeadScraperRole() && <div>Scheduled By</div>}
                 <div>Actions</div>
               </div>
 
@@ -1045,7 +1972,7 @@ export default function Leads() {
               {leads.map((lead, index) => (
                 <div key={lead.id} style={{
                   display: 'grid',
-                  gridTemplateColumns: '1.5fr 1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
+                  gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1fr 1fr 1fr 1fr' : '1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr',
                   gap: '12px',
                   padding: '16px 20px',
                   borderBottom: index < leads.length - 1 ? '1px solid #f3f4f6' : 'none',
@@ -1106,60 +2033,61 @@ export default function Leads() {
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>
-                    {lead.city && lead.state ? `${lead.city}, ${lead.state}` : 
-                     lead.city ? lead.city : 
-                     lead.state ? lead.state : 'N/A'}
-                  </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: '#6b7280',
-                    display: 'flex',
-                    alignItems: 'center',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {lead.service_required || 'N/A'}
-                  </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: '#6b7280',
-                    display: 'flex',
-                    alignItems: 'center',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {lead.source || 'N/A'}
-                  </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: '#6b7280',
-                    display: 'flex',
-                    alignItems: 'center',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {lead.created_by_name || 'Unknown'}
-                  </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: '#6b7280',
-                    display: 'flex',
-                    alignItems: 'center',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
                     {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'}
                   </div>
+                  {!hasLeadScraperRole() && (
+                    <div style={{
+                      fontSize: '13px',
+                      color: '#6b7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {lead.scheduled_by_names || 'Not scheduled'}
+                    </div>
+                  )}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px'
                   }}>
+                    <button 
+                      onClick={() => handleViewLead(lead)}
+                      style={{
+                        backgroundColor: '#6366f1',
+                        color: 'white',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      View
+                    </button>
+                    {hasPermission('lead_notes', 'create') && (
+                      <button 
+                        onClick={() => handleAddNote(lead)}
+                        style={{
+                          backgroundColor: '#f59e0b',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Notes
+                      </button>
+                    )}
                     {hasPermission('leads', 'update') && (
                       <button 
                         onClick={() => handleEditLead(lead)}
@@ -1176,6 +2104,42 @@ export default function Leads() {
                         }}
                       >
                         Edit
+                      </button>
+                    )}
+                    {hasPermission('leads', 'update') && !hasLeadScraperRole() && (
+                      <button 
+                        onClick={() => openScheduleForm(lead)}
+                        style={{
+                          backgroundColor: hasUserScheduledLead(lead) ? '#f59e0b' : '#8b5cf6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {hasUserScheduledLead(lead) ? 'Reschedule' : 'Schedule'}
+                      </button>
+                    )}
+                    {hasPermission('leads', 'update') && hasUserScheduledLead(lead) && !hasLeadScraperRole() && (
+                      <button 
+                        onClick={() => handleCancelSchedule(lead.id)}
+                        style={{
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Cancel
                       </button>
                     )}
                     {hasPermission('sales', 'create') && (
@@ -1253,26 +2217,12 @@ export default function Leads() {
                     >
                       Next
                     </button>
-      </div>
-    </div>
+                  </div>
+                </div>
               )}
             </>
           )}
         </div>
-    </PageLayout>
-  );
-}
-
-const inputStyle = {
-  padding: '12px 16px',
-  border: '2px solid #e2e8f0',
-  borderRadius: '8px',
-  fontSize: '14px',
-  outline: 'none',
-  transition: 'border-color 0.2s ease',
-  backgroundColor: '#ffffff',
-  ':focus': {
-    borderColor: '#3b82f6',
-    boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
+      </PageLayout>
+    );
   }
-};

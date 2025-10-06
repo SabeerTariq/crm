@@ -12,33 +12,57 @@ class CustomerAssignmentService {
    */
   static async assignCustomer(customerId, upsellerId, notes = null, createdBy) {
     return new Promise((resolve, reject) => {
-      // Start transaction
-      db.beginTransaction((err) => {
+      // Get a connection from the pool
+      db.getConnection((err, connection) => {
         if (err) return reject(err);
         
-        // First, deactivate any existing active assignments for this customer
-        const deactivateSql = `
-          UPDATE customer_assignments 
-          SET status = 'inactive', updated_at = CURRENT_TIMESTAMP
-          WHERE customer_id = ? AND status = 'active'
-        `;
-        
-        db.query(deactivateSql, [customerId], (err) => {
-          if (err) return db.rollback(() => reject(err));
+        // Start transaction
+        connection.beginTransaction((err) => {
+          if (err) {
+            connection.release();
+            return reject(err);
+          }
           
-          // Create new assignment
-          const insertSql = `
-            INSERT INTO customer_assignments 
-            (customer_id, upseller_id, notes, created_by)
-            VALUES (?, ?, ?, ?)
+          // First, deactivate any existing active assignments for this customer
+          const deactivateSql = `
+            UPDATE customer_assignments 
+            SET status = 'inactive', updated_at = CURRENT_TIMESTAMP
+            WHERE customer_id = ? AND status = 'active'
           `;
           
-          db.query(insertSql, [customerId, upsellerId, notes, createdBy], (err, result) => {
-            if (err) return db.rollback(() => reject(err));
+          connection.query(deactivateSql, [customerId], (err) => {
+            if (err) {
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+              return;
+            }
             
-            db.commit((err) => {
-              if (err) return db.rollback(() => reject(err));
-              resolve(result);
+            // Create new assignment
+            const insertSql = `
+              INSERT INTO customer_assignments 
+              (customer_id, upseller_id, notes, created_by)
+              VALUES (?, ?, ?, ?)
+            `;
+            
+            connection.query(insertSql, [customerId, upsellerId, notes, createdBy], (err, result) => {
+              if (err) {
+                connection.rollback(() => {
+                  connection.release();
+                  reject(err);
+                });
+                return;
+              }
+              
+              connection.commit((err) => {
+                connection.release(); // Always release the connection
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve(result);
+                }
+              });
             });
           });
         });
@@ -199,68 +223,91 @@ class CustomerAssignmentService {
     return new Promise((resolve, reject) => {
       console.log('Starting transfer:', { customerId, newUpsellerId, notes, createdBy });
       
-      // Start transaction
-      db.beginTransaction((err) => {
+      // Get a connection from the pool
+      db.getConnection((err, connection) => {
         if (err) {
-          console.error('Transaction begin error:', err);
+          console.error('Connection error:', err);
           return reject(err);
         }
         
-        // First, delete any existing 'transferred' records for this customer
-        // to avoid unique constraint violation
-        const deleteTransferredSql = `
-          DELETE FROM customer_assignments 
-          WHERE customer_id = ? AND status = 'transferred'
-        `;
-        
-        console.log('Deleting existing transferred records for customer:', customerId);
-        db.query(deleteTransferredSql, [customerId], (err, result) => {
+        // Start transaction
+        connection.beginTransaction((err) => {
           if (err) {
-            console.error('Delete transferred query error:', err);
-            return db.rollback(() => reject(err));
+            console.error('Transaction begin error:', err);
+            connection.release();
+            return reject(err);
           }
           
-          console.log('Delete transferred result:', result);
-          
-          // Now update current active assignment to transferred
-          const deactivateSql = `
-            UPDATE customer_assignments 
-            SET status = 'transferred', notes = CONCAT(IFNULL(notes, ''), ' | Transferred to new upseller'), updated_at = CURRENT_TIMESTAMP
-            WHERE customer_id = ? AND status = 'active'
+          // First, delete any existing 'transferred' records for this customer
+          // to avoid unique constraint violation
+          const deleteTransferredSql = `
+            DELETE FROM customer_assignments 
+            WHERE customer_id = ? AND status = 'transferred'
           `;
           
-          console.log('Deactivating current assignment for customer:', customerId);
-          db.query(deactivateSql, [customerId], (err, result) => {
+          console.log('Deleting existing transferred records for customer:', customerId);
+          connection.query(deleteTransferredSql, [customerId], (err, result) => {
             if (err) {
-              console.error('Deactivate query error:', err);
-              return db.rollback(() => reject(err));
+              console.error('Delete transferred query error:', err);
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+              return;
             }
             
-            console.log('Deactivate result:', result);
+            console.log('Delete transferred result:', result);
             
-            // Create new assignment
-            const insertSql = `
-              INSERT INTO customer_assignments 
-              (customer_id, upseller_id, notes, created_by)
-              VALUES (?, ?, ?, ?)
+            // Now update current active assignment to transferred
+            const deactivateSql = `
+              UPDATE customer_assignments 
+              SET status = 'transferred', notes = CONCAT(IFNULL(notes, ''), ' | Transferred to new upseller'), updated_at = CURRENT_TIMESTAMP
+              WHERE customer_id = ? AND status = 'active'
             `;
             
-            console.log('Creating new assignment:', { customerId, newUpsellerId, notes, createdBy });
-            db.query(insertSql, [customerId, newUpsellerId, notes, createdBy], (err, result) => {
+            console.log('Deactivating current assignment for customer:', customerId);
+            connection.query(deactivateSql, [customerId], (err, result) => {
               if (err) {
-                console.error('Insert query error:', err);
-                return db.rollback(() => reject(err));
+                console.error('Deactivate query error:', err);
+                connection.rollback(() => {
+                  connection.release();
+                  reject(err);
+                });
+                return;
               }
               
-              console.log('Insert result:', result);
+              console.log('Deactivate result:', result);
               
-              db.commit((err) => {
+              // Create new assignment
+              const insertSql = `
+                INSERT INTO customer_assignments 
+                (customer_id, upseller_id, notes, created_by)
+                VALUES (?, ?, ?, ?)
+              `;
+              
+              console.log('Creating new assignment:', { customerId, newUpsellerId, notes, createdBy });
+              connection.query(insertSql, [customerId, newUpsellerId, notes, createdBy], (err, result) => {
                 if (err) {
-                  console.error('Commit error:', err);
-                  return db.rollback(() => reject(err));
+                  console.error('Insert query error:', err);
+                  connection.rollback(() => {
+                    connection.release();
+                    reject(err);
+                  });
+                  return;
                 }
-                console.log('Transfer completed successfully');
-                resolve(result);
+                
+                console.log('Insert result:', result);
+                
+                connection.commit((err) => {
+                  connection.release(); // Always release the connection
+                  if (err) {
+                    console.error('Commit error:', err);
+                    reject(err);
+                  } else {
+                    console.log('Transfer completed successfully');
+                    resolve(result);
+                  }
+                });
               });
             });
           });

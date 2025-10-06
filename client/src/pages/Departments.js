@@ -35,7 +35,7 @@ const Departments = () => {
     try {
       setLoading(true);
       const response = await api.get('/departments');
-      setDepartments(response.data || []);
+      setDepartments(response.data.departments || []);
     } catch (err) {
       console.error('Error fetching departments:', err);
       setError('Failed to fetch departments');

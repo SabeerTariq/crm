@@ -65,7 +65,7 @@ const Projects = () => {
   const fetchDepartments = useCallback(async () => {
     try {
       const response = await api.get('/departments');
-      setDepartments(response.data || []);
+      setDepartments(response.data.departments || []);
     } catch (err) {
       console.error('Error fetching departments:', err);
     }

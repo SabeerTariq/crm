@@ -604,15 +604,21 @@ export default function Sales() {
         // Set converting lead state
         setConvertingLead(lead);
         
-        // Pre-fill form with lead data
+        // Pre-fill form with lead data and auto-populate lead search
         setFormData(prev => ({
           ...prev,
           customer_name: lead.lead_name || '',
           customer_email: lead.lead_email || '',
           customer_phone: lead.lead_phone || '',
           notes: `Converted from lead: ${lead.lead_company || ''} - ${lead.lead_service_required || ''} - ${lead.lead_notes || ''}`.trim(),
-          services: lead.lead_service_required || ''
+          services: lead.lead_service_required || '',
+          lead_id: lead.lead_id || '',
+          convert_lead: true,
+          customer_id: null
         }));
+        
+        // Auto-populate the lead search field
+        setLeadSearch(lead.lead_name || '');
         
         // Open the sales form modal
         setShowAddForm(true);
@@ -625,6 +631,48 @@ export default function Sales() {
       }
     }
   }, [hasPermission]);
+
+  // Additional useEffect to catch lead conversion data when component mounts
+  useEffect(() => {
+    // This runs only once when component mounts
+    const leadData = localStorage.getItem('leadToConvert');
+    if (leadData) {
+      // Check if permission is available and has sales.create permission
+      if (hasPermission && hasPermission('sales', 'create')) {
+      try {
+        const lead = JSON.parse(leadData);
+        
+        // Set converting lead state
+        setConvertingLead(lead);
+        
+        // Pre-fill form with lead data and auto-populate lead search
+        setFormData(prev => ({
+          ...prev,
+          customer_name: lead.lead_name || '',
+          customer_email: lead.lead_email || '',
+          customer_phone: lead.lead_phone || '',
+          notes: `Converted from lead: ${lead.lead_company || ''} - ${lead.lead_service_required || ''} - ${lead.lead_notes || ''}`.trim(),
+          services: lead.lead_service_required || '',
+          lead_id: lead.lead_id || '',
+          convert_lead: true,
+          customer_id: null
+        }));
+        
+        // Auto-populate the lead search field
+        setLeadSearch(lead.lead_name || '');
+        
+        // Open the sales form modal
+        setShowAddForm(true);
+        
+        // Clear the lead data from localStorage
+        localStorage.removeItem('leadToConvert');
+      } catch (error) {
+        console.error('Error parsing lead data:', error);
+        localStorage.removeItem('leadToConvert');
+      }
+      }
+    }
+  }, [hasPermission]); // Include hasPermission dependency
 
   // Handle escape key to close modal
   useEffect(() => {

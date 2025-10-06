@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const authorize = require('../middleware/authorize');
 const StatsService = require('../services/statsService');
 const CustomerSalesService = require('../services/customerSalesService');
+const ReminderService = require('../services/reminderService');
 
 
 // Get Leads with search and filtering
@@ -80,18 +81,26 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
       
       const sql = `
         SELECT l.*, 
-               u1.name as created_by_name
+               u1.name as created_by_name,
+               GROUP_CONCAT(DISTINCT u2.name ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as scheduled_by_names,
+               GROUP_CONCAT(DISTINCT ls.schedule_date ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_dates,
+               GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times
         FROM leads l
         LEFT JOIN users u1 ON l.created_by = u1.id
+        LEFT JOIN lead_schedules ls ON l.id = ls.lead_id
+        LEFT JOIN users u2 ON ls.scheduled_by = u2.id
         ${whereClause}
+        GROUP BY l.id
         ORDER BY l.created_at DESC
         LIMIT ? OFFSET ?
       `;
       
       const countSql = `
-        SELECT COUNT(*) as total
+        SELECT COUNT(DISTINCT l.id) as total
         FROM leads l
         LEFT JOIN users u1 ON l.created_by = u1.id
+        LEFT JOIN lead_schedules ls ON l.id = ls.lead_id
+        LEFT JOIN users u2 ON ls.scheduled_by = u2.id
         ${whereClause}
       `;
       
@@ -135,18 +144,26 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
     
     const sql = `
       SELECT l.*, 
-             u1.name as created_by_name
+             u1.name as created_by_name,
+             GROUP_CONCAT(DISTINCT u2.name ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as scheduled_by_names,
+             GROUP_CONCAT(DISTINCT ls.schedule_date ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_dates,
+             GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times
       FROM leads l
       LEFT JOIN users u1 ON l.created_by = u1.id
+      LEFT JOIN lead_schedules ls ON l.id = ls.lead_id
+      LEFT JOIN users u2 ON ls.scheduled_by = u2.id
       ${whereClause}
+      GROUP BY l.id
       ORDER BY l.created_at DESC
       LIMIT ? OFFSET ?
     `;
     
     const countSql = `
-      SELECT COUNT(*) as total
+      SELECT COUNT(DISTINCT l.id) as total
       FROM leads l
       LEFT JOIN users u1 ON l.created_by = u1.id
+      LEFT JOIN lead_schedules ls ON l.id = ls.lead_id
+      LEFT JOIN users u2 ON ls.scheduled_by = u2.id
       ${whereClause}
     `;
     
@@ -339,6 +356,285 @@ router.post('/convert/:id', auth, authorize('customers','create'), async (req, r
       }
     });
   });
+});
+
+// Schedule Lead
+router.post('/:id/schedule', auth, authorize('leads','update'), async (req, res) => {
+  const leadId = req.params.id;
+  const { schedule_date, schedule_time } = req.body;
+  const userId = req.user.id;
+  
+  if (!schedule_date) {
+    return res.status(400).json({ message: 'Schedule date is required' });
+  }
+  
+  try {
+    // Get the lead details
+    const leadResult = await new Promise((resolve, reject) => {
+      db.query('SELECT * FROM leads WHERE id = ?', [leadId], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+    
+    if (leadResult.length === 0) {
+      return res.status(404).json({ message: 'Lead not found' });
+    }
+    
+    const lead = leadResult[0];
+    
+    // Check if user already has a schedule for this lead
+    const existingSchedule = await new Promise((resolve, reject) => {
+      db.query(
+        'SELECT * FROM lead_schedules WHERE lead_id = ? AND scheduled_by = ?',
+        [leadId, userId],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        }
+      );
+    });
+    
+    if (existingSchedule.length > 0) {
+      return res.status(400).json({ message: 'You have already scheduled this lead' });
+    }
+    
+    // Insert new schedule
+    await new Promise((resolve, reject) => {
+      db.query(
+        'INSERT INTO lead_schedules (lead_id, scheduled_by, schedule_date, schedule_time) VALUES (?, ?, ?, ?)',
+        [leadId, userId, schedule_date, schedule_time],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        }
+      );
+    });
+    
+    // Create a reminder in the calendar
+    const reminderTitle = `Call with ${lead.name}${lead.company_name ? ` (${lead.company_name})` : ''}`;
+    const reminderDescription = `Scheduled call with lead: ${lead.name}\nCompany: ${lead.company_name || 'N/A'}\nPhone: ${lead.phone || 'N/A'}\nEmail: ${lead.email || 'N/A'}`;
+    
+    await ReminderService.createReminder({
+      user_id: userId,
+      title: reminderTitle,
+      description: reminderDescription,
+      reminder_date: schedule_date,
+      reminder_time: schedule_time,
+      is_all_day: !schedule_time,
+      priority: 'medium',
+      status: 'pending'
+    });
+    
+    res.json({ message: 'Lead scheduled successfully' });
+    
+  } catch (error) {
+    console.error('Error scheduling lead:', error);
+    res.status(500).json({ message: 'Error scheduling lead' });
+  }
+});
+
+// Cancel Lead Schedule
+router.delete('/:id/schedule', auth, authorize('leads','update'), async (req, res) => {
+  const leadId = req.params.id;
+  const userId = req.user.id;
+  
+  try {
+    // Get the user's schedule for this lead
+    const scheduleResult = await new Promise((resolve, reject) => {
+      db.query(
+        'SELECT * FROM lead_schedules WHERE lead_id = ? AND scheduled_by = ?',
+        [leadId, userId],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        }
+      );
+    });
+    
+    if (scheduleResult.length === 0) {
+      return res.status(404).json({ message: 'No schedule found for this lead' });
+    }
+    
+    const schedule = scheduleResult[0];
+    
+    // Delete the schedule
+    await new Promise((resolve, reject) => {
+      db.query(
+        'DELETE FROM lead_schedules WHERE lead_id = ? AND scheduled_by = ?',
+        [leadId, userId],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        }
+      );
+    });
+    
+    // Find and delete the associated reminder
+    const reminders = await ReminderService.getUserReminders(userId, schedule.schedule_date, schedule.schedule_date);
+    const leadReminder = reminders.find(r => 
+      r.title.includes(schedule.schedule_date) && 
+      r.description.includes('Scheduled call with lead')
+    );
+    
+    if (leadReminder) {
+      await ReminderService.deleteReminder(leadReminder.id, userId);
+    }
+    
+    res.json({ message: 'Schedule cancelled successfully' });
+    
+  } catch (error) {
+    console.error('Error cancelling schedule:', error);
+    res.status(500).json({ message: 'Error cancelling schedule' });
+  }
+});
+
+// Get Lead Notes
+router.get('/:id/notes', auth, authorize('lead_notes', 'read'), async (req, res) => {
+  const leadId = req.params.id;
+  
+  try {
+    const notes = await new Promise((resolve, reject) => {
+      db.query(`
+        SELECT ln.*, u.name as user_name, u.email as user_email
+        FROM lead_notes ln
+        JOIN users u ON ln.user_id = u.id
+        WHERE ln.lead_id = ?
+        ORDER BY ln.created_at DESC
+      `, [leadId], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+    
+    res.json(notes);
+  } catch (error) {
+    console.error('Error fetching lead notes:', error);
+    res.status(500).json({ message: 'Error fetching lead notes' });
+  }
+});
+
+// Add Lead Note
+router.post('/:id/notes', auth, authorize('lead_notes', 'create'), async (req, res) => {
+  const leadId = req.params.id;
+  const { note } = req.body;
+  const userId = req.user.id;
+  
+  if (!note || note.trim() === '') {
+    return res.status(400).json({ message: 'Note is required' });
+  }
+  
+  try {
+    const result = await new Promise((resolve, reject) => {
+      db.query(
+        'INSERT INTO lead_notes (lead_id, user_id, note) VALUES (?, ?, ?)',
+        [leadId, userId, note.trim()],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        }
+      );
+    });
+    
+    // Get the created note with user info
+    const newNote = await new Promise((resolve, reject) => {
+      db.query(`
+        SELECT ln.*, u.name as user_name, u.email as user_email
+        FROM lead_notes ln
+        JOIN users u ON ln.user_id = u.id
+        WHERE ln.id = ?
+      `, [result.insertId], (err, results) => {
+        if (err) return reject(err);
+        resolve(results[0]);
+      });
+    });
+    
+    res.status(201).json(newNote);
+  } catch (error) {
+    console.error('Error adding lead note:', error);
+    res.status(500).json({ message: 'Error adding lead note' });
+  }
+});
+
+// Update Lead Note
+router.put('/notes/:noteId', auth, authorize('lead_notes', 'update'), async (req, res) => {
+  const noteId = req.params.noteId;
+  const { note } = req.body;
+  const userId = req.user.id;
+  
+  if (!note || note.trim() === '') {
+    return res.status(400).json({ message: 'Note is required' });
+  }
+  
+  try {
+    // Check if user owns the note or is admin
+    const noteResult = await new Promise((resolve, reject) => {
+      db.query('SELECT user_id FROM lead_notes WHERE id = ?', [noteId], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+    
+    if (noteResult.length === 0) {
+      return res.status(404).json({ message: 'Note not found' });
+    }
+    
+    if (noteResult[0].user_id !== userId && req.user.role_id !== 1) {
+      return res.status(403).json({ message: 'You can only edit your own notes' });
+    }
+    
+    await new Promise((resolve, reject) => {
+      db.query(
+        'UPDATE lead_notes SET note = ?, updated_at = NOW() WHERE id = ?',
+        [note.trim(), noteId],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        }
+      );
+    });
+    
+    res.json({ message: 'Note updated successfully' });
+  } catch (error) {
+    console.error('Error updating lead note:', error);
+    res.status(500).json({ message: 'Error updating lead note' });
+  }
+});
+
+// Delete Lead Note
+router.delete('/notes/:noteId', auth, authorize('lead_notes', 'delete'), async (req, res) => {
+  const noteId = req.params.noteId;
+  const userId = req.user.id;
+  
+  try {
+    // Check if user owns the note or is admin
+    const noteResult = await new Promise((resolve, reject) => {
+      db.query('SELECT user_id FROM lead_notes WHERE id = ?', [noteId], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+    
+    if (noteResult.length === 0) {
+      return res.status(404).json({ message: 'Note not found' });
+    }
+    
+    if (noteResult[0].user_id !== userId && req.user.role_id !== 1) {
+      return res.status(403).json({ message: 'You can only delete your own notes' });
+    }
+    
+    await new Promise((resolve, reject) => {
+      db.query('DELETE FROM lead_notes WHERE id = ?', [noteId], (err, result) => {
+        if (err) return reject(err);
+        resolve(result);
+      });
+    });
+    
+    res.json({ message: 'Note deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting lead note:', error);
+    res.status(500).json({ message: 'Error deleting lead note' });
+  }
 });
 
 module.exports = router;
