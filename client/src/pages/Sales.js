@@ -53,6 +53,9 @@ export default function Sales() {
     sale_time: new Date().toTimeString().split(' ')[0].substring(0, 5)
   });
   
+  // Agreement file state
+  const [agreementFile, setAgreementFile] = useState(null);
+  
   // Services array for multiple services
   const [services, setServices] = useState([]);
   const [currentService, setCurrentService] = useState({ name: '', details: '' });
@@ -220,6 +223,7 @@ export default function Sales() {
     });
     setServices([]);
     setCurrentService({ name: '', details: '' });
+    setAgreementFile(null);
     setEditingSale(null);
     setConvertingLead(null);
     setShowAddForm(false);
@@ -227,6 +231,72 @@ export default function Sales() {
     setLeadSearch('');
     setShowCustomerDropdown(false);
     setShowLeadDropdown(false);
+  };
+
+  const handleAgreementFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB');
+        return;
+      }
+      
+      // Validate file type
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'image/jpeg',
+        'image/png'
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        alert('Invalid file type. Only PDF, DOC, DOCX, TXT, JPEG, and PNG files are allowed.');
+        return;
+      }
+      
+      setAgreementFile(file);
+    }
+  };
+
+  const removeAgreementFile = () => {
+    setAgreementFile(null);
+  };
+
+  const downloadAgreement = async (saleId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get(`/sales/${saleId}/agreement`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      // Get the original filename from the response headers or use a default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `agreement-${saleId}.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      // Create blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading agreement:', error);
+      alert('Error downloading agreement file');
+    }
   };
 
   const submitSale = async (e) => {
@@ -279,9 +349,30 @@ export default function Sales() {
         service_details: allServices.length > 0 ? allServices.map(s => s.details).filter(d => d).join(', ') : formData.service_details
       };
       
-      const response = await api[method](url, saleData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Handle file upload
+      let response;
+      if (agreementFile) {
+        // Use FormData for file upload
+        const formDataToSend = new FormData();
+        Object.keys(saleData).forEach(key => {
+          if (saleData[key] !== null && saleData[key] !== undefined) {
+            formDataToSend.append(key, saleData[key]);
+          }
+        });
+        formDataToSend.append('agreement', agreementFile);
+        
+        response = await api[method](url, formDataToSend, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      } else {
+        // Regular JSON request
+        response = await api[method](url, saleData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
       
       if (response.data.leadConverted) {
         alert('Sale added and lead converted to customer successfully!');
@@ -513,15 +604,21 @@ export default function Sales() {
         // Set converting lead state
         setConvertingLead(lead);
         
-        // Pre-fill form with lead data
+        // Pre-fill form with lead data and auto-populate lead search
         setFormData(prev => ({
           ...prev,
           customer_name: lead.lead_name || '',
           customer_email: lead.lead_email || '',
           customer_phone: lead.lead_phone || '',
           notes: `Converted from lead: ${lead.lead_company || ''} - ${lead.lead_service_required || ''} - ${lead.lead_notes || ''}`.trim(),
-          services: lead.lead_service_required || ''
+          services: lead.lead_service_required || '',
+          lead_id: lead.lead_id || '',
+          convert_lead: true,
+          customer_id: null
         }));
+        
+        // Auto-populate the lead search field
+        setLeadSearch(lead.lead_name || '');
         
         // Open the sales form modal
         setShowAddForm(true);
@@ -534,6 +631,48 @@ export default function Sales() {
       }
     }
   }, [hasPermission]);
+
+  // Additional useEffect to catch lead conversion data when component mounts
+  useEffect(() => {
+    // This runs only once when component mounts
+    const leadData = localStorage.getItem('leadToConvert');
+    if (leadData) {
+      // Check if permission is available and has sales.create permission
+      if (hasPermission && hasPermission('sales', 'create')) {
+      try {
+        const lead = JSON.parse(leadData);
+        
+        // Set converting lead state
+        setConvertingLead(lead);
+        
+        // Pre-fill form with lead data and auto-populate lead search
+        setFormData(prev => ({
+          ...prev,
+          customer_name: lead.lead_name || '',
+          customer_email: lead.lead_email || '',
+          customer_phone: lead.lead_phone || '',
+          notes: `Converted from lead: ${lead.lead_company || ''} - ${lead.lead_service_required || ''} - ${lead.lead_notes || ''}`.trim(),
+          services: lead.lead_service_required || '',
+          lead_id: lead.lead_id || '',
+          convert_lead: true,
+          customer_id: null
+        }));
+        
+        // Auto-populate the lead search field
+        setLeadSearch(lead.lead_name || '');
+        
+        // Open the sales form modal
+        setShowAddForm(true);
+        
+        // Clear the lead data from localStorage
+        localStorage.removeItem('leadToConvert');
+      } catch (error) {
+        console.error('Error parsing lead data:', error);
+        localStorage.removeItem('leadToConvert');
+      }
+      }
+    }
+  }, [hasPermission]); // Include hasPermission dependency
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -1406,7 +1545,85 @@ export default function Sales() {
                 )}
               </div>
 
-              {/* Section 3: Payment Details */}
+              {/* Section 3: Agreement Upload */}
+              <div style={{ 
+                marginBottom: '30px', 
+                padding: '20px', 
+                backgroundColor: 'white', 
+                borderRadius: '8px', 
+                border: '1px solid #e2e8f0' 
+              }}>
+                <h4 style={{ 
+                  margin: '0 0 20px 0', 
+                  color: '#1f2937', 
+                  borderBottom: '2px solid #8b5cf6', 
+                  paddingBottom: '10px' 
+                }}>
+                  📄 Agreement Upload
+                </h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                      Upload Agreement Document
+                    </label>
+                    <input
+                      type="file"
+                      onChange={handleAgreementFileChange}
+                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        backgroundColor: 'white'
+                      }}
+                    />
+                    <p style={{ 
+                      fontSize: '12px', 
+                      color: '#6b7280', 
+                      margin: '5px 0 0 0' 
+                    }}>
+                      Supported formats: PDF, DOC, DOCX, TXT, JPEG, PNG (Max 10MB)
+                    </p>
+                    
+                    {agreementFile && (
+                      <div style={{
+                        marginTop: '10px',
+                        padding: '10px',
+                        backgroundColor: '#f0f9ff',
+                        border: '1px solid #0ea5e9',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <span style={{ fontSize: '14px', color: '#0c4a6e' }}>
+                          📎 {agreementFile.name} ({(agreementFile.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={removeAgreementFile}
+                          style={{
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Payment Details */}
               <div style={{ 
                 marginBottom: '30px', 
                 padding: '20px', 
@@ -1806,7 +2023,7 @@ export default function Sales() {
           {/* Table Header */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
+            gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
             gap: '16px',
             padding: '20px 24px',
             backgroundColor: '#f8fafc',
@@ -1823,6 +2040,7 @@ export default function Sales() {
             <div>Payment Type</div>
             <div>Payment Source</div>
             <div>Brand</div>
+            <div>Agreement</div>
             <div>Created By</div>
             <div>Date</div>
             <div>Actions</div>
@@ -1850,7 +2068,7 @@ export default function Sales() {
             filteredSales.map((sale, index) => (
               <div key={sale.id} style={{
                 display: 'grid',
-                gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
+                gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
                 gap: '16px',
                 padding: '20px 24px',
                 borderBottom: index < filteredSales.length - 1 ? '1px solid #f3f4f6' : 'none',
@@ -1984,6 +2202,36 @@ export default function Sales() {
                   fontWeight: '500'
                 }}>
                   {sale.brand?.replace('_', ' ') || 'N/A'}
+                </div>
+
+                {/* Agreement */}
+                <div style={{ 
+                  fontSize: '12px',
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  {sale.agreement_file_name ? (
+                    <button
+                      onClick={() => downloadAgreement(sale.id)}
+                      style={{
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      title={`Download: ${sale.agreement_file_name}`}
+                    >
+                      📄 Download
+                    </button>
+                  ) : (
+                    <span style={{ color: '#9ca3af' }}>No Agreement</span>
+                  )}
                 </div>
 
                 {/* Created By */}

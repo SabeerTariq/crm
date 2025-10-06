@@ -272,9 +272,12 @@ class CustomerSalesService {
   /**
    * Update customer totals after payment
    * @param {number} customerId - Customer ID
+   * @param {Object} connection - Optional database connection to use within transaction
    */
-  static async updateCustomerTotals(customerId) {
+  static async updateCustomerTotals(customerId, connection = null) {
     return new Promise((resolve, reject) => {
+      console.log(`🔍 Calculating customer totals for customer ${customerId}...`);
+      
       const sql = `
         SELECT 
           SUM(unit_price) as total_sales,
@@ -285,24 +288,55 @@ class CustomerSalesService {
         WHERE customer_id = ?
       `;
       
-      db.query(sql, [customerId], (err, results) => {
-        if (err) return reject(err);
+      console.log(`📋 Query to get sales totals:`, sql);
+      console.log(`👤 Customer ID parameter:`, customerId);
+      
+      const queryFn = connection ? connection.query.bind(connection) : db.query.bind(db);
+      
+      queryFn(sql, [customerId], (err, results) => {
+        if (err) {
+          console.error(`❌ Error querying sales for customer ${customerId}:`, err);
+          return reject(err);
+        }
+        
+        console.log(`📊 Raw query results for customer ${customerId}:`, results);
         
         const totals = results[0];
+        console.log(`📈 Calculated totals for customer ${customerId}:`, totals);
+        
+        // Check if customer exists
+        if (!totals.total_sales && !totals.total_paid && !totals.total_remaining) {
+          console.warn(`⚠️ Customer ${customerId} has no sales - totals will be set to 0`);
+        }
+        
         const updateSql = `
           UPDATE customers 
           SET total_sales = ?, total_paid = ?, total_remaining = ?, last_payment_date = ?
           WHERE id = ?
         `;
         
-        db.query(updateSql, [
+        const updateValues = [
           totals.total_sales || 0,
           totals.total_paid || 0,
           totals.total_remaining || 0,
           totals.last_payment_date,
           customerId
-        ], (err, result) => {
-          if (err) return reject(err);
+        ];
+        
+        console.log(`💾 Updating customer table with values:`, updateValues);
+        console.log(`🔄 Update SQL:`, updateSql);
+        
+        const updateQueryFn = connection ? connection.query.bind(connection) : db.query.bind(db);
+        
+        updateQueryFn(updateSql, updateValues, (err, result) => {
+          if (err) {
+            console.error(`❌ Error updating customer totals for customer ${customerId}:`, err);
+            console.error(`❌ SQL Error details:`, err.message);
+            return reject(err);
+          }
+          
+          console.log(`✅ Successfully updated customer totals for customer ${customerId}`);
+          console.log(`📝 Update result:`, result);
           resolve(result);
         });
       });
@@ -320,23 +354,65 @@ class CustomerSalesService {
    */
   static async processPayment(saleId, amount, paymentSource, createdBy, notes = null, receivedBy = null) {
     return new Promise((resolve, reject) => {
-      // Start transaction
-      db.beginTransaction((err) => {
+      // Get a connection from the pool
+      db.getConnection((err, connection) => {
         if (err) return reject(err);
         
-        // Get sale details
-        const getSaleSql = 'SELECT * FROM sales WHERE id = ?';
-        db.query(getSaleSql, [saleId], (err, saleResults) => {
-          if (err) return db.rollback(() => reject(err));
-          
-          if (saleResults.length === 0) {
-            return db.rollback(() => reject(new Error('Sale not found')));
+        // Start transaction
+        connection.beginTransaction((err) => {
+          if (err) {
+            connection.release();
+            return reject(err);
           }
           
+          // Get sale details
+          const getSaleSql = 'SELECT * FROM sales WHERE id = ?';
+          connection.query(getSaleSql, [saleId], (err, saleResults) => {
+            if (err) {
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+              return;
+            }
+            
+            if (saleResults.length === 0) {
+              connection.rollback(() => {
+                connection.release();
+                reject(new Error('Sale not found'));
+              });
+              return;
+            }
+          
           const sale = saleResults[0];
-          const newCashIn = parseFloat(sale.cash_in) + parseFloat(amount);
-          const newRemaining = parseFloat(sale.unit_price) - newCashIn;
+          const currentCashIn = parseFloat(sale.cash_in || 0);
+          const unitPrice = parseFloat(sale.unit_price || 0);
+          const paymentAmount = parseFloat(amount);
+          const newCashIn = currentCashIn + paymentAmount;
+          const newRemaining = unitPrice - newCashIn;
           const isFullyPaid = newRemaining <= 0;
+          
+          console.log(`Payment processing - Sale ID: ${saleId}`);
+          console.log(`Current sale data: unit_price=${unitPrice}, cash_in=${currentCashIn}, customer_id=${sale.customer_id}`);
+          console.log(`Payment data: amount=${paymentAmount}, paymentSource=${paymentSource}, receivedBy=${receivedBy}`);
+          console.log(`Calculated: newCashIn=${newCashIn}, newRemaining=${newRemaining}, isFullyPaid=${isFullyPaid}`);
+          
+          // Validation checks
+          if (paymentAmount <= 0) {
+            connection.rollback(() => {
+              connection.release();
+              reject(new Error(`Invalid payment amount: ${paymentAmount}. Must be greater than 0.`));
+            });
+            return;
+          }
+          
+          if (newCashIn > unitPrice) {
+            console.warn(`⚠️ WARNING: Payment exceeds sale amount! Payment: ${paymentAmount}, Total would be: ${newCashIn}, Sale Amount: ${unitPrice}`);
+          }
+          
+          if (newRemaining < 0) {
+            console.warn(`⚠️ WARNING: Calculated remaining amount is negative: ${newRemaining}`);
+          }
           
           // Update sale
           const updateSaleSql = `
@@ -347,14 +423,20 @@ class CustomerSalesService {
           
           const paymentStatus = isFullyPaid ? 'completed' : (newCashIn > 0 ? 'partial' : 'pending');
           
-          db.query(updateSaleSql, [
+          connection.query(updateSaleSql, [
             newCashIn, 
             newRemaining, 
             new Date().toISOString().split('T')[0], 
             paymentStatus, 
             saleId
           ], (err) => {
-            if (err) return db.rollback(() => reject(err));
+            if (err) {
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+              return;
+            }
             
             // Record transaction
             PaymentService.recordPayment({
@@ -364,40 +446,123 @@ class CustomerSalesService {
               notes: notes,
               createdBy: createdBy,
               receivedBy: receivedBy
-            }).then(() => {
+            }, connection).then(() => {
               // Update customer totals
-              CustomerSalesService.updateCustomerTotals(sale.customer_id).then(() => {
+              CustomerSalesService.updateCustomerTotals(sale.customer_id, connection).then(() => {
                 // Update upseller performance - get upseller for customer if receivedBy not provided
                 const currentDate = new Date();
                 const currentYear = currentDate.getFullYear();
                 const currentMonth = currentDate.getMonth() + 1;
                 
+                console.log(`Updating upseller performance for payment: saleId=${saleId}, receivedBy=${receivedBy}, customerId=${sale.customer_id}`);
+                
                 if (receivedBy) {
-                  return PaymentService.recalculateUpsellerPerformance(receivedBy, currentYear, currentMonth);
+                  console.log(`🎯 Using receivedBy upseller: ${receivedBy}`);
+                  console.log(`🔄 Calling PaymentService.recalculateUpsellerPerformance(${receivedBy}, ${currentYear}, ${currentMonth})`);
+                  return PaymentService.recalculateUpsellerPerformance(receivedBy, currentYear, currentMonth)
+                    .then(result => {
+                      console.log(`✅ Upseller performance recalculated for receivedBy ${receivedBy}:`, result);
+                      return result;
+                    })
+                    .catch(err => {
+                      console.error(`❌ Error recalculating upseller performance for receivedBy ${receivedBy}:`, err);
+                      console.error(`❌ Error stack:`, err.stack);
+                      throw err;
+                    });
                 } else {
+                  console.log(`Finding upseller for customer: ${sale.customer_id}`);
                   // Get upseller for this customer and update performance
                   return PaymentService.getUpsellerForCustomer(sale.customer_id)
                     .then(upsellerId => {
+                      console.log(`Found upseller for customer ${sale.customer_id}: ${upsellerId}`);
                       if (upsellerId) {
-                        return PaymentService.recalculateUpsellerPerformance(upsellerId, currentYear, currentMonth);
+                        return PaymentService.recalculateUpsellerPerformance(upsellerId, currentYear, currentMonth)
+                          .then(result => {
+                            console.log(`Upseller performance recalculated for customer's upseller ${upsellerId}:`, result);
+                            return result;
+                          })
+                          .catch(err => {
+                            console.error(`Error recalculating upseller performance for customer's upseller ${upsellerId}:`, err);
+                            throw err;
+                          });
+                      } else {
+                        console.log(`No upseller found for customer ${sale.customer_id}`);
+                        return Promise.resolve({ success: true, message: 'No upseller found for customer' });
                       }
-                      return Promise.resolve({ success: true, message: 'No upseller found for customer' });
+                    })
+                    .catch(err => {
+                      console.error(`Error getting upseller for customer ${sale.customer_id}:`, err);
+                      // Don't fail the transaction for upseller issues
+                      return Promise.resolve({ success: false, message: 'Error getting upseller', error: err.message });
                     });
                 }
               }).then(() => {
-                db.commit((err) => {
-                  if (err) return db.rollback(() => reject(err));
-                  resolve({ 
-                    success: true, 
-                    fullyPaid: isFullyPaid,
-                    newRemaining: newRemaining
-                  });
+                console.log(`✅ Upseller performance update completed successfully`);
+                connection.commit((err) => {
+                  connection.release(); // Always release the connection
+                  if (err) {
+                    console.error(`❌ Error committing transaction:`, err);
+                    reject(err);
+                  } else {
+                    console.log(`✅ Payment transaction committed successfully`);
+                    // Now recalculate upseller performance AFTER transaction is committed
+                    const currentDate = new Date();
+                    const currentYear = currentDate.getFullYear();
+                    const currentMonth = currentDate.getMonth() + 1;
+                    
+                    console.log(`🔄 Recalculating upseller performance AFTER transaction commit...`);
+                    
+                    if (receivedBy) {
+                      PaymentService.recalculateUpsellerPerformance(receivedBy, currentYear, currentMonth)
+                        .then(result => {
+                          console.log(`✅ Upseller performance recalculated AFTER commit:`, result);
+                        })
+                        .catch(err => {
+                          console.error(`❌ Error in post-commit upseller recalculating:`, err);
+                          // Don't fail the payment for this
+                        });
+                    } else {
+                      PaymentService.getUpsellerForCustomer(sale.customer_id)
+                        .then(upsellerId => {
+                          if (upsellerId) {
+                            PaymentService.recalculateUpsellerPerformance(upsellerId, currentYear, currentMonth)
+                              .then(result => {
+                                console.log(`✅ Upseller performance recalculated AFTER commit:`, result);
+                              })
+                              .catch(err => {
+                                console.error(`❌ Error in post-commit upseller recalculating:`, err);
+                              });
+                          }
+                        })
+                        .catch(err => {
+                          console.error(`❌ Error getting upseller for post-commit recalculation:`, err);
+                        });
+                    }
+                    
+                    resolve({ 
+                      success: true, 
+                      fullyPaid: isFullyPaid,
+                      newRemaining: newRemaining
+                    });
+                  }
                 });
-              }).catch(err => db.rollback(() => reject(err)));
-            }).catch(err => db.rollback(() => reject(err)));
+              }).catch(err => {
+                console.error(`❌ Error in transaction:`, err);
+                connection.rollback(() => {
+                  connection.release();
+                  reject(err);
+                });
+              });
+            }).catch(err => {
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+            });
           });
         });
       });
+    });
     });
   }
   

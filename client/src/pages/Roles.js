@@ -59,7 +59,9 @@ export default function Roles() {
         api.get('/rbac/modules', { headers: tokenHeader }),
       ]);
       setRoles(rolesRes.data);
-      console.log('Loaded modules:', modulesRes.data);
+      console.log('Raw modules response:', modulesRes.data);
+      console.log('Modules count:', modulesRes.data.length);
+      console.log('Reminders modules:', modulesRes.data.filter(m => m.module === 'reminders'));
       setModules(modulesRes.data);
       // If there is at least one role, preselect it in edit mode
       if (rolesRes.data.length > 0) {
@@ -72,6 +74,7 @@ export default function Roles() {
         setMode('create');
       }
     } catch (e) {
+      console.error('Error loading roles/modules:', e);
       alert(e.response?.data?.message || 'Failed to load roles/modules');
     } finally {
       setLoading(false);
@@ -252,6 +255,11 @@ export default function Roles() {
                       </thead>
                       <tbody>
                         {availableModules.map(({ module, actions }) => {
+                          // Debug logging for reminders module
+                          if (module === 'reminders') {
+                            console.log('Rendering reminders row:', { module, actions });
+                          }
+                          
                           const has = (action) => selectedPermMap[module]?.has(action);
                           const cell = (action) => (
                             <td style={thTd}>

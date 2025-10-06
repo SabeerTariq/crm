@@ -102,6 +102,40 @@ export default function CustomerSalesProfile() {
     }).format(amount);
   };
 
+  const downloadAgreement = async (saleId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get(`/sales/${saleId}/agreement`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      // Get the original filename from the response headers or use a default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `agreement-${saleId}.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      // Create blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading agreement:', error);
+      alert('Error downloading agreement file');
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -330,6 +364,33 @@ export default function CustomerSalesProfile() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Agreement Section */}
+                  {sale.agreement_file_name && (
+                    <div style={{ marginBottom: '15px' }}>
+                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '5px' }}>
+                        Agreement Document
+                      </div>
+                      <button
+                        onClick={() => downloadAgreement(sale.id)}
+                        style={{
+                          backgroundColor: '#8b5cf6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        title={`Download: ${sale.agreement_file_name}`}
+                      >
+                        📄 Download Agreement
+                      </button>
+                    </div>
+                  )}
 
                   {hasPermission('sales', 'update') && (
                     <button

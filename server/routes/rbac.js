@@ -125,7 +125,7 @@ router.post('/users/:id/role', auth, authorize('users','update'), (req, res) => 
 /** GET CURRENT USER'S PERMISSIONS **/
 router.get('/user/permissions', auth, (req, res) => {
   const userId = req.user.id;
-  console.log('Getting permissions for user:', userId, 'role_id:', req.user.role_id);
+  // Removed verbose permission logging to clean up console output
   
   // If user is admin (role_id = 1), return all permissions
   if (req.user.role_id === 1) {
@@ -135,7 +135,6 @@ router.get('/user/permissions', auth, (req, res) => {
         console.error('Error fetching admin permissions:', err);
         return res.status(500).json(err);
       }
-      console.log('Admin permissions:', rows);
       res.json(rows);
     });
     return;
@@ -155,7 +154,6 @@ router.get('/user/permissions', auth, (req, res) => {
       console.error('Error fetching user permissions:', err);
       return res.status(500).json(err);
     }
-    console.log('User permissions:', rows);
     res.json(rows);
   });
 });

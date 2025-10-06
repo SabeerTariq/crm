@@ -138,17 +138,34 @@ class InvoiceService {
    */
   static async updateInvoicePayment(invoiceId, paidAmount, updatedBy) {
     return new Promise((resolve, reject) => {
-      // Start transaction
-      db.beginTransaction((err) => {
+      // Get a connection from the pool
+      db.getConnection((err, connection) => {
         if (err) return reject(err);
+        
+        // Start transaction
+        connection.beginTransaction((err) => {
+          if (err) {
+            connection.release();
+            return reject(err);
+          }
         
         // Get current invoice details
         const getInvoiceSql = 'SELECT * FROM invoices WHERE id = ?';
-        db.query(getInvoiceSql, [invoiceId], (err, invoiceResults) => {
-          if (err) return db.rollback(() => reject(err));
+        connection.query(getInvoiceSql, [invoiceId], (err, invoiceResults) => {
+          if (err) {
+            connection.rollback(() => {
+              connection.release();
+              reject(err);
+            });
+            return;
+          }
           
           if (invoiceResults.length === 0) {
-            return db.rollback(() => reject(new Error('Invoice not found')));
+            connection.rollback(() => {
+              connection.release();
+              reject(new Error('Invoice not found'));
+            });
+            return;
           }
           
           const invoice = invoiceResults[0];
@@ -165,8 +182,14 @@ class InvoiceService {
           
           const status = isFullyPaid ? 'paid' : 'sent';
           
-          db.query(updateInvoiceSql, [newPaidAmount, newRemainingAmount, status, invoiceId], (err) => {
-            if (err) return db.rollback(() => reject(err));
+          connection.query(updateInvoiceSql, [newPaidAmount, newRemainingAmount, status, invoiceId], (err) => {
+            if (err) {
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+              return;
+            }
             
             // Update upcoming payment status if fully paid
             if (isFullyPaid) {
@@ -176,31 +199,46 @@ class InvoiceService {
                 WHERE source_id = ? AND payment_type = 'invoice'
               `;
               
-              db.query(updateUpcomingSql, [invoiceId], (err) => {
-                if (err) return db.rollback(() => reject(err));
-                
-                db.commit((err) => {
-                  if (err) return db.rollback(() => reject(err));
-                  resolve({ 
-                    success: true, 
-                    fullyPaid: true,
-                    remainingAmount: 0
+              connection.query(updateUpcomingSql, [invoiceId], (err) => {
+                if (err) {
+                  connection.rollback(() => {
+                    connection.release();
+                    reject(err);
                   });
+                  return;
+                }
+                
+                connection.commit((err) => {
+                  connection.release(); // Always release the connection
+                  if (err) {
+                    reject(err);
+                  } else {
+                    resolve({ 
+                      success: true, 
+                      fullyPaid: true,
+                      remainingAmount: 0
+                    });
+                  }
                 });
               });
             } else {
-              db.commit((err) => {
-                if (err) return db.rollback(() => reject(err));
-                resolve({ 
-                  success: true, 
-                  fullyPaid: false,
-                  remainingAmount: newRemainingAmount
-                });
+              connection.commit((err) => {
+                connection.release(); // Always release the connection
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve({ 
+                    success: true, 
+                    fullyPaid: false,
+                    remainingAmount: newRemainingAmount
+                  });
+                }
               });
             }
           });
         });
       });
+    });
     });
   }
   

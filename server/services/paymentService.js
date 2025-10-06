@@ -88,8 +88,9 @@ class PaymentService {
   /**
    * Record a payment transaction
    * @param {Object} transactionData - Transaction details
+   * @param {Object} connection - Optional database connection to use within transaction
    */
-  static async recordPayment(transactionData) {
+  static async recordPayment(transactionData, connection = null) {
     return new Promise((resolve, reject) => {
       const {
         saleId,
@@ -103,6 +104,14 @@ class PaymentService {
         receivedBy = null
       } = transactionData;
       
+      // Validate transaction data
+      if (!saleId || !amount || amount <= 0) {
+        console.error('Invalid payment transaction data:', transactionData);
+        return reject(new Error('Invalid payment transaction data: saleId and amount are required, amount must be > 0'));
+      }
+      
+      console.log(`Recording payment transaction for sale ${saleId}, amount ${amount}, paymentSource ${paymentSource}`);
+      
       const sql = `
         INSERT INTO payment_transactions 
         (sale_id, installment_id, recurring_id, amount, payment_source, 
@@ -110,13 +119,23 @@ class PaymentService {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
-      db.query(sql, [
-        saleId, installmentId, recurringId, amount, paymentSource,
-        transactionReference, notes, createdBy, receivedBy
-      ], (err, result) => {
-        if (err) return reject(err);
-        resolve(result);
-      });
+      if (connection) {
+        connection.query(sql, [
+          saleId, installmentId, recurringId, amount, paymentSource,
+          transactionReference, notes, createdBy, receivedBy
+        ], (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        });
+      } else {
+        db.query(sql, [
+          saleId, installmentId, recurringId, amount, paymentSource,
+          transactionReference, notes, createdBy, receivedBy
+        ], (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        });
+      }
     });
   }
   
@@ -130,17 +149,34 @@ class PaymentService {
    */
   static async processInstallmentPayment(installmentId, amount, paymentSource, createdBy, receivedBy = null) {
     return new Promise((resolve, reject) => {
-      // Start transaction
-      db.beginTransaction((err) => {
+      // Get a connection from the pool
+      db.getConnection((err, connection) => {
         if (err) return reject(err);
+        
+        // Start transaction
+        connection.beginTransaction((err) => {
+          if (err) {
+            connection.release();
+            return reject(err);
+          }
         
         // Get installment details
         const getInstallmentSql = 'SELECT * FROM payment_installments WHERE id = ?';
-        db.query(getInstallmentSql, [installmentId], (err, installmentResults) => {
-          if (err) return db.rollback(() => reject(err));
+        connection.query(getInstallmentSql, [installmentId], (err, installmentResults) => {
+          if (err) {
+            connection.rollback(() => {
+              connection.release();
+              reject(err);
+            });
+            return;
+          }
           
           if (installmentResults.length === 0) {
-            return db.rollback(() => reject(new Error('Installment not found')));
+            connection.rollback(() => {
+              connection.release();
+              reject(new Error('Installment not found'));
+            });
+            return;
           }
           
           const installment = installmentResults[0];
@@ -151,23 +187,39 @@ class PaymentService {
           
           // Validate payment amount
           if (paymentAmount <= 0) {
-            return db.rollback(() => reject(new Error('Payment amount must be greater than 0')));
+            connection.rollback(() => {
+              connection.release();
+              reject(new Error('Payment amount must be greater than 0'));
+            });
+            return;
           }
           
           // Check if installment is already fully paid
           if (installment.status === 'paid') {
-            return db.rollback(() => reject(new Error('This installment is already fully paid')));
+            connection.rollback(() => {
+              connection.release();
+              reject(new Error('This installment is already fully paid'));
+            });
+            return;
           }
           
           // Check for overpayment
           if (newPaidAmount > installmentAmount) {
-            return db.rollback(() => reject(new Error(`Payment amount exceeds remaining balance. Remaining: $${(installmentAmount - currentPaidAmount).toFixed(2)}`)));
+            connection.rollback(() => {
+              connection.release();
+              reject(new Error(`Payment amount exceeds remaining balance. Remaining: $${(installmentAmount - currentPaidAmount).toFixed(2)}`));
+            });
+            return;
           }
           
           // For installments, ensure the payment amount exactly matches the remaining balance
           const remainingBalance = installmentAmount - currentPaidAmount;
           if (Math.abs(paymentAmount - remainingBalance) > 0.01) { // Allow for small floating point differences
-            return db.rollback(() => reject(new Error(`For installment payments, you must pay the exact remaining balance of $${remainingBalance.toFixed(2)}`)));
+            connection.rollback(() => {
+              connection.release();
+              reject(new Error(`For installment payments, you must pay the exact remaining balance of $${remainingBalance.toFixed(2)}`));
+            });
+            return;
           }
           
           const isFullyPaid = newPaidAmount >= installmentAmount;
@@ -182,8 +234,14 @@ class PaymentService {
           const newStatus = isFullyPaid ? 'paid' : 'pending';
           const paidAt = isFullyPaid ? new Date() : null;
           
-          db.query(updateInstallmentSql, [newPaidAmount, newStatus, paidAt, installmentId], (err) => {
-            if (err) return db.rollback(() => reject(err));
+          connection.query(updateInstallmentSql, [newPaidAmount, newStatus, paidAt, installmentId], (err) => {
+            if (err) {
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+              return;
+            }
             
             // Record transaction
             PaymentService.recordPayment({
@@ -193,7 +251,7 @@ class PaymentService {
               paymentSource: paymentSource,
               createdBy: createdBy,
               receivedBy: receivedBy
-            }).then(() => {
+            }, connection).then(() => {
               // Update sale remaining amount
               const updateSaleSql = `
                 UPDATE sales 
@@ -201,20 +259,32 @@ class PaymentService {
                 WHERE id = ?
               `;
               
-              db.query(updateSaleSql, [amount, amount, installment.sale_id], (err) => {
-                if (err) return db.rollback(() => reject(err));
+              connection.query(updateSaleSql, [amount, amount, installment.sale_id], (err) => {
+                if (err) {
+                  connection.rollback(() => {
+                    connection.release();
+                    reject(err);
+                  });
+                  return;
+                }
                 
                 // Get customer ID from sale to find upseller
                 const getSaleSql = 'SELECT customer_id FROM sales WHERE id = ?';
-                db.query(getSaleSql, [installment.sale_id], (err, saleResults) => {
-                  if (err) return db.rollback(() => reject(err));
+                connection.query(getSaleSql, [installment.sale_id], (err, saleResults) => {
+                  if (err) {
+                    connection.rollback(() => {
+                      connection.release();
+                      reject(err);
+                    });
+                    return;
+                  }
                   
                   if (saleResults.length > 0) {
                     const customerId = saleResults[0].customer_id;
                     
                     // Update customer totals first
                     const CustomerSalesService = require('./customerSalesService');
-                    CustomerSalesService.updateCustomerTotals(customerId)
+                    CustomerSalesService.updateCustomerTotals(customerId, connection)
                       .then(() => {
                         // Get upseller for this customer and update performance
                         return PaymentService.getUpsellerForCustomer(customerId);
@@ -229,24 +299,43 @@ class PaymentService {
                         return Promise.resolve({ success: true, message: 'No upseller found' });
                       })
                       .then(() => {
-                        db.commit((err) => {
-                          if (err) return db.rollback(() => reject(err));
-                          resolve({ success: true, fullyPaid: isFullyPaid });
+                        connection.commit((err) => {
+                          connection.release(); // Always release the connection
+                          if (err) {
+                            reject(err);
+                          } else {
+                            resolve({ success: true, fullyPaid: isFullyPaid });
+                          }
                         });
                       })
-                      .catch(err => db.rollback(() => reject(err)));
+                      .catch(err => {
+                        connection.rollback(() => {
+                          connection.release();
+                          reject(err);
+                        });
+                      });
                   } else {
-                    db.commit((err) => {
-                      if (err) return db.rollback(() => reject(err));
-                      resolve({ success: true, fullyPaid: isFullyPaid });
+                    connection.commit((err) => {
+                      connection.release(); // Always release the connection
+                      if (err) {
+                        reject(err);
+                      } else {
+                        resolve({ success: true, fullyPaid: isFullyPaid });
+                      }
                     });
                   }
                 });
               });
-            }).catch(err => db.rollback(() => reject(err)));
+            }).catch(err => {
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+            });
           });
         });
       });
+    });
     });
   }
   
@@ -260,17 +349,34 @@ class PaymentService {
    */
   static async processRecurringPayment(recurringId, amount, paymentSource, createdBy, receivedBy = null) {
     return new Promise((resolve, reject) => {
-      // Start transaction
-      db.beginTransaction((err) => {
+      // Get a connection from the pool
+      db.getConnection((err, connection) => {
         if (err) return reject(err);
+        
+        // Start transaction
+        connection.beginTransaction((err) => {
+          if (err) {
+            connection.release();
+            return reject(err);
+          }
         
         // Get recurring payment details
         const getRecurringSql = 'SELECT * FROM payment_recurring WHERE id = ?';
-        db.query(getRecurringSql, [recurringId], (err, recurringResults) => {
-          if (err) return db.rollback(() => reject(err));
+        connection.query(getRecurringSql, [recurringId], (err, recurringResults) => {
+          if (err) {
+            connection.rollback(() => {
+              connection.release();
+              reject(err);
+            });
+            return;
+          }
           
           if (recurringResults.length === 0) {
-            return db.rollback(() => reject(new Error('Recurring payment not found')));
+            connection.rollback(() => {
+              connection.release();
+              reject(new Error('Recurring payment not found'));
+            });
+            return;
           }
           
           const recurring = recurringResults[0];
@@ -303,11 +409,17 @@ class PaymentService {
           
           const newStatus = isCompleted ? 'completed' : 'active';
           
-          db.query(updateRecurringSql, [
+          connection.query(updateRecurringSql, [
             newPaymentsMade, new Date().toISOString().split('T')[0], 
             nextPaymentDate.toISOString().split('T')[0], newStatus, recurringId
           ], (err) => {
-            if (err) return db.rollback(() => reject(err));
+            if (err) {
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+              return;
+            }
             
             // Record transaction
             PaymentService.recordPayment({
@@ -317,7 +429,7 @@ class PaymentService {
               paymentSource: paymentSource,
               createdBy: createdBy,
               receivedBy: receivedBy
-            }).then(() => {
+            }, connection).then(() => {
               // For recurring payments, update both unit_price (total sales) and cash_in (amount received)
               // remaining should stay at the original sale amount - recurring payments are additional revenue
               const updateSaleSql = `
@@ -328,8 +440,14 @@ class PaymentService {
               
               // Get current sale details
               const getSaleSql = 'SELECT unit_price, cash_in, remaining FROM sales WHERE id = ?';
-              db.query(getSaleSql, [recurring.sale_id], (err, saleResults) => {
-                if (err) return db.rollback(() => reject(err));
+              connection.query(getSaleSql, [recurring.sale_id], (err, saleResults) => {
+                if (err) {
+                  connection.rollback(() => {
+                    connection.release();
+                    reject(err);
+                  });
+                  return;
+                }
                 
                 const sale = saleResults[0];
                 const newUnitPrice = parseFloat(sale.unit_price) + parseFloat(amount);
@@ -338,8 +456,14 @@ class PaymentService {
                 // The remaining field represents the original sale amount, not total sales
                 const paymentStatus = (newCashIn > 0 ? 'partial' : 'pending');
                 
-                db.query(updateSaleSql, [amount, amount, new Date().toISOString().split('T')[0], paymentStatus, recurring.sale_id], (err) => {
-                  if (err) return db.rollback(() => reject(err));
+                connection.query(updateSaleSql, [amount, amount, new Date().toISOString().split('T')[0], paymentStatus, recurring.sale_id], (err) => {
+                  if (err) {
+                    connection.rollback(() => {
+                      connection.release();
+                      reject(err);
+                    });
+                    return;
+                  }
                   
                   // Update customer totals using the standard function
                   const CustomerSalesService = require('./customerSalesService');
@@ -358,18 +482,33 @@ class PaymentService {
                       return Promise.resolve({ success: true, message: 'No upseller found' });
                     })
                     .then(() => {
-                      db.commit((err) => {
-                        if (err) return db.rollback(() => reject(err));
-                        resolve({ success: true, completed: isCompleted });
+                      connection.commit((err) => {
+                        connection.release(); // Always release the connection
+                        if (err) {
+                          reject(err);
+                        } else {
+                          resolve({ success: true, completed: isCompleted });
+                        }
                       });
                     })
-                    .catch(err => db.rollback(() => reject(err)));
+                    .catch(err => {
+                      connection.rollback(() => {
+                        connection.release();
+                        reject(err);
+                    });
+                  });
                 });
               });
-            }).catch(err => db.rollback(() => reject(err)));
+            }).catch(err => {
+              connection.rollback(() => {
+                connection.release();
+                reject(err);
+              });
+            });
           });
         });
       });
+    });
     });
   }
   
@@ -533,6 +672,8 @@ class PaymentService {
   static async recalculateUpsellerPerformance(upsellerId, year, month) {
     return new Promise(async (resolve, reject) => {
       try {
+        console.log(`Recalculating upseller performance for upseller ${upsellerId}, year ${year}, month ${month}`);
+        
         // Get assigned customers for the upseller
         const assignedCustomersSql = `
           SELECT DISTINCT customer_id 
@@ -542,86 +683,29 @@ class PaymentService {
         
         const assignedCustomers = await new Promise((resolve, reject) => {
           db.query(assignedCustomersSql, [upsellerId], (err, results) => {
-            if (err) reject(err);
-            else resolve(results.map(row => row.customer_id));
+            if (err) {
+              console.error(`Error getting assigned customers for upseller ${upsellerId}:`, err);
+              reject(err);
+            } else {
+              console.log(`Assigned customers for upseller ${upsellerId}:`, results);
+              resolve(results.map(row => row.customer_id));
+            }
           });
         });
 
         if (assignedCustomers.length === 0) {
+          console.log(`No assigned customers found for upseller ${upsellerId}`);
           return resolve({ success: true, message: 'No assigned customers', totalCashIn: 0 });
         }
+        
+        console.log(`Found ${assignedCustomers.length} assigned customers for upseller ${upsellerId}:`, assignedCustomers);
 
         let totalCashIn = 0;
 
-        // 1. Sales created by the upseller
-        const salesSql = `
-          SELECT COALESCE(SUM(cash_in), 0) as total_cash_in
-          FROM sales 
-          WHERE customer_id IN (${assignedCustomers.map(() => '?').join(',')})
-          AND created_by = ?
-          AND YEAR(created_at) = ? AND MONTH(created_at) = ?
-        `;
-        
-        const salesResults = await new Promise((resolve, reject) => {
-          db.query(salesSql, [...assignedCustomers, upsellerId, year, month], (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          });
-        });
-        
-        if (salesResults.length > 0) {
-          totalCashIn += parseFloat(salesResults[0].total_cash_in || 0);
-        }
-
-        // 2. Sales where upseller received payments
-        const receivedSalesSql = `
-          SELECT COALESCE(SUM(s.cash_in), 0) as received_sales_cash_in
-          FROM sales s
-          WHERE s.customer_id IN (${assignedCustomers.map(() => '?').join(',')})
-          AND s.id IN (
-            SELECT DISTINCT pt.sale_id 
-            FROM payment_transactions pt 
-            WHERE pt.received_by = ?
-            AND YEAR(pt.created_at) = ? AND MONTH(pt.created_at) = ?
-          )
-        `;
-        
-        const receivedSalesResults = await new Promise((resolve, reject) => {
-          db.query(receivedSalesSql, [...assignedCustomers, upsellerId, year, month], (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          });
-        });
-        
-        if (receivedSalesResults.length > 0) {
-          totalCashIn += parseFloat(receivedSalesResults[0].received_sales_cash_in || 0);
-        }
-
-        // 3. Additional cash in from payment transactions (installments, recurring, etc.)
-        const paymentSql = `
-          SELECT COALESCE(SUM(pt.amount), 0) as additional_cash_in
-          FROM payment_transactions pt
-          JOIN sales s ON pt.sale_id = s.id
-          WHERE s.customer_id IN (${assignedCustomers.map(() => '?').join(',')})
-          AND (pt.created_by = ? OR pt.received_by = ?)
-          AND (pt.installment_id IS NOT NULL OR pt.recurring_id IS NOT NULL)
-          AND YEAR(pt.created_at) = ? AND MONTH(pt.created_at) = ?
-        `;
-        
-        const paymentResults = await new Promise((resolve, reject) => {
-          db.query(paymentSql, [...assignedCustomers, upsellerId, upsellerId, year, month], (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          });
-        });
-        
-        if (paymentResults.length > 0) {
-          totalCashIn += parseFloat(paymentResults[0].additional_cash_in || 0);
-        }
-
-        // 4. All payments received by the upseller
-        const receivedPaymentsSql = `
-          SELECT COALESCE(SUM(pt.amount), 0) as received_cash_in
+        // FIXED: Use payment_transactions as the single source of truth to avoid double-counting
+        // This counts all payments received for assigned customers in the specified month/year
+        const paymentsSql = `
+          SELECT COALESCE(SUM(pt.amount), 0) as total_received_payments
           FROM payment_transactions pt
           JOIN sales s ON pt.sale_id = s.id
           WHERE s.customer_id IN (${assignedCustomers.map(() => '?').join(',')})
@@ -629,16 +713,26 @@ class PaymentService {
           AND YEAR(pt.created_at) = ? AND MONTH(pt.created_at) = ?
         `;
         
-        const receivedPaymentsResults = await new Promise((resolve, reject) => {
-          db.query(receivedPaymentsSql, [...assignedCustomers, upsellerId, year, month], (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
+        console.log(`Counting payments for upseller ${upsellerId} from customers: [${assignedCustomers.join(',')}] for ${year}-${month}`);
+        
+        const paymentsResults = await new Promise((resolve, reject) => {
+          db.query(paymentsSql, [...assignedCustomers, upsellerId, year, month], (err, results) => {
+            if (err) {
+              console.error(`Error calculating upseller payments for ${upsellerId}:`, err);
+              reject(err);
+            } else {
+              console.log(`Payment results for upseller ${upsellerId}:`, results);
+              resolve(results);
+            }
           });
         });
         
-        if (receivedPaymentsResults.length > 0) {
-          totalCashIn += parseFloat(receivedPaymentsResults[0].received_cash_in || 0);
+        if (paymentsResults.length > 0) {
+          totalCashIn = parseFloat(paymentsResults[0].total_received_payments || 0);
+          console.log(`Total cash-in calculated for upseller ${upsellerId}: ${totalCashIn}`);
         }
+
+        console.log(`Final calculated total cash in for upseller ${upsellerId}: ${totalCashIn}`);
 
         // Update or create upseller performance record
         const checkSql = `
@@ -696,8 +790,15 @@ class PaymentService {
         LIMIT 1
       `;
       
+      console.log(`Getting upseller for customer ${customerId} with query:`, sql);
+      
       db.query(sql, [customerId], (err, results) => {
-        if (err) return reject(err);
+        if (err) {
+          console.error(`Error querying upseller for customer ${customerId}:`, err);
+          return reject(err);
+        }
+        
+        console.log(`Customer assignments result for customer ${customerId}:`, results);
         resolve(results.length > 0 ? results[0].upseller_id : null);
       });
     });

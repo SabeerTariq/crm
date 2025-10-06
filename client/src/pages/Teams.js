@@ -24,6 +24,17 @@ export default function Teams() {
     fetchUsers();
   }, []);
 
+  // Reset form when opening for new team creation
+  useEffect(() => {
+    if (showAddForm && !editingTeam) {
+      setFormData({
+        name: '',
+        description: '',
+        member_ids: []
+      });
+    }
+  }, [showAddForm, editingTeam]);
+
   const fetchTeams = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -76,6 +87,16 @@ export default function Teams() {
     });
     setEditingTeam(null);
     setShowAddForm(false);
+  };
+
+  const openAddForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      member_ids: []
+    });
+    setEditingTeam(null);
+    setShowAddForm(true);
   };
 
   const submitTeam = async (e) => {
@@ -204,7 +225,7 @@ export default function Teams() {
             <h2>Teams Management</h2>
             {hasPermission('teams', 'create') && (
               <button 
-                onClick={() => setShowAddForm(true)}
+                onClick={openAddForm}
                 style={{
                   backgroundColor: '#3b82f6',
                   color: 'white',

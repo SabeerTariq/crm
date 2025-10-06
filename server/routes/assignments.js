@@ -8,7 +8,6 @@ const CustomerAssignmentService = require('../services/customerAssignmentService
 router.get('/', auth, authorize('assignments', 'read'), (req, res) => {
   const filters = {
     status: req.query.status,
-    assignment_type: req.query.assignment_type,
     upseller_id: req.query.upseller_id,
     customer_id: req.query.customer_id,
     limit: req.query.limit ? parseInt(req.query.limit) : null
@@ -87,7 +86,7 @@ router.get('/customer/:customerId', auth, authorize('assignments', 'read'), (req
 
 // Assign customer to upseller
 router.post('/assign', auth, authorize('assignments', 'create'), (req, res) => {
-  const { customer_id, upseller_id, assignment_type = 'manual', notes } = req.body;
+  const { customer_id, upseller_id, notes } = req.body;
   
   if (!customer_id || !upseller_id) {
     return res.status(400).json({ message: 'Customer ID and Upseller ID are required' });
@@ -96,7 +95,6 @@ router.post('/assign', auth, authorize('assignments', 'create'), (req, res) => {
   CustomerAssignmentService.assignCustomer(
     customer_id, 
     upseller_id, 
-    assignment_type, 
     notes, 
     req.user.id
   )

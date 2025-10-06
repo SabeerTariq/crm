@@ -69,7 +69,7 @@ const ProjectDetails = () => {
   const fetchAllDepartments = async () => {
     try {
       const response = await api.get('/departments');
-      setAllDepartments(response.data || []);
+      setAllDepartments(response.data.departments || []);
     } catch (err) {
       console.error('Error fetching departments:', err);
     }
@@ -314,6 +314,15 @@ const ProjectDetails = () => {
   const availableDepartments = allDepartments.filter(dept => 
     !departments.some(assignedDept => assignedDept.department_id === dept.id)
   );
+  
+  // Debug logging
+  console.log('Debug info:', {
+    allDepartments: allDepartments.length,
+    assignedDepartments: departments.length,
+    availableDepartments: availableDepartments.length,
+    allDepartmentsData: allDepartments,
+    assignedDepartmentsData: departments
+  });
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -1076,8 +1085,8 @@ const ProjectDetails = () => {
                     }}
                   >
                     <option value="">Select Department</option>
-                    {departments.map(dept => (
-                      <option key={dept.department_id} value={dept.department_id}>
+                    {allDepartments.map(dept => (
+                      <option key={dept.id} value={dept.id}>
                         {dept.department_name}
                       </option>
                     ))}
@@ -1797,8 +1806,8 @@ const ProjectDetails = () => {
                     }}
                   >
                     <option value="">Select Department</option>
-                    {departments.map(dept => (
-                      <option key={dept.department_id} value={dept.department_id}>
+                    {allDepartments.map(dept => (
+                      <option key={dept.id} value={dept.id}>
                         {dept.department_name}
                       </option>
                     ))}

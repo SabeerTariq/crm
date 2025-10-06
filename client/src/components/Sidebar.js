@@ -292,6 +292,14 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
+        {hasPermission('reminders', 'view') && (
+          <li className={`menu-item ${isActive('/calendar') ? 'active' : ''}`}>
+            <Link to="/calendar" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-calendar-alt menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Calendar</span>}
+            </Link>
+          </li>
+        )}
         {hasPermission('tasks', 'view') && (
           <li className={`menu-item ${isActive('/task-management') || location.pathname.startsWith('/task-management/board/') ? 'active' : ''}`}>
             <div 

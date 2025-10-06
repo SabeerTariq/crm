@@ -32,3 +32,5 @@ FROM departments d;
 UPDATE project_tasks pt
 JOIN boards b ON pt.department_id = b.department_id AND b.is_default = TRUE
 SET pt.board_id = b.id;
+
+

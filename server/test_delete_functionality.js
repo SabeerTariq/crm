@@ -57,3 +57,5 @@ async function testDeleteFunctionality() {
 // Note: This test requires the server to be running
 // Run with: node test_delete_functionality.js
 testDeleteFunctionality();
+
+

@@ -470,7 +470,7 @@ export default function UpsellerDashboard() {
                       {customer.customer_email} • {customer.customer_phone}
                     </div>
                     <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '5px' }}>
-                      Assigned: {new Date(customer.assigned_date).toLocaleDateString()} • Type: {customer.assignment_type}
+                      Assigned: {new Date(customer.assigned_date).toLocaleDateString()}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>

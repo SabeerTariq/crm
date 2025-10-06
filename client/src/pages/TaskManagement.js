@@ -41,11 +41,18 @@ const TaskManagement = () => {
 
   // Fetch tasks
   const fetchTasks = useCallback(async (boardId) => {
-    if (!boardId) return;
-    
     try {
       setLoading(true);
-      const response = await api.get(`/boards/${boardId}/tasks`);
+      let response;
+      
+      if (boardId) {
+        // Fetch tasks for a specific board
+        response = await api.get(`/boards/${boardId}/tasks`);
+      } else {
+        // Fetch all tasks across all boards
+        response = await api.get('/tasks');
+      }
+      
       setTasks(response.data.tasks || []);
     } catch (err) {
       console.error('Error fetching tasks:', err);
@@ -69,9 +76,12 @@ const TaskManagement = () => {
   const fetchBoards = useCallback(async () => {
     try {
       const response = await api.get('/boards');
-      setBoards(response.data.boards || []);
+      const boardsData = response.data.boards || [];
+      setBoards(boardsData);
+      return boardsData;
     } catch (err) {
       console.error('Error fetching boards:', err);
+      return [];
     }
   }, []);
 
@@ -120,7 +130,14 @@ const TaskManagement = () => {
       await api.post('/boards', newBoard);
       setNewBoard({ board_name: '', department_id: '', description: '' });
       setShowBoardModal(false);
-      fetchBoards(); // Refresh boards
+      
+      // Refresh boards and automatically navigate to the new board
+      const updatedBoards = await fetchBoards();
+      if (updatedBoards && updatedBoards.length > 0) {
+        // Navigate to the newly created board
+        const newBoardId = updatedBoards[updatedBoards.length - 1].id;
+        navigate(`/task-management/board/${newBoardId}`);
+      }
     } catch (err) {
       console.error('Error adding board:', err);
       setError('Failed to add board');
@@ -267,35 +284,54 @@ const TaskManagement = () => {
   };
 
   useEffect(() => {
-    fetchBoards();
-    fetchStatuses();
-    fetchDepartments();
+    const initializeData = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([
+          fetchBoards(),
+          fetchStatuses(),
+          fetchDepartments()
+        ]);
+      } catch (err) {
+        console.error('Error initializing data:', err);
+        setError('Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
   }, [fetchBoards, fetchStatuses, fetchDepartments]);
 
   // Handle board selection and task fetching
   useEffect(() => {
-    if (boards.length > 0) {
-      let targetBoard = null;
-      
-      if (boardId) {
-        // If boardId is in URL, find that board
-        targetBoard = boards.find(b => b.id === parseInt(boardId));
-        if (!targetBoard) {
-          // Board not found, redirect to main task management
-          navigate('/task-management');
-          return;
-        }
-      } else {
-        // No boardId in URL, select first board
-        targetBoard = boards[0];
-      }
-      
-      if (targetBoard && (!selectedBoard || selectedBoard.id !== targetBoard.id)) {
-        setSelectedBoard(targetBoard);
-        fetchTasks(targetBoard.id);
-      }
+    // Don't try to fetch tasks if there are no boards
+    if (boards.length === 0) {
+      setSelectedBoard(null);
+      setTasks([]);
+      setLoading(false);
+      return;
     }
-  }, [boards, boardId, selectedBoard, navigate, fetchTasks]);
+
+    let targetBoard = null;
+    
+    if (boardId) {
+      // If boardId is in URL, find that board
+      targetBoard = boards.find(b => b.id === parseInt(boardId));
+      if (!targetBoard) {
+        // Board not found, redirect to main task management
+        navigate('/task-management');
+        return;
+      }
+    } else {
+      // No boardId in URL - this means "All Boards" is selected
+      targetBoard = null; // Set to null to indicate all boards
+    }
+    
+    // Update selected board state and fetch tasks
+    setSelectedBoard(targetBoard);
+    fetchTasks(targetBoard ? targetBoard.id : null);
+  }, [boards, boardId, navigate, fetchTasks]);
 
   if (loading) {
     return (
@@ -312,6 +348,270 @@ const TaskManagement = () => {
       <PageLayout>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
           <div style={{ fontSize: '18px', color: '#ef4444' }}>{error}</div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // Show empty state when no boards exist
+  if (boards.length === 0) {
+    return (
+      <PageLayout>
+        <div style={{ padding: '24px' }}>
+          {/* Header */}
+          <div style={{ 
+            marginBottom: '32px',
+            maxWidth: '100%',
+            wordWrap: 'break-word'
+          }}>
+            <h1 style={{ 
+              margin: '0 0 8px 0', 
+              fontSize: 'clamp(24px, 4vw, 32px)', 
+              fontWeight: '700', 
+              color: '#111827' 
+            }}>
+              Task Management
+            </h1>
+            <p style={{ 
+              margin: '0', 
+              color: '#6b7280', 
+              fontSize: 'clamp(14px, 2.5vw, 16px)' 
+            }}>
+              Manage and track tasks across projects with a visual Kanban board
+            </p>
+          </div>
+
+          {/* Empty State */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '400px',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            padding: '48px 24px',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              backgroundColor: '#f3f4f6',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '24px'
+            }}>
+              <i className="fas fa-columns" style={{
+                fontSize: '32px',
+                color: '#9ca3af'
+              }}></i>
+            </div>
+            
+            <h2 style={{
+              margin: '0 0 12px 0',
+              fontSize: '24px',
+              fontWeight: '600',
+              color: '#111827'
+            }}>
+              No Boards Available
+            </h2>
+            
+            <p style={{
+              margin: '0 0 32px 0',
+              fontSize: '16px',
+              color: '#6b7280',
+              maxWidth: '400px',
+              lineHeight: '1.5'
+            }}>
+              You need to create a board before you can start managing tasks. 
+              Boards help organize tasks by department or project.
+            </p>
+            
+            <button
+              onClick={() => setShowBoardModal(true)}
+              style={{
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '12px 24px',
+                fontSize: '16px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'background-color 0.2s ease',
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+            >
+              <i className="fas fa-plus"></i>
+              Create Your First Board
+            </button>
+          </div>
+
+          {/* Add Board Modal */}
+          {showBoardModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '32px',
+                width: '400px',
+                maxWidth: '90vw'
+              }}>
+                <h3 style={{
+                  margin: '0 0 24px 0',
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#111827'
+                }}>
+                  Create Your First Board
+                </h3>
+
+                <form onSubmit={handleAddBoard}>
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      Board Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newBoard.board_name}
+                      onChange={(e) => setNewBoard(prev => ({ ...prev, board_name: e.target.value }))}
+                      placeholder="e.g., Marketing Campaign Board"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        outline: 'none'
+                      }}
+                      required
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      Department
+                    </label>
+                    <select
+                      value={newBoard.department_id}
+                      onChange={(e) => setNewBoard(prev => ({ ...prev, department_id: e.target.value }))}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        outline: 'none'
+                      }}
+                      required
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.department_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      Description (Optional)
+                    </label>
+                    <textarea
+                      value={newBoard.description}
+                      onChange={(e) => setNewBoard(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Brief description of this board's purpose..."
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBoardModal(false);
+                        setNewBoard({ board_name: '', department_id: '', description: '' });
+                      }}
+                      style={{
+                        padding: '12px 24px',
+                        backgroundColor: '#f3f4f6',
+                        color: '#374151',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      style={{
+                        padding: '12px 24px',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Create Board
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </PageLayout>
     );
@@ -417,8 +717,8 @@ const TaskManagement = () => {
             <select
               value={selectedBoard ? selectedBoard.id : ''}
               onChange={(e) => {
-                const boardId = parseInt(e.target.value);
-                // Navigate to the board-specific URL
+                const boardId = e.target.value ? parseInt(e.target.value) : null;
+                // Navigate to the board-specific URL or all boards
                 if (boardId) {
                   navigate(`/task-management/board/${boardId}`);
                 } else {
@@ -443,7 +743,7 @@ const TaskManagement = () => {
                 </option>
               ))}
             </select>
-            {selectedBoard && (
+            {selectedBoard ? (
               <div style={{ 
                 fontSize: '14px', 
                 color: '#6b7280',
@@ -464,6 +764,26 @@ const TaskManagement = () => {
                 {selectedBoard.description && (
                   <span>{selectedBoard.description}</span>
                 )}
+              </div>
+            ) : (
+              <div style={{ 
+                fontSize: '14px', 
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  fontWeight: '500',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white'
+                }}>
+                  ALL BOARDS
+                </span>
+                <span>Showing tasks from all boards</span>
               </div>
             )}
           </div>
