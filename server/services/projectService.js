@@ -31,7 +31,10 @@ class ProjectService {
 
       const values = [
         customer_id, project_name, description, status, priority,
-        start_date, end_date, budget, created_by, project_manager_id, assigned_upseller_id
+        start_date && start_date !== '' ? start_date : null, 
+        end_date && end_date !== '' ? end_date : null, 
+        budget && budget !== '' ? budget : null, 
+        created_by, project_manager_id, assigned_upseller_id
       ];
 
       db.query(sql, values, (err, result) => {
@@ -229,7 +232,14 @@ class ProjectService {
       Object.keys(updateData).forEach(key => {
         if (allowedFields.includes(key) && updateData[key] !== undefined) {
           updateFields.push(`${key} = ?`);
-          values.push(updateData[key]);
+          // Handle empty strings for date and numeric fields
+          if ((key === 'start_date' || key === 'end_date') && updateData[key] === '') {
+            values.push(null);
+          } else if (key === 'budget' && updateData[key] === '') {
+            values.push(null);
+          } else {
+            values.push(updateData[key]);
+          }
         }
       });
 

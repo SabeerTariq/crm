@@ -399,39 +399,65 @@ class DepartmentService {
     return new Promise((resolve, reject) => {
       const { department_id, user_id, role = 'team_member' } = teamMemberData;
 
-      // Check if user is already in this department
-      const checkSql = `
+      // Check if user is already an active member of this department
+      const checkActiveSql = `
         SELECT id FROM department_team_members 
         WHERE department_id = ? AND user_id = ? AND is_active = 1
       `;
 
-      db.query(checkSql, [department_id, user_id], (err, results) => {
+      db.query(checkActiveSql, [department_id, user_id], (err, activeResults) => {
         if (err) return reject(err);
         
-        if (results.length > 0) {
+        if (activeResults.length > 0) {
           return reject(new Error('User is already a member of this department'));
         }
 
-        // Check if user is in another department and remove them from there first
-        const removeFromOtherDeptSql = `
-          UPDATE department_team_members 
-          SET is_active = 0, updated_at = CURRENT_TIMESTAMP
-          WHERE user_id = ? AND is_active = 1 AND department_id != ?
+        // Check if user has an inactive record in this department
+        const checkInactiveSql = `
+          SELECT id FROM department_team_members 
+          WHERE department_id = ? AND user_id = ? AND is_active = 0
         `;
 
-        db.query(removeFromOtherDeptSql, [user_id, department_id], (err, removeResult) => {
+        db.query(checkInactiveSql, [department_id, user_id], (err, inactiveResults) => {
           if (err) return reject(err);
 
-          // Add user to new department
-          const sql = `
-            INSERT INTO department_team_members (department_id, user_id, role)
-            VALUES (?, ?, ?)
-          `;
+          // If user has an inactive record, reactivate it
+          if (inactiveResults.length > 0) {
+            const reactivateSql = `
+              UPDATE department_team_members 
+              SET is_active = 1, role = ?, updated_at = CURRENT_TIMESTAMP
+              WHERE department_id = ? AND user_id = ? AND is_active = 0
+            `;
 
-          db.query(sql, [department_id, user_id, role], (err, result) => {
-            if (err) return reject(err);
-            resolve(result.insertId);
-          });
+            db.query(reactivateSql, [role, department_id, user_id], (err, result) => {
+              if (err) return reject(err);
+              resolve(inactiveResults[0].id);
+            });
+          } else {
+            // User is not in this department, proceed with normal addition
+            
+            // Check if user is in another department and remove them from there first
+            const removeFromOtherDeptSql = `
+              UPDATE department_team_members 
+              SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+              WHERE user_id = ? AND is_active = 1 AND department_id != ?
+            `;
+
+            db.query(removeFromOtherDeptSql, [user_id, department_id], (err, removeResult) => {
+              if (err) return reject(err);
+
+              // Add user to new department
+              const sql = `
+                INSERT INTO department_team_members (department_id, user_id, role)
+                VALUES (?, ?, ?)
+              `;
+
+              db.query(sql, [department_id, user_id, role], (err, result) => {
+                if (err) return reject(err);
+                resolve(result.insertId);
+              });
+            });
+          }
         });
       });
     });
