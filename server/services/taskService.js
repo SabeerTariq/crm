@@ -34,8 +34,8 @@ class TaskService {
         const sql = `
           INSERT INTO project_tasks (
             project_id, department_id, task_name, description, priority,
-            assigned_to, created_by, due_date, estimated_hours, board_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            assigned_to, created_by, due_date, estimated_hours, board_id, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const values = [
@@ -44,7 +44,8 @@ class TaskService {
           created_by, 
           due_date && due_date !== '' ? due_date : null, 
           estimated_hours && estimated_hours !== '' ? estimated_hours : null,
-          board_id
+          board_id,
+          'New Task'
         ];
 
         db.query(sql, values, (err, result) => {

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 01, 2025 at 10:19 PM
+-- Generation Time: Oct 07, 2025 at 11:56 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,12 +43,9 @@ CREATE TABLE `boards` (
 --
 
 INSERT INTO `boards` (`id`, `board_name`, `department_id`, `description`, `is_default`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, 'Content Board', 4, 'Default Kanban board for Content department', 1, 1, '2025-09-23 23:03:31', '2025-09-23 23:03:31'),
-(2, 'Design Board', 1, 'Default Kanban board for Design department', 1, 1, '2025-09-23 23:03:31', '2025-09-23 23:03:31'),
-(3, 'Development Board', 2, 'Default Kanban board for Development department', 1, 1, '2025-09-23 23:03:31', '2025-09-23 23:03:31'),
-(4, 'Marketing Board', 5, 'Default Kanban board for Marketing department', 1, 1, '2025-09-23 23:03:31', '2025-09-23 23:03:31'),
-(5, 'SEO Board', 3, 'Default Kanban board for SEO department', 1, 1, '2025-09-23 23:03:31', '2025-09-23 23:03:31'),
-(6, 'XYZ Board', 11, 'Default Kanban board for XYZ department', 1, 1, '2025-09-23 23:03:31', '2025-09-23 23:03:31');
+(7, 'Development', 13, '', 1, 1, '2025-10-06 21:38:42', '2025-10-06 22:34:52'),
+(9, 'Marketing', 12, '', 1, 1, '2025-10-06 21:46:24', '2025-10-06 22:34:58'),
+(10, 'Design', 15, '', 1, 1, '2025-10-06 21:46:48', '2025-10-06 22:35:02');
 
 -- --------------------------------------------------------
 
@@ -88,7 +85,6 @@ CREATE TABLE `customer_assignments` (
   `customer_id` int(11) NOT NULL,
   `upseller_id` int(11) NOT NULL,
   `assigned_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `assignment_type` enum('territory','product','manual','performance') DEFAULT 'manual',
   `status` enum('active','inactive','transferred') DEFAULT 'active',
   `notes` text DEFAULT NULL,
   `created_by` int(11) NOT NULL,
@@ -140,12 +136,9 @@ CREATE TABLE `departments` (
 --
 
 INSERT INTO `departments` (`id`, `department_name`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'Design', 'Updated description for design department', 1, '2025-09-22 23:53:33', '2025-09-23 23:58:16'),
-(2, 'Development', 'Frontend Development, Backend Development, Full-stack', 1, '2025-09-22 23:53:33', '2025-09-22 23:53:33'),
-(3, 'SEO', 'Search Engine Optimization, Keyword Research, Link Building', 1, '2025-09-22 23:53:33', '2025-09-22 23:53:33'),
-(4, 'Content', 'Content Writing, Copywriting, Blog Posts', 1, '2025-09-22 23:53:33', '2025-09-23 23:49:25'),
-(5, 'Marketing', 'Digital Marketing, Social Media, Email Marketing, PPC', 1, '2025-09-22 23:53:33', '2025-09-22 23:53:33'),
-(11, 'XYZ', '', 0, '2025-09-23 00:09:43', '2025-09-23 23:53:38');
+(12, 'Marketing', 'Marketing team', 1, '2025-10-03 23:59:25', '2025-10-03 23:59:25'),
+(13, 'Development', 'Development team', 1, '2025-10-03 23:59:25', '2025-10-03 23:59:25'),
+(15, 'Design', '', 1, '2025-10-04 00:04:35', '2025-10-04 00:04:35');
 
 -- --------------------------------------------------------
 
@@ -169,12 +162,12 @@ CREATE TABLE `department_team_members` (
 --
 
 INSERT INTO `department_team_members` (`id`, `department_id`, `user_id`, `role`, `is_active`, `assigned_at`, `created_at`, `updated_at`) VALUES
-(1, 2, 14, 'team_leader', 0, '2025-09-23 23:37:24', '2025-09-23 23:37:24', '2025-09-23 23:43:37'),
-(2, 2, 15, 'team_member', 0, '2025-09-23 23:41:10', '2025-09-23 23:41:10', '2025-09-23 23:43:36'),
-(3, 1, 14, 'team_leader', 1, '2025-09-23 23:43:49', '2025-09-23 23:43:49', '2025-09-23 23:43:49'),
-(4, 1, 15, 'team_member', 1, '2025-09-23 23:43:53', '2025-09-23 23:43:53', '2025-09-23 23:43:53'),
-(5, 2, 16, 'team_leader', 1, '2025-10-01 00:22:43', '2025-10-01 00:22:43', '2025-10-01 00:22:46'),
-(6, 2, 17, 'team_member', 1, '2025-10-01 00:22:54', '2025-10-01 00:22:54', '2025-10-01 00:22:54');
+(7, 13, 14, 'team_leader', 0, '2025-10-06 22:38:01', '2025-10-06 22:38:01', '2025-10-06 22:38:17'),
+(8, 13, 15, 'team_member', 0, '2025-10-06 22:38:07', '2025-10-06 22:38:07', '2025-10-06 22:38:17'),
+(9, 13, 16, 'team_leader', 1, '2025-10-06 22:38:22', '2025-10-06 22:38:22', '2025-10-06 22:38:22'),
+(10, 13, 17, 'team_member', 0, '2025-10-06 22:38:24', '2025-10-06 22:38:24', '2025-10-06 22:38:31'),
+(11, 15, 14, 'team_leader', 1, '2025-10-06 22:38:29', '2025-10-06 22:38:29', '2025-10-06 22:38:29'),
+(12, 15, 17, 'team_member', 1, '2025-10-06 22:38:31', '2025-10-06 22:38:31', '2025-10-06 22:38:31');
 
 -- --------------------------------------------------------
 
@@ -229,6 +222,38 @@ CREATE TABLE `leads` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `lead_notes`
+--
+
+CREATE TABLE `lead_notes` (
+  `id` int(11) NOT NULL,
+  `lead_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `note` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lead_schedules`
+--
+
+CREATE TABLE `lead_schedules` (
+  `id` int(11) NOT NULL,
+  `lead_id` int(11) NOT NULL,
+  `scheduled_by` int(11) NOT NULL,
+  `schedule_date` date NOT NULL,
+  `schedule_time` time DEFAULT NULL,
+  `scheduled_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `lead_tracking`
 --
 
@@ -239,6 +264,15 @@ CREATE TABLE `lead_tracking` (
   `action` enum('created','converted') NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lead_tracking`
+--
+
+INSERT INTO `lead_tracking` (`id`, `user_id`, `lead_id`, `action`, `created_at`) VALUES
+(197, 21, 91, 'created', '2025-10-03 23:15:36'),
+(198, 21, 91, 'converted', '2025-10-03 23:16:02'),
+(199, 1, 92, 'created', '2025-10-07 21:39:26');
 
 -- --------------------------------------------------------
 
@@ -356,6 +390,11 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (2, 'leads', 'read'),
 (3, 'leads', 'update'),
 (18, 'leads', 'view'),
+(130, 'lead_notes', 'create'),
+(133, 'lead_notes', 'delete'),
+(131, 'lead_notes', 'read'),
+(132, 'lead_notes', 'update'),
+(134, 'lead_notes', 'view'),
 (65, 'payments', 'create'),
 (68, 'payments', 'delete'),
 (66, 'payments', 'read'),
@@ -376,6 +415,11 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (111, 'project_attachments', 'read'),
 (112, 'project_attachments', 'update'),
 (114, 'project_attachments', 'view'),
+(125, 'reminders', 'create'),
+(128, 'reminders', 'delete'),
+(126, 'reminders', 'read'),
+(127, 'reminders', 'update'),
+(129, 'reminders', 'view'),
 (13, 'roles', 'create'),
 (16, 'roles', 'delete'),
 (14, 'roles', 'read'),
@@ -518,6 +562,26 @@ CREATE TABLE `project_tasks` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `reminders`
+--
+
+CREATE TABLE `reminders` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `reminder_date` date NOT NULL,
+  `reminder_time` time DEFAULT NULL,
+  `is_all_day` tinyint(1) DEFAULT 0,
+  `priority` enum('low','medium','high') DEFAULT 'medium',
+  `status` enum('pending','completed','cancelled') DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `roles`
 --
 
@@ -652,10 +716,25 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (1, 122),
 (1, 123),
 (1, 124),
+(1, 125),
+(1, 126),
+(1, 127),
+(1, 128),
+(1, 129),
+(1, 130),
+(1, 131),
+(1, 132),
+(1, 133),
+(1, 134),
 (2, 1),
 (2, 2),
 (2, 3),
 (2, 18),
+(2, 125),
+(2, 126),
+(2, 127),
+(2, 128),
+(2, 129),
 (3, 1),
 (3, 2),
 (3, 3),
@@ -690,6 +769,16 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (3, 122),
 (3, 123),
 (3, 124),
+(3, 125),
+(3, 126),
+(3, 127),
+(3, 128),
+(3, 129),
+(3, 130),
+(3, 131),
+(3, 132),
+(3, 133),
+(3, 134),
 (4, 1),
 (4, 2),
 (4, 3),
@@ -733,6 +822,16 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (4, 122),
 (4, 123),
 (4, 124),
+(4, 125),
+(4, 126),
+(4, 127),
+(4, 128),
+(4, 129),
+(4, 130),
+(4, 131),
+(4, 132),
+(4, 133),
+(4, 134),
 (5, 5),
 (5, 6),
 (5, 7),
@@ -781,6 +880,16 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (5, 122),
 (5, 123),
 (5, 124),
+(5, 125),
+(5, 126),
+(5, 127),
+(5, 128),
+(5, 129),
+(5, 130),
+(5, 131),
+(5, 132),
+(5, 133),
+(5, 134),
 (6, 5),
 (6, 6),
 (6, 7),
@@ -813,12 +922,30 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (6, 92),
 (6, 93),
 (6, 94),
+(6, 125),
+(6, 126),
+(6, 127),
+(6, 128),
+(6, 129),
 (7, 96),
 (7, 97),
 (7, 105),
 (7, 106),
 (7, 107),
-(7, 109);
+(7, 109),
+(7, 115),
+(7, 116),
+(7, 117),
+(7, 119),
+(7, 120),
+(7, 121),
+(7, 122),
+(7, 124),
+(7, 125),
+(7, 126),
+(7, 127),
+(7, 128),
+(7, 129);
 
 -- --------------------------------------------------------
 
@@ -844,6 +971,11 @@ CREATE TABLE `sales` (
   `notes` text DEFAULT NULL,
   `services` varchar(255) DEFAULT NULL,
   `service_details` text DEFAULT NULL,
+  `agreement_file_name` varchar(255) DEFAULT NULL,
+  `agreement_file_path` varchar(500) DEFAULT NULL,
+  `agreement_file_size` int(11) DEFAULT NULL,
+  `agreement_file_type` varchar(100) DEFAULT NULL,
+  `agreement_uploaded_at` timestamp NULL DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -972,11 +1104,11 @@ CREATE TABLE `task_statuses` (
 --
 
 INSERT INTO `task_statuses` (`id`, `status_name`, `status_color`, `status_order`, `is_default`, `created_at`, `updated_at`) VALUES
-(14, 'In Progress', '#6b7280', 3, 0, '2025-09-23 22:39:17', '2025-09-23 22:55:51'),
-(15, 'QA', '#6b7280', 4, 0, '2025-09-23 22:39:23', '2025-09-23 22:55:51'),
-(16, 'Revisions', '#6b7280', 5, 0, '2025-09-23 22:39:29', '2025-09-23 22:55:51'),
-(17, 'Completed', '#6b7280', 6, 0, '2025-09-23 22:39:39', '2025-09-23 22:55:51'),
-(18, 'New Task', '#10b981', 1, 1, '2025-09-23 22:55:45', '2025-09-23 22:55:45');
+(19, 'New Task', '#6B7280', 0, 1, '2025-10-06 21:43:55', '2025-10-07 06:13:45'),
+(34, 'In Progress', '#0055ff', 1, 0, '2025-10-07 06:10:15', '2025-10-07 06:13:00'),
+(35, 'Revisions', '#ffbb00', 2, 0, '2025-10-07 06:13:28', '2025-10-07 06:13:53'),
+(37, 'On Hold', '#ff0000', 3, 0, '2025-10-07 21:46:51', '2025-10-07 21:47:40'),
+(38, 'Completed', '#04ff00', 4, 0, '2025-10-07 21:47:18', '2025-10-07 21:47:44');
 
 -- --------------------------------------------------------
 
@@ -993,6 +1125,13 @@ CREATE TABLE `teams` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `teams`
+--
+
+INSERT INTO `teams` (`id`, `name`, `description`, `created_by`, `created_at`, `updated_at`) VALUES
+(13, 'Team A', '', 9, '2025-10-01 22:49:15', '2025-10-01 22:49:15');
+
 -- --------------------------------------------------------
 
 --
@@ -1006,6 +1145,16 @@ CREATE TABLE `team_members` (
   `role` enum('leader','member') DEFAULT 'member',
   `joined_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `team_members`
+--
+
+INSERT INTO `team_members` (`id`, `team_id`, `user_id`, `role`, `joined_at`) VALUES
+(39, 13, 21, 'member', '2025-10-01 22:49:15'),
+(40, 13, 22, 'member', '2025-10-01 22:49:15'),
+(41, 13, 26, 'member', '2025-10-01 22:49:15'),
+(42, 13, 20, 'member', '2025-10-01 22:49:15');
 
 -- --------------------------------------------------------
 
@@ -1060,6 +1209,13 @@ CREATE TABLE `upseller_targets` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `upseller_targets`
+--
+
+INSERT INTO `upseller_targets` (`id`, `user_id`, `target_value`, `target_month`, `target_year`, `created_by`, `created_at`, `updated_at`) VALUES
+(12, 10, 2000.00, 10, 2025, 10, '2025-10-03 23:26:15', '2025-10-03 23:26:15');
 
 -- --------------------------------------------------------
 
@@ -1132,7 +1288,9 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`, `role_id`)
 (23, 'Muhammad Fahad ', 'fahad@crm.com', '$2b$10$YPSKznKoJ.QWcj3mDw307OoSLVSz1MzON2Pr5Oe5N2Rp1uS.k9vLG', '2025-10-01 19:57:50', 3),
 (24, 'Shahbaz khan', 'shahbaz@crm.com', '$2b$10$.p8CbzrqsL/7ipgZjRBFfOdkCBHZInJocqmTHX7t8Q.9y5eAnTX9y', '2025-10-01 19:58:28', 3),
 (25, 'Vincent Welfred Khan', 'vincent@crm.com', '$2b$10$2wIycws1OCuIHzmWKH4PPeeZJwM38RmOMTnJ02UoAO/rLhEwvAfha', '2025-10-01 19:59:00', 3),
-(26, 'Bilal Ahmed ', 'bilal@crm.com', '$2b$10$BwcOLWPypwR3WZYKbh3mn.GsRX9SBkvjQI/zqRog.dpFZojACDOsq', '2025-10-01 19:59:25', 3);
+(26, 'Bilal Ahmed ', 'bilal@crm.com', '$2b$10$BwcOLWPypwR3WZYKbh3mn.GsRX9SBkvjQI/zqRog.dpFZojACDOsq', '2025-10-01 19:59:25', 3),
+(27, 'Sharjeel Ahmed', 'sharjeel@crm.com', '$2b$10$.gDVaOM.gBWsctAEztBn9e0dxg8KjncnQzw3pieFcrV8B5xVOPO.K', '2025-10-07 21:41:21', 3),
+(28, 'Muheet', 'muheet@crm.com', '$2b$10$3G37APrgzrbsdxJW2XGOIOk.f6jBxlrnnczSmaEBV84v.WuWDNNMC', '2025-10-07 21:41:45', 3);
 
 --
 -- Indexes for dumped tables
@@ -1164,7 +1322,6 @@ ALTER TABLE `customer_assignments`
   ADD KEY `created_by` (`created_by`),
   ADD KEY `idx_customer_id` (`customer_id`),
   ADD KEY `idx_upseller_id` (`upseller_id`),
-  ADD KEY `idx_assignment_type` (`assignment_type`),
   ADD KEY `idx_status` (`status`),
   ADD KEY `idx_assigned_date` (`assigned_date`);
 
@@ -1212,6 +1369,22 @@ ALTER TABLE `leads`
   ADD KEY `assigned_to` (`assigned_to`),
   ADD KEY `fk_leads_created_by` (`created_by`),
   ADD KEY `fk_leads_converted_by` (`converted_by`);
+
+--
+-- Indexes for table `lead_notes`
+--
+ALTER TABLE `lead_notes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `lead_id` (`lead_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `lead_schedules`
+--
+ALTER TABLE `lead_schedules`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_lead_schedule` (`lead_id`,`scheduled_by`),
+  ADD KEY `scheduled_by` (`scheduled_by`);
 
 --
 -- Indexes for table `lead_tracking`
@@ -1305,6 +1478,16 @@ ALTER TABLE `project_tasks`
   ADD KEY `fk_tasks_assigned` (`assigned_to`),
   ADD KEY `fk_tasks_created` (`created_by`),
   ADD KEY `fk_tasks_board` (`board_id`);
+
+--
+-- Indexes for table `reminders`
+--
+ALTER TABLE `reminders`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_reminder_date` (`reminder_date`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_priority` (`priority`);
 
 --
 -- Indexes for table `roles`
@@ -1461,19 +1644,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `boards`
 --
 ALTER TABLE `boards`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=90;
 
 --
 -- AUTO_INCREMENT for table `customer_assignments`
 --
 ALTER TABLE `customer_assignments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `customer_subscriptions`
@@ -1485,37 +1668,49 @@ ALTER TABLE `customer_subscriptions`
 -- AUTO_INCREMENT for table `departments`
 --
 ALTER TABLE `departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `department_team_members`
 --
 ALTER TABLE `department_team_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `invoices`
 --
 ALTER TABLE `invoices`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
 
 --
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=78;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
+
+--
+-- AUTO_INCREMENT for table `lead_notes`
+--
+ALTER TABLE `lead_notes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `lead_schedules`
+--
+ALTER TABLE `lead_schedules`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `lead_tracking`
 --
 ALTER TABLE `lead_tracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=174;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=200;
 
 --
 -- AUTO_INCREMENT for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
 -- AUTO_INCREMENT for table `payment_installments`
@@ -1533,37 +1728,43 @@ ALTER TABLE `payment_recurring`
 -- AUTO_INCREMENT for table `payment_transactions`
 --
 ALTER TABLE `payment_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=81;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=104;
 
 --
 -- AUTO_INCREMENT for table `permissions`
 --
 ALTER TABLE `permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=125;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=135;
 
 --
 -- AUTO_INCREMENT for table `projects`
 --
 ALTER TABLE `projects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `project_attachments`
 --
 ALTER TABLE `project_attachments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `project_departments`
 --
 ALTER TABLE `project_departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `project_tasks`
 --
 ALTER TABLE `project_tasks`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+
+--
+-- AUTO_INCREMENT for table `reminders`
+--
+ALTER TABLE `reminders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -1575,7 +1776,7 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=81;
 
 --
 -- AUTO_INCREMENT for table `targets`
@@ -1587,7 +1788,7 @@ ALTER TABLE `targets`
 -- AUTO_INCREMENT for table `task_activity_logs`
 --
 ALTER TABLE `task_activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `task_checklists`
@@ -1611,61 +1812,61 @@ ALTER TABLE `task_comments`
 -- AUTO_INCREMENT for table `task_members`
 --
 ALTER TABLE `task_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `task_statuses`
 --
 ALTER TABLE `task_statuses`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `teams`
 --
 ALTER TABLE `teams`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `team_members`
 --
 ALTER TABLE `team_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT for table `upcoming_payments`
 --
 ALTER TABLE `upcoming_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 --
 -- AUTO_INCREMENT for table `upseller_performance`
 --
 ALTER TABLE `upseller_performance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `upseller_targets`
 --
 ALTER TABLE `upseller_targets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `upseller_teams`
 --
 ALTER TABLE `upseller_teams`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `upseller_team_members`
 --
 ALTER TABLE `upseller_team_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- Constraints for dumped tables
@@ -1714,6 +1915,20 @@ ALTER TABLE `leads`
   ADD CONSTRAINT `fk_leads_converted_by` FOREIGN KEY (`converted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_leads_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `leads_ibfk_1` FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `lead_notes`
+--
+ALTER TABLE `lead_notes`
+  ADD CONSTRAINT `lead_notes_ibfk_1` FOREIGN KEY (`lead_id`) REFERENCES `leads` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `lead_notes_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `lead_schedules`
+--
+ALTER TABLE `lead_schedules`
+  ADD CONSTRAINT `lead_schedules_ibfk_1` FOREIGN KEY (`lead_id`) REFERENCES `leads` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `lead_schedules_ibfk_2` FOREIGN KEY (`scheduled_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `lead_tracking`
@@ -1783,6 +1998,12 @@ ALTER TABLE `project_tasks`
   ADD CONSTRAINT `fk_tasks_created` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_tasks_department` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_tasks_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `reminders`
+--
+ALTER TABLE `reminders`
+  ADD CONSTRAINT `reminders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `role_permissions`
