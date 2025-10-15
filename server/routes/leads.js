@@ -87,7 +87,7 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
                GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times
         FROM leads l
         LEFT JOIN users u1 ON l.created_by = u1.id
-        LEFT JOIN lead_schedules ls ON l.id = ls.lead_id
+        LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
         LEFT JOIN users u2 ON ls.scheduled_by = u2.id
         ${whereClause}
         GROUP BY l.id
@@ -99,13 +99,13 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
         SELECT COUNT(DISTINCT l.id) as total
         FROM leads l
         LEFT JOIN users u1 ON l.created_by = u1.id
-        LEFT JOIN lead_schedules ls ON l.id = ls.lead_id
+        LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
         LEFT JOIN users u2 ON ls.scheduled_by = u2.id
         ${whereClause}
       `;
       
-      // Add pagination parameters
-      queryParams.push(parseInt(limit), offset);
+      // Add userId parameter for schedule filtering and pagination parameters
+      queryParams.push(userId, parseInt(limit), offset);
       
       // Execute both queries
       Promise.all([
@@ -150,7 +150,7 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
              GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times
       FROM leads l
       LEFT JOIN users u1 ON l.created_by = u1.id
-      LEFT JOIN lead_schedules ls ON l.id = ls.lead_id
+      LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
       LEFT JOIN users u2 ON ls.scheduled_by = u2.id
       ${whereClause}
       GROUP BY l.id
@@ -162,13 +162,13 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
       SELECT COUNT(DISTINCT l.id) as total
       FROM leads l
       LEFT JOIN users u1 ON l.created_by = u1.id
-      LEFT JOIN lead_schedules ls ON l.id = ls.lead_id
+      LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
       LEFT JOIN users u2 ON ls.scheduled_by = u2.id
       ${whereClause}
     `;
     
-    // Add pagination parameters
-    queryParams.push(parseInt(limit), offset);
+    // Add userId parameter for schedule filtering and pagination parameters
+    queryParams.push(req.user.id, parseInt(limit), offset);
     
     // Execute both queries
     Promise.all([
@@ -489,9 +489,284 @@ router.delete('/:id/schedule', auth, authorize('leads','update'), async (req, re
   }
 });
 
+// Import Leads from CSV
+router.post('/import-csv', auth, authorize('leads', 'create'), async (req, res) => {
+  const userId = req.user.id;
+  const { leads } = req.body; // Array of lead objects from CSV
+  
+  if (!leads || !Array.isArray(leads) || leads.length === 0) {
+    return res.status(400).json({ message: 'No leads data provided' });
+  }
+  
+  try {
+    const results = {
+      success: 0,
+      failed: 0,
+      updated: 0,
+      created: 0,
+      errors: []
+    };
+    
+    // Process each lead
+    for (let i = 0; i < leads.length; i++) {
+      const lead = leads[i];
+      
+      try {
+        // Validate required fields
+        if (!lead.name) {
+          results.failed++;
+          results.errors.push(`Row ${i + 1}: Name is required`);
+          continue;
+        }
+        
+        // Clean and validate data
+        const leadData = {
+          name: lead.name.trim(),
+          company_name: lead.company_name ? lead.company_name.trim() : null,
+          email: lead.email ? lead.email.trim().toLowerCase() : null,
+          phone: lead.phone ? lead.phone.trim() : null,
+          city: lead.city ? lead.city.trim() : null,
+          state: lead.state ? lead.state.trim() : null,
+          source: lead.source ? lead.source.trim() : 'CSV Import',
+          service_required: lead.service_required ? lead.service_required.trim() : null,
+          notes: lead.notes ? lead.notes.trim() : null,
+          created_by: userId,
+          assigned_to: userId
+        };
+        
+        // Validate email format if provided
+        if (leadData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadData.email)) {
+          results.failed++;
+          results.errors.push(`Row ${i + 1}: Invalid email format`);
+          continue;
+        }
+        
+        // Check for existing lead by email or phone
+        const existingLead = await new Promise((resolve, reject) => {
+          let checkSql = 'SELECT id FROM leads WHERE ';
+          let checkParams = [];
+          
+          if (leadData.email && leadData.phone) {
+            checkSql += '(email = ? OR phone = ?)';
+            checkParams = [leadData.email, leadData.phone];
+          } else if (leadData.email) {
+            checkSql += 'email = ?';
+            checkParams = [leadData.email];
+          } else if (leadData.phone) {
+            checkSql += 'phone = ?';
+            checkParams = [leadData.phone];
+          } else {
+            // No email or phone to check, proceed with insert
+            resolve(null);
+            return;
+          }
+          
+          db.query(checkSql, checkParams, (err, results) => {
+            if (err) {
+              console.error('Error checking existing lead:', err);
+              reject(err);
+            } else {
+              resolve(results.length > 0 ? results[0] : null);
+            }
+          });
+        });
+        
+        if (existingLead) {
+          // Update existing lead
+          await new Promise((resolve, reject) => {
+            const updateSql = `
+              UPDATE leads 
+              SET name = ?, company_name = ?, email = ?, phone = ?, city = ?, state = ?, 
+                  source = ?, service_required = ?, notes = ?, assigned_to = ?, updated_at = NOW()
+              WHERE id = ?
+            `;
+            
+            db.query(updateSql, [
+              leadData.name,
+              leadData.company_name,
+              leadData.email,
+              leadData.phone,
+              leadData.city,
+              leadData.state,
+              leadData.source,
+              leadData.service_required,
+              leadData.notes,
+              leadData.assigned_to,
+              existingLead.id
+            ], (err, result) => {
+              if (err) {
+                console.error('Error updating lead:', err);
+                reject(err);
+              } else {
+                resolve(result);
+              }
+            });
+          });
+          
+          results.updated++;
+          results.success++;
+        } else {
+          // Create new lead
+          await new Promise((resolve, reject) => {
+            db.query(
+              'INSERT INTO leads (name, company_name, email, phone, city, state, source, service_required, notes, created_by, assigned_to, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+              [
+                leadData.name,
+                leadData.company_name,
+                leadData.email,
+                leadData.phone,
+                leadData.city,
+                leadData.state,
+                leadData.source,
+                leadData.service_required,
+                leadData.notes,
+                leadData.created_by,
+                leadData.assigned_to
+              ],
+              (err, result) => {
+                if (err) {
+                  console.error('Error inserting lead:', err);
+                  reject(err);
+                } else {
+                  resolve(result);
+                }
+              }
+            );
+          });
+          
+          results.created++;
+          results.success++;
+        }
+        
+      } catch (error) {
+        results.failed++;
+        results.errors.push(`Row ${i + 1}: ${error.message}`);
+      }
+    }
+    
+    // Track lead creation for statistics (only count newly created leads, not updated ones)
+    if (results.created > 0) {
+      try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        
+        // Get or create monthly stats
+        const statsResult = await new Promise((resolve, reject) => {
+          const sql = `
+            SELECT * FROM monthly_lead_stats 
+            WHERE user_id = ? AND year = ? AND month = ?
+          `;
+          
+          db.query(sql, [userId, year, month], (err, results) => {
+            if (err) return reject(err);
+            
+            if (results.length > 0) {
+              resolve(results[0]);
+            } else {
+              // Create new monthly stats record
+              const insertSql = `
+                INSERT INTO monthly_lead_stats (user_id, year, month, leads_added, leads_converted)
+                VALUES (?, ?, ?, 0, 0)
+              `;
+              
+              db.query(insertSql, [userId, year, month], (err, result) => {
+                if (err) return reject(err);
+                resolve({ id: result.insertId, user_id: userId, year, month, leads_added: 0, leads_converted: 0 });
+              });
+            }
+          });
+        });
+        
+        // Update monthly stats with the count of newly created leads only
+        await new Promise((resolve, reject) => {
+          const updateSql = `
+            UPDATE monthly_lead_stats 
+            SET leads_added = leads_added + ?
+            WHERE id = ?
+          `;
+          
+          db.query(updateSql, [results.created, statsResult.id], (err) => {
+            if (err) return reject(err);
+            resolve();
+          });
+        });
+      } catch (statsErr) {
+        console.error('Error tracking lead creation:', statsErr);
+      }
+    }
+    
+    res.json({
+      message: `Import completed: ${results.success} leads processed successfully (${results.created} created, ${results.updated} updated), ${results.failed} failed`,
+      results
+    });
+    
+  } catch (error) {
+    console.error('Error importing leads:', error);
+    res.status(500).json({ message: 'Error importing leads' });
+  }
+});
+
+// Get Scheduled Leads for Current User
+router.get('/scheduled', auth, authorize('leads', 'read'), async (req, res) => {
+  const userId = req.user.id;
+  const { page = 1, limit = 20 } = req.query;
+  const offset = (page - 1) * limit;
+  
+  try {
+    // Get scheduled leads for the current user
+    const scheduledLeads = await new Promise((resolve, reject) => {
+      db.query(`
+        SELECT l.*, 
+               u1.name as created_by_name,
+               ls.schedule_date,
+               ls.schedule_time,
+               ls.scheduled_at,
+               ls.id as schedule_id
+        FROM leads l
+        JOIN lead_schedules ls ON l.id = ls.lead_id
+        LEFT JOIN users u1 ON l.created_by = u1.id
+        WHERE ls.scheduled_by = ?
+        ORDER BY ls.schedule_date ASC, ls.schedule_time ASC
+        LIMIT ? OFFSET ?
+      `, [userId, parseInt(limit), offset], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+    
+    // Get total count
+    const totalCount = await new Promise((resolve, reject) => {
+      db.query(`
+        SELECT COUNT(*) as total
+        FROM leads l
+        JOIN lead_schedules ls ON l.id = ls.lead_id
+        WHERE ls.scheduled_by = ?
+      `, [userId], (err, results) => {
+        if (err) return reject(err);
+        resolve(results[0].total);
+      });
+    });
+    
+    res.json({
+      scheduledLeads,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalCount,
+        pages: Math.ceil(totalCount / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching scheduled leads:', error);
+    res.status(500).json({ message: 'Error fetching scheduled leads' });
+  }
+});
+
 // Get Lead Notes
 router.get('/:id/notes', auth, authorize('lead_notes', 'read'), async (req, res) => {
   const leadId = req.params.id;
+  const userId = req.user.id;
   
   try {
     const notes = await new Promise((resolve, reject) => {
@@ -499,9 +774,9 @@ router.get('/:id/notes', auth, authorize('lead_notes', 'read'), async (req, res)
         SELECT ln.*, u.name as user_name, u.email as user_email
         FROM lead_notes ln
         JOIN users u ON ln.user_id = u.id
-        WHERE ln.lead_id = ?
+        WHERE ln.lead_id = ? AND ln.user_id = ?
         ORDER BY ln.created_at DESC
-      `, [leadId], (err, results) => {
+      `, [leadId, userId], (err, results) => {
         if (err) return reject(err);
         resolve(results);
       });

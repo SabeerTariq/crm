@@ -48,6 +48,17 @@ export const hasUpsellerRole = () => {
   return userRoleId === 5;
 };
 
+export const hasUpsellerManagerRole = () => {
+  // Check admin role first (role_id = 1)
+  const userRoleId = getUserRoleId();
+  if (userRoleId === 1) {
+    return true;
+  }
+  
+  // Check upseller-manager role (role_id = 6)
+  return userRoleId === 6;
+};
+
 export const isAdmin = () => {
   return getUserRoleId() === 1;
 };

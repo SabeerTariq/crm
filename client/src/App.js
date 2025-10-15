@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
+import ScheduleList from './pages/ScheduleList';
 import Customers from './pages/Customers';
 import CustomerSalesProfile from './pages/CustomerSalesProfile';
 import Sales from './pages/Sales';
@@ -10,6 +11,7 @@ import Roles from './pages/Roles';
 import LeadScraperDashboard from './pages/LeadScraperDashboard';
 import FrontSellerDashboard from './pages/FrontSellerDashboard';
 import UpsellerDashboard from './pages/UpsellerDashboard';
+import UpsellManagerDashboard from './pages/UpsellManagerDashboard';
 import UpsellerTeams from './pages/UpsellerTeams';
 import UpsellerTargets from './pages/UpsellerTargets';
 import UpsellerPerformance from './pages/UpsellerPerformance';
@@ -40,6 +42,11 @@ function App() {
             <Leads />
           </ProtectedRoute>
         } />
+        <Route path="/schedule-list" element={
+          <ProtectedRoute module="leads">
+            <ScheduleList />
+          </ProtectedRoute>
+        } />
         <Route path="/customers" element={
           <ProtectedRoute module="customers">
             <Customers />
@@ -68,6 +75,7 @@ function App() {
         <Route path="/lead-scraper-dashboard" element={<LeadScraperDashboard />} />
         <Route path="/front-seller-dashboard" element={<FrontSellerDashboard />} />
         <Route path="/upseller-dashboard" element={<UpsellerDashboard />} />
+        <Route path="/upsell-manager-dashboard" element={<UpsellManagerDashboard />} />
         <Route path="/upseller-teams" element={
           <ProtectedRoute module="upseller_teams" action="view">
             <UpsellerTeams />

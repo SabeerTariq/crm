@@ -38,6 +38,49 @@ router.post('/installments', auth, authorize('payments', 'create'), (req, res) =
     });
 });
 
+// Create installment payments with custom dates
+router.post('/installments/custom', auth, authorize('payments', 'create'), (req, res) => {
+  const { saleId, installments } = req.body;
+  
+  // Validate input
+  if (!saleId || !installments || !Array.isArray(installments) || installments.length === 0) {
+    return res.status(400).json({ message: 'Sale ID and installments array are required' });
+  }
+  
+  // Validate each installment
+  for (let i = 0; i < installments.length; i++) {
+    const installment = installments[i];
+    if (!installment.amount || !installment.due_date) {
+      return res.status(400).json({ 
+        message: `Installment ${i + 1} is missing required fields: amount and due_date` 
+      });
+    }
+    
+    // Validate date format
+    if (isNaN(Date.parse(installment.due_date))) {
+      return res.status(400).json({ 
+        message: `Installment ${i + 1} has invalid date format` 
+      });
+    }
+    
+    // Validate amount
+    if (isNaN(parseFloat(installment.amount)) || parseFloat(installment.amount) <= 0) {
+      return res.status(400).json({ 
+        message: `Installment ${i + 1} has invalid amount` 
+      });
+    }
+  }
+  
+  PaymentService.createInstallmentsWithCustomDates(saleId, installments)
+    .then(result => {
+      res.json({ message: 'Custom installments created successfully', installments: result });
+    })
+    .catch(err => {
+      console.error('Error creating custom installments:', err);
+      res.status(500).json({ message: 'Error creating custom installments' });
+    });
+});
+
 // Create recurring payment for a sale
 router.post('/recurring', auth, authorize('payments', 'create'), (req, res) => {
   const { saleId, customerId, amount, frequency, startDate, totalPayments } = req.body;
@@ -53,6 +96,49 @@ router.post('/recurring', auth, authorize('payments', 'create'), (req, res) => {
     .catch(err => {
       console.error('Error creating recurring payment:', err);
       res.status(500).json({ message: 'Error creating recurring payment' });
+    });
+});
+
+// Create recurring payments with custom dates
+router.post('/recurring/custom', auth, authorize('payments', 'create'), (req, res) => {
+  const { saleId, customerId, recurringPayments } = req.body;
+  
+  // Validate input
+  if (!saleId || !customerId || !recurringPayments || !Array.isArray(recurringPayments) || recurringPayments.length === 0) {
+    return res.status(400).json({ message: 'Sale ID, Customer ID and recurring payments array are required' });
+  }
+  
+  // Validate each recurring payment
+  for (let i = 0; i < recurringPayments.length; i++) {
+    const payment = recurringPayments[i];
+    if (!payment.amount || !payment.due_date) {
+      return res.status(400).json({ 
+        message: `Recurring payment ${i + 1} is missing required fields: amount and due_date` 
+      });
+    }
+    
+    // Validate date format
+    if (isNaN(Date.parse(payment.due_date))) {
+      return res.status(400).json({ 
+        message: `Recurring payment ${i + 1} has invalid date format` 
+      });
+    }
+    
+    // Validate amount
+    if (isNaN(parseFloat(payment.amount)) || parseFloat(payment.amount) <= 0) {
+      return res.status(400).json({ 
+        message: `Recurring payment ${i + 1} has invalid amount` 
+      });
+    }
+  }
+  
+  PaymentService.createRecurringPaymentsWithCustomDates(saleId, customerId, recurringPayments)
+    .then(result => {
+      res.json({ message: 'Custom recurring payments created successfully', recurring: result });
+    })
+    .catch(err => {
+      console.error('Error creating custom recurring payments:', err);
+      res.status(500).json({ message: 'Error creating custom recurring payments' });
     });
 });
 
@@ -174,22 +260,26 @@ router.put('/installment/:installmentId', auth, authorize('payments', 'update'),
   const installmentId = req.params.installmentId;
   const { dueDate, notes } = req.body;
   
-  const sql = `
-    UPDATE payment_installments 
-    SET due_date = ?, notes = ?
-    WHERE id = ?
-  `;
+  if (!dueDate) {
+    return res.status(400).json({ message: 'Due date is required' });
+  }
   
-  db.query(sql, [dueDate, notes, installmentId], (err, result) => {
-    if (err) {
+  // Validate date format
+  if (isNaN(Date.parse(dueDate))) {
+    return res.status(400).json({ message: 'Invalid date format' });
+  }
+  
+  PaymentService.updateInstallment(installmentId, dueDate, notes)
+    .then(result => {
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Installment not found' });
+      }
+      res.json({ message: 'Installment updated successfully' });
+    })
+    .catch(err => {
       console.error('Error updating installment:', err);
-      return res.status(500).json({ message: 'Error updating installment' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Installment not found' });
-    }
-    res.json({ message: 'Installment updated successfully' });
-  });
+      res.status(500).json({ message: 'Error updating installment' });
+    });
 });
 
 // Pause/Resume recurring payment

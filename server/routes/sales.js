@@ -118,7 +118,9 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
     // Payment type specific fields
     installment_count,
     installment_frequency,
+    installment_type = 'automatic', // Default to automatic for backward compatibility
     recurring_frequency,
+    recurring_type = 'automatic', // Default to automatic for backward compatibility
     payment_start_date
   } = req.body;
   
@@ -178,9 +180,60 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
     const saleId = result.insertId;
     let customerId = customer_id;
     
+    // Record initial payment transaction if cash_in > 0
+    if (cash_in > 0 && payment_source) {
+      try {
+        console.log(`💰 Recording initial payment transaction - Sale ID: ${saleId}, Amount: ${cash_in}, Source: ${payment_source}`);
+        await PaymentService.recordPayment({
+          saleId: saleId,
+          amount: cash_in,
+          paymentSource: payment_source,
+          transactionReference: `Initial payment for sale ${saleId}`,
+          notes: 'Initial payment received at sale creation',
+          createdBy: req.user.id,
+          receivedBy: req.user.id
+        });
+        console.log(`✅ Initial payment transaction recorded successfully`);
+        
+        // Update upseller performance for target tracking
+        try {
+          // Get the upseller assigned to this customer
+          const upsellerQuery = `
+            SELECT ca.upseller_id 
+            FROM customer_assignments ca 
+            WHERE ca.customer_id = ? AND ca.status = 'active'
+            LIMIT 1
+          `;
+          
+          db.query(upsellerQuery, [customerId], async (err, upsellerResults) => {
+            if (err) {
+              console.error('Error getting upseller for customer:', err);
+              return;
+            }
+            
+            if (upsellerResults.length > 0) {
+              const upsellerId = upsellerResults[0].upseller_id;
+              console.log(`📊 Updating upseller performance for upseller ${upsellerId} with amount ${cash_in}`);
+              
+              await PaymentService.updateUpsellerPerformance(upsellerId, cash_in);
+              console.log(`✅ Upseller performance updated successfully`);
+            } else {
+              console.log(`⚠️ No active upseller found for customer ${customerId}`);
+            }
+          });
+        } catch (performanceError) {
+          console.error('Error updating upseller performance:', performanceError);
+          // Continue with sale creation even if performance update fails
+        }
+      } catch (paymentError) {
+        console.error('Error recording initial payment transaction:', paymentError);
+        // Continue with sale creation even if payment recording fails
+      }
+    }
+    
     // Handle payment type specific logic
     try {
-      if (payment_type === 'installments' && installment_count && installment_frequency) {
+      if (payment_type === 'installments' && installment_count && installment_frequency && installment_type === 'automatic') {
         const startDate = payment_start_date ? new Date(payment_start_date) : new Date();
         const remainingAmount = unit_price - cash_in;
         await PaymentService.createInstallments(
@@ -190,7 +243,7 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
           installment_frequency, 
           startDate
         );
-      } else if (payment_type === 'recurring' && recurring_frequency && cash_in > 0) {
+      } else if (payment_type === 'recurring' && recurring_frequency && cash_in > 0 && recurring_type === 'automatic') {
         const startDate = payment_start_date ? new Date(payment_start_date) : new Date();
         
         // Use cash_in amount as the subscription amount
@@ -227,10 +280,11 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
     
     // Auto-generate invoice for the sale
     try {
+      console.log(`📄 Creating invoice for sale ID: ${saleId}`);
       const invoiceResult = await InvoiceService.createInvoiceFromSale(saleId, req.user.id);
-      console.log('Invoice created:', invoiceResult);
+      console.log('✅ Invoice created:', invoiceResult);
     } catch (invoiceError) {
-      console.error('Error creating invoice:', invoiceError);
+      console.error('❌ Error creating invoice:', invoiceError);
       // Continue with sale creation even if invoice creation fails
     }
     
@@ -288,13 +342,8 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
                   await StatsService.trackLeadConverted(originalLeadCreator, lead_id);
                 }
                 
-                // Auto-generate invoice for the converted lead sale
-                try {
-                  const invoiceResult = await InvoiceService.createInvoiceFromSale(saleId, req.user.id);
-                  console.log('Invoice created for converted lead:', invoiceResult);
-                } catch (invoiceError) {
-                  console.error('Error creating invoice for converted lead:', invoiceError);
-                }
+                // Note: Invoice creation is handled by the general sale creation process above
+                // No need to create invoice again here to avoid duplicates
                 
                 // Delete the lead
                 console.log('Attempting to delete lead with id:', lead_id);

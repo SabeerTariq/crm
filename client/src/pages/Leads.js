@@ -31,6 +31,10 @@ export default function Leads() {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showCsvImportModal, setShowCsvImportModal] = useState(false);
+  const [csvFile, setCsvFile] = useState(null);
+  const [csvPreview, setCsvPreview] = useState([]);
+  const [importing, setImporting] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [schedulingLead, setSchedulingLead] = useState(null);
   const [viewingLead, setViewingLead] = useState(null);
@@ -249,6 +253,202 @@ export default function Leads() {
     setNotesLead(null);
     setLeadNotes([]);
     setNewNote('');
+  };
+
+  const closeCsvImportModal = () => {
+    setShowCsvImportModal(false);
+    setCsvFile(null);
+    setCsvPreview([]);
+  };
+
+  const handleCsvFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+      parseCsvFile(file);
+    } else {
+      alert('Please select a valid CSV file');
+    }
+  };
+
+  const parseCsvFile = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const csv = e.target.result;
+      const lines = csv.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        alert('CSV file must have at least a header row and one data row');
+        return;
+      }
+      
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+      const data = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''));
+        const row = {};
+        
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        
+        data.push(row);
+      }
+      
+      setCsvPreview(data.slice(0, 5)); // Show first 5 rows as preview
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCsvImport = async () => {
+    if (!csvFile) {
+      alert('Please select a CSV file first');
+      return;
+    }
+    
+    setImporting(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const csv = e.target.result;
+        const lines = csv.split('\n').filter(line => line.trim());
+        
+        if (lines.length < 2) {
+          alert('CSV file must have at least a header row and one data row');
+          setImporting(false);
+          return;
+        }
+        
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+        const leads = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''));
+          const lead = {};
+          
+          headers.forEach((header, index) => {
+            lead[header] = values[index] || '';
+          });
+          
+          leads.push(lead);
+        }
+        
+        const token = localStorage.getItem('token');
+        const response = await api.post('/leads/import-csv', { leads }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        alert(response.data.message);
+        closeCsvImportModal();
+        loadLeads(); // Refresh the leads list
+        
+      };
+      reader.readAsText(csvFile);
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      alert('Error importing CSV file');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const downloadSampleCsv = () => {
+    const sampleData = [
+      {
+        name: 'John Doe',
+        company_name: 'ABC Corporation',
+        email: 'john.doe@abccorp.com',
+        phone: '+1-555-0123',
+        city: 'New York',
+        state: 'NY',
+        source: 'Website',
+        service_required: 'Web Development',
+        notes: 'Interested in e-commerce platform'
+      },
+      {
+        name: 'Jane Smith',
+        company_name: 'XYZ Industries',
+        email: 'jane.smith@xyz.com',
+        phone: '+1-555-0456',
+        city: 'Los Angeles',
+        state: 'CA',
+        source: 'Referral',
+        service_required: 'Mobile App',
+        notes: 'Urgent project deadline'
+      },
+      {
+        name: 'Mike Johnson',
+        company_name: 'Tech Solutions Inc',
+        email: 'mike@techsolutions.com',
+        phone: '+1-555-0789',
+        city: 'Chicago',
+        state: 'IL',
+        source: 'Cold Call',
+        service_required: 'Consulting',
+        notes: 'Looking for digital transformation'
+      },
+      {
+        name: 'Sarah Williams',
+        company_name: 'StartupCo',
+        email: 'sarah@startupco.com',
+        phone: '+1-555-0321',
+        city: 'Austin',
+        state: 'TX',
+        source: 'Social Media',
+        service_required: 'Marketing',
+        notes: 'Early stage startup'
+      },
+      {
+        name: 'David Brown',
+        company_name: 'Enterprise Ltd',
+        email: 'david.brown@enterprise.com',
+        phone: '+1-555-0654',
+        city: 'Seattle',
+        state: 'WA',
+        source: 'Trade Show',
+        service_required: 'Cloud Migration',
+        notes: 'Large enterprise client'
+      }
+    ];
+
+    // Create CSV content
+    const headers = [
+      'name',
+      'company_name', 
+      'email',
+      'phone',
+      'city',
+      'state',
+      'source',
+      'service_required',
+      'notes'
+    ];
+
+    let csvContent = headers.join(',') + '\n';
+    
+    sampleData.forEach(row => {
+      const values = headers.map(header => {
+        const value = row[header] || '';
+        // Escape commas and quotes in values
+        if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      });
+      csvContent += values.join(',') + '\n';
+    });
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'sample_leads_import.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const inputStyle = {
@@ -502,8 +702,28 @@ export default function Leads() {
                   }}
                 >
                   ➕ Add Lead
-              </button>
-            )}
+                </button>
+              )}
+              {hasPermission('leads', 'create') && (
+                <button 
+                  onClick={() => setShowCsvImportModal(true)}
+                  style={{
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  📊 Import CSV
+                </button>
+              )}
             </div>
           </div>
           <p style={{ 
@@ -2223,6 +2443,265 @@ export default function Leads() {
             </>
           )}
         </div>
+
+        {/* CSV Import Modal */}
+        {showCsvImportModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}>
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '800px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+            }}>
+              {/* Modal Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '20px',
+                paddingBottom: '15px',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  color: '#1f2937',
+                  margin: 0
+                }}>
+                  Import Leads from CSV
+                </h2>
+                <button
+                  onClick={closeCsvImportModal}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: '24px',
+                    color: '#6b7280',
+                    cursor: 'pointer',
+                    padding: '5px'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* CSV Format Instructions */}
+              <div style={{
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '20px'
+              }}>
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#0369a1',
+                  margin: '0 0 10px 0'
+                }}>
+                  📋 CSV Format Requirements
+                </h3>
+                <div style={{
+                  fontSize: '14px',
+                  color: '#0c4a6e',
+                  lineHeight: '1.5',
+                  marginBottom: '15px'
+                }}>
+                  <p style={{ margin: '0 0 8px 0' }}>
+                    <strong>Required columns:</strong> name
+                  </p>
+                  <p style={{ margin: '0 0 8px 0' }}>
+                    <strong>Optional columns:</strong> company_name, email, phone, city, state, source, service_required, notes
+                  </p>
+                  <p style={{ margin: '0' }}>
+                    <strong>Note:</strong> The first row should contain column headers. Email addresses will be validated.
+                  </p>
+                </div>
+                <button
+                  onClick={downloadSampleCsv}
+                  style={{
+                    backgroundColor: '#0369a1',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  📥 Download Sample CSV
+                </button>
+              </div>
+
+              {/* File Upload */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Select CSV File
+                </label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCsvFileChange}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    backgroundColor: '#ffffff'
+                  }}
+                />
+              </div>
+
+              {/* CSV Preview */}
+              {csvPreview.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h3 style={{
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    margin: '0 0 15px 0'
+                  }}>
+                    Preview (First 5 rows)
+                  </h3>
+                  <div style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#f9fafb',
+                      padding: '12px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>
+                      CSV Data Preview
+                    </div>
+                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                      {csvPreview.map((row, index) => (
+                        <div key={index} style={{
+                          padding: '12px',
+                          borderBottom: index < csvPreview.length - 1 ? '1px solid #f3f4f6' : 'none',
+                          fontSize: '13px',
+                          color: '#6b7280'
+                        }}>
+                          <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+                            Row {index + 1}:
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
+                            {Object.entries(row).map(([key, value]) => (
+                              <div key={key} style={{
+                                backgroundColor: '#f9fafb',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px'
+                              }}>
+                                <strong>{key}:</strong> {value || '(empty)'}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '12px'
+              }}>
+                <button
+                  onClick={closeCsvImportModal}
+                  disabled={importing}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: importing ? 'not-allowed' : 'pointer',
+                    opacity: importing ? 0.6 : 1
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCsvImport}
+                  disabled={!csvFile || importing}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: importing ? '#9ca3af' : '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: (!csvFile || importing) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {importing ? (
+                    <>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid #ffffff',
+                        borderTop: '2px solid transparent',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
+                      Importing...
+                    </>
+                  ) : (
+                    'Import Leads'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </PageLayout>
     );
   }

@@ -46,7 +46,10 @@ export default function Sales() {
     // Payment type specific fields
     installment_count: 1,
     installment_frequency: 'monthly',
+    installment_type: 'automatic', // 'automatic' or 'custom'
     recurring_frequency: 'monthly',
+    recurring_type: 'automatic', // 'automatic' or 'custom'
+    recurring_count: 1,
     payment_start_date: new Date().toISOString().split('T')[0],
     // Auto-generated fields
     sale_date: new Date().toISOString().split('T')[0],
@@ -349,6 +352,19 @@ export default function Sales() {
         service_details: allServices.length > 0 ? allServices.map(s => s.details).filter(d => d).join(', ') : formData.service_details
       };
       
+      // Remove automatic installment fields when using custom installments
+      if (formData.payment_type === 'installments' && formData.installment_type === 'custom') {
+        delete saleData.installment_count;
+        delete saleData.installment_frequency;
+        delete saleData.payment_start_date;
+      }
+      
+      // Remove automatic recurring fields when using custom recurring payments
+      if (formData.payment_type === 'recurring' && formData.recurring_type === 'custom') {
+        delete saleData.recurring_frequency;
+        delete saleData.payment_start_date;
+      }
+      
       // Handle file upload
       let response;
       if (agreementFile) {
@@ -374,6 +390,86 @@ export default function Sales() {
         });
       }
       
+      // Handle custom installments if payment type is installments and custom dates are set
+      if (formData.payment_type === 'installments' && formData.installment_type === 'custom' && !editingSale) {
+        const saleId = response.data.saleId || response.data.id;
+        if (saleId) {
+          try {
+            // Collect custom installment data
+            const customInstallments = [];
+            const installmentCount = parseInt(formData.installment_count) || 0;
+            const totalAmount = parseFloat(formData.unit_price || 0) - parseFloat(formData.cash_in || 0);
+            const installmentAmount = totalAmount / installmentCount;
+            
+            for (let i = 0; i < installmentCount; i++) {
+              const dueDate = formData[`custom_installment_${i}_date`];
+              const notes = formData[`custom_installment_${i}_notes`] || '';
+              
+              if (dueDate) {
+                customInstallments.push({
+                  amount: installmentAmount,
+                  due_date: dueDate,
+                  notes: notes
+                });
+              }
+            }
+            
+            if (customInstallments.length > 0) {
+              // Create custom installments
+              await api.post('/payments/installments/custom', {
+                saleId: saleId,
+                installments: customInstallments
+              }, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+            }
+          } catch (installmentErr) {
+            console.error('Error creating custom installments:', installmentErr);
+            alert('Sale created but there was an error creating custom installments. Please create them manually.');
+          }
+        }
+      }
+      
+      // Handle custom recurring payments if payment type is recurring and custom dates are set
+      if (formData.payment_type === 'recurring' && formData.recurring_type === 'custom' && !editingSale) {
+        const saleId = response.data.saleId || response.data.id;
+        if (saleId) {
+          try {
+            // Collect custom recurring payment data
+            const customRecurringPayments = [];
+            const recurringCount = parseInt(formData.recurring_count) || 0;
+            const paymentAmount = parseFloat(formData.cash_in || 0);
+            
+            for (let i = 0; i < recurringCount; i++) {
+              const dueDate = formData[`custom_recurring_${i}_date`];
+              const notes = formData[`custom_recurring_${i}_notes`] || '';
+              
+              if (dueDate) {
+                customRecurringPayments.push({
+                  amount: paymentAmount,
+                  due_date: dueDate,
+                  notes: notes
+                });
+              }
+            }
+            
+            if (customRecurringPayments.length > 0) {
+              // Create custom recurring payments
+              await api.post('/payments/recurring/custom', {
+                saleId: saleId,
+                customerId: formData.customer_id,
+                recurringPayments: customRecurringPayments
+              }, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+            }
+          } catch (recurringErr) {
+            console.error('Error creating custom recurring payments:', recurringErr);
+            alert('Sale created but there was an error creating custom recurring payments. Please create them manually.');
+          }
+        }
+      }
+      
       if (response.data.leadConverted) {
         alert('Sale added and lead converted to customer successfully!');
       } else if (response.data.customerId) {
@@ -385,6 +481,9 @@ export default function Sales() {
       resetForm();
       loadSales();
       loadCustomers(); // Refresh customers list in case a new customer was created
+      
+      // Trigger dashboard refresh for upseller users
+      localStorage.setItem('salesUpdated', Date.now().toString());
     } catch (err) {
       alert(err.response?.data?.message || 'Error saving sale');
       console.error(err);
@@ -1761,60 +1860,187 @@ export default function Sales() {
                     borderRadius: '8px' 
                   }}>
                     <h5 style={{ margin: '0 0 15px 0', color: '#0c4a6e' }}>Installment Plan Settings</h5>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                          Number of Installments
+                    
+                    {/* Installment Type Toggle */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                        Installment Schedule Type
+                      </label>
+                      <div style={{ display: 'flex', gap: '20px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input 
+                            type="radio" 
+                            name="installment_type" 
+                            value="automatic" 
+                            checked={formData.installment_type === 'automatic'}
+                            onChange={handleFormChange}
+                          />
+                          <span>Automatic (Based on Frequency)</span>
                         </label>
-                        <input 
-                          type="number" 
-                          name="installment_count" 
-                          placeholder="2" 
-                          value={formData.installment_count} 
-                          onChange={handleFormChange} 
-                          min="2"
-                          max="60"
-                          required 
-                          style={inputStyle}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                          Frequency
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input 
+                            type="radio" 
+                            name="installment_type" 
+                            value="custom" 
+                            checked={formData.installment_type === 'custom'}
+                            onChange={handleFormChange}
+                          />
+                          <span>Custom Dates</span>
                         </label>
-                        <select 
-                          name="installment_frequency" 
-                          value={formData.installment_frequency} 
-                          onChange={handleFormChange} 
-                          required 
-                          style={inputStyle}
-                        >
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="quarterly">Quarterly</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                          Start Date
-                        </label>
-                        <input 
-                          type="date" 
-                          name="payment_start_date" 
-                          value={formData.payment_start_date} 
-                          onChange={handleFormChange} 
-                          required 
-                          style={inputStyle}
-                        />
                       </div>
                     </div>
+
+                    {/* Automatic Installment Settings */}
+                    {formData.installment_type === 'automatic' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                            Number of Installments
+                          </label>
+                          <input 
+                            type="number" 
+                            name="installment_count" 
+                            placeholder="2" 
+                            value={formData.installment_count} 
+                            onChange={handleFormChange} 
+                            min="2"
+                            max="60"
+                            required 
+                            style={inputStyle}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                            Frequency
+                          </label>
+                          <select 
+                            name="installment_frequency" 
+                            value={formData.installment_frequency} 
+                            onChange={handleFormChange} 
+                            required 
+                            style={inputStyle}
+                          >
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                            Start Date
+                          </label>
+                          <input 
+                            type="date" 
+                            name="payment_start_date" 
+                            value={formData.payment_start_date} 
+                            onChange={handleFormChange} 
+                            required 
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Custom Installment Settings */}
+                    {formData.installment_type === 'custom' && (
+                      <div>
+                        <div style={{ marginBottom: '15px' }}>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                            Number of Installments
+                          </label>
+                          <input 
+                            type="number" 
+                            name="installment_count" 
+                            placeholder="2" 
+                            value={formData.installment_count} 
+                            onChange={handleFormChange} 
+                            min="2"
+                            max="60"
+                            required 
+                            style={inputStyle}
+                          />
+                        </div>
+                        
+                        {/* Custom Installment Dates */}
+                        <div style={{ marginTop: '20px' }}>
+                          <h6 style={{ margin: '0 0 15px 0', color: '#0c4a6e' }}>Set Custom Dates for Each Installment</h6>
+                          {Array.from({ length: parseInt(formData.installment_count) || 0 }, (_, index) => {
+                            const installmentAmount = (parseFloat(formData.unit_price || 0) - parseFloat(formData.cash_in || 0)) / parseInt(formData.installment_count || 1);
+                            return (
+                              <div key={index} style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '15px', 
+                                marginBottom: '15px',
+                                padding: '15px',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '6px'
+                              }}>
+                                <div style={{ minWidth: '120px', fontWeight: '500' }}>
+                                  Installment #{index + 1}
+                                </div>
+                                <div style={{ minWidth: '120px' }}>
+                                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#6b7280' }}>
+                                    Amount
+                                  </label>
+                                  <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={installmentAmount.toFixed(2)}
+                                    readOnly
+                                    style={{ 
+                                      ...inputStyle, 
+                                      backgroundColor: '#f9fafb',
+                                      cursor: 'not-allowed'
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ minWidth: '150px' }}>
+                                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#6b7280' }}>
+                                    Due Date
+                                  </label>
+                                  <input 
+                                    type="date" 
+                                    name={`custom_installment_${index}_date`}
+                                    value={formData[`custom_installment_${index}_date`] || ''}
+                                    onChange={handleFormChange}
+                                    required
+                                    style={inputStyle}
+                                  />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#6b7280' }}>
+                                    Notes (Optional)
+                                  </label>
+                                  <input 
+                                    type="text" 
+                                    name={`custom_installment_${index}_notes`}
+                                    placeholder={`Installment ${index + 1} notes`}
+                                    value={formData[`custom_installment_${index}_notes`] || ''}
+                                    onChange={handleFormChange}
+                                    style={inputStyle}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Installment Preview */}
                     <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#dbeafe', borderRadius: '6px' }}>
                       <strong>Installment Preview:</strong><br/>
                       Total Sale: ${parseFloat(formData.unit_price || 0).toFixed(2)}<br/>
                       Cash Received: ${parseFloat(formData.cash_in || 0).toFixed(2)}<br/>
                       Remaining: ${(parseFloat(formData.unit_price || 0) - parseFloat(formData.cash_in || 0)).toFixed(2)}<br/>
                       Per installment: ${((parseFloat(formData.unit_price || 0) - parseFloat(formData.cash_in || 0)) / parseInt(formData.installment_count || 1)).toFixed(2)}<br/>
-                      Frequency: {formData.installment_frequency}
+                      {formData.installment_type === 'automatic' ? (
+                        <>Frequency: {formData.installment_frequency}</>
+                      ) : (
+                        <>Custom dates: {formData.installment_count} installments</>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1828,42 +2054,169 @@ export default function Sales() {
                     borderRadius: '8px' 
                   }}>
                     <h5 style={{ margin: '0 0 15px 0', color: '#14532d' }}>Recurring Subscription Settings</h5>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                          Subscription Frequency
+                    
+                    {/* Recurring Type Toggle */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                        Subscription Schedule Type
+                      </label>
+                      <div style={{ display: 'flex', gap: '20px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input 
+                            type="radio" 
+                            name="recurring_type" 
+                            value="automatic" 
+                            checked={formData.recurring_type === 'automatic'}
+                            onChange={handleFormChange}
+                          />
+                          <span>Automatic (Based on Frequency)</span>
                         </label>
-                        <select 
-                          name="recurring_frequency" 
-                          value={formData.recurring_frequency} 
-                          onChange={handleFormChange} 
-                          required 
-                          style={inputStyle}
-                        >
-                          <option value="monthly">Monthly</option>
-                          <option value="quarterly">Quarterly</option>
-                          <option value="yearly">Yearly</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                          Start Date
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input 
+                            type="radio" 
+                            name="recurring_type" 
+                            value="custom" 
+                            checked={formData.recurring_type === 'custom'}
+                            onChange={handleFormChange}
+                          />
+                          <span>Custom Dates</span>
                         </label>
-                        <input 
-                          type="date" 
-                          name="payment_start_date" 
-                          value={formData.payment_start_date} 
-                          onChange={handleFormChange} 
-                          required 
-                          style={inputStyle}
-                        />
                       </div>
                     </div>
+
+                    {/* Automatic Recurring Settings */}
+                    {formData.recurring_type === 'automatic' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                            Subscription Frequency
+                          </label>
+                          <select 
+                            name="recurring_frequency" 
+                            value={formData.recurring_frequency} 
+                            onChange={handleFormChange} 
+                            required 
+                            style={inputStyle}
+                          >
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                            Start Date
+                          </label>
+                          <input 
+                            type="date" 
+                            name="payment_start_date" 
+                            value={formData.payment_start_date} 
+                            onChange={handleFormChange} 
+                            required 
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Custom Recurring Settings */}
+                    {formData.recurring_type === 'custom' && (
+                      <div>
+                        <div style={{ marginBottom: '15px' }}>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                            Number of Recurring Payments
+                          </label>
+                          <input 
+                            type="number" 
+                            name="recurring_count" 
+                            placeholder="3" 
+                            value={formData.recurring_count} 
+                            onChange={handleFormChange} 
+                            min="1"
+                            max="60"
+                            required 
+                            style={inputStyle}
+                          />
+                        </div>
+                        
+                        {/* Custom Recurring Payment Dates */}
+                        <div style={{ marginTop: '20px' }}>
+                          <h6 style={{ margin: '0 0 15px 0', color: '#14532d' }}>Set Custom Dates for Each Recurring Payment</h6>
+                          {Array.from({ length: parseInt(formData.recurring_count) || 0 }, (_, index) => {
+                            const paymentAmount = parseFloat(formData.cash_in || 0);
+                            return (
+                              <div key={index} style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '15px', 
+                                marginBottom: '15px',
+                                padding: '15px',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '6px'
+                              }}>
+                                <div style={{ minWidth: '120px', fontWeight: '500' }}>
+                                  Payment #{index + 1}
+                                </div>
+                                <div style={{ minWidth: '120px' }}>
+                                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#6b7280' }}>
+                                    Amount
+                                  </label>
+                                  <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={paymentAmount.toFixed(2)}
+                                    readOnly
+                                    style={{ 
+                                      ...inputStyle, 
+                                      backgroundColor: '#f9fafb',
+                                      cursor: 'not-allowed'
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ minWidth: '150px' }}>
+                                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#6b7280' }}>
+                                    Due Date
+                                  </label>
+                                  <input 
+                                    type="date" 
+                                    name={`custom_recurring_${index}_date`}
+                                    value={formData[`custom_recurring_${index}_date`] || ''}
+                                    onChange={handleFormChange}
+                                    required
+                                    style={inputStyle}
+                                  />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#6b7280' }}>
+                                    Notes (Optional)
+                                  </label>
+                                  <input 
+                                    type="text" 
+                                    name={`custom_recurring_${index}_notes`}
+                                    placeholder={`Payment ${index + 1} notes`}
+                                    value={formData[`custom_recurring_${index}_notes`] || ''}
+                                    onChange={handleFormChange}
+                                    style={inputStyle}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Subscription Preview */}
                     <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#dcfce7', borderRadius: '6px' }}>
                       <strong>Subscription Preview:</strong><br/>
                       Service Value: ${parseFloat(formData.unit_price || 0).toFixed(2)}<br/>
-                      Subscription: ${parseFloat(formData.cash_in || 0).toFixed(2)} per {formData.recurring_frequency}<br/>
-                      Indefinite subscription (ongoing until cancelled)
+                      Subscription: ${parseFloat(formData.cash_in || 0).toFixed(2)} per {formData.recurring_type === 'automatic' ? formData.recurring_frequency : 'custom schedule'}<br/>
+                      {formData.recurring_type === 'automatic' ? (
+                        <>Indefinite subscription (ongoing until cancelled)</>
+                      ) : (
+                        <>{formData.recurring_count} scheduled payments</>
+                      )}
                     </div>
                   </div>
                 )}

@@ -18,6 +18,26 @@ router.get('/dashboard', auth, authorize('assignments', 'read'), async (req, res
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth() + 1;
     
+    // Get count of customers assigned in current month
+    const currentMonthAssignmentsSql = `
+      SELECT COUNT(*) as assigned_this_month
+      FROM customer_assignments 
+      WHERE upseller_id = ? 
+        AND status = 'active'
+        AND YEAR(assigned_date) = ?
+        AND MONTH(assigned_date) = ?
+    `;
+    
+    const currentMonthAssignmentsResults = await new Promise((resolve, reject) => {
+      db.query(currentMonthAssignmentsSql, [upsellerId, currentYear, currentMonth], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+    
+    const assignedCustomersThisMonth = currentMonthAssignmentsResults.length > 0 ? 
+      parseInt(currentMonthAssignmentsResults[0].assigned_this_month || 0) : 0;
+    
     // Get current month target
     const targetSql = `
       SELECT ut.target_value,
@@ -173,12 +193,17 @@ router.get('/dashboard', auth, authorize('assignments', 'read'), async (req, res
     // Get upcoming payments for assigned customers
     const upcomingPayments = await getUpcomingPaymentsForUpseller(upsellerId);
     
+    // Get commission data (wire transfer and Zelle payments)
+    const commissionData = await getCommissionDataForUpseller(upsellerId);
+    
     res.json({
       success: true,
       data: {
         assignedCustomersCount: assignedCustomers.length,
+        assignedCustomersThisMonth: assignedCustomersThisMonth,
         assignedCustomers: assignedCustomers,
         financialData: financialData,
+        commissionData: commissionData,
         targetData: {
           target: parseFloat(targetData.target_value || 0),
           achieved: parseFloat(targetData.actual_cash_in || 0),
@@ -254,6 +279,122 @@ async function getUpcomingPaymentsForUpseller(upsellerId) {
     db.query(sql, [upsellerId], (err, results) => {
       if (err) reject(err);
       else resolve(results);
+    });
+  });
+}
+
+// Get commission data for upseller's assigned customers (wire transfer and Zelle payments)
+async function getCommissionDataForUpseller(upsellerId) {
+  return new Promise((resolve, reject) => {
+    // Get current month data
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    const sql = `
+      SELECT 
+        pt.payment_source,
+        COALESCE(SUM(pt.amount), 0) as total_amount,
+        COUNT(pt.id) as payment_count,
+        'current_month' as period_type
+      FROM payment_transactions pt
+      JOIN sales s ON pt.sale_id = s.id
+      JOIN customers c ON s.customer_id = c.id
+      JOIN customer_assignments ca ON c.id = ca.customer_id
+      WHERE ca.upseller_id = ? 
+        AND ca.status = 'active'
+        AND pt.payment_source IN ('wire', 'zelle')
+        AND YEAR(pt.created_at) = ?
+        AND MONTH(pt.created_at) = ?
+      GROUP BY pt.payment_source
+      
+      UNION ALL
+      
+      SELECT 
+        pt.payment_source,
+        COALESCE(SUM(pt.amount), 0) as total_amount,
+        COUNT(pt.id) as payment_count,
+        'all_time' as period_type
+      FROM payment_transactions pt
+      JOIN sales s ON pt.sale_id = s.id
+      JOIN customers c ON s.customer_id = c.id
+      JOIN customer_assignments ca ON c.id = ca.customer_id
+      WHERE ca.upseller_id = ? 
+        AND ca.status = 'active'
+        AND pt.payment_source IN ('wire', 'zelle')
+      GROUP BY pt.payment_source
+    `;
+    
+    db.query(sql, [upsellerId, currentYear, currentMonth, upsellerId], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        // Initialize commission data
+        const commissionData = {
+          currentMonth: {
+            wireTransfer: {
+              amount: 0,
+              count: 0
+            },
+            zelle: {
+              amount: 0,
+              count: 0
+            },
+            total: {
+              amount: 0,
+              count: 0
+            }
+          },
+          allTime: {
+            wireTransfer: {
+              amount: 0,
+              count: 0
+            },
+            zelle: {
+              amount: 0,
+              count: 0
+            },
+            total: {
+              amount: 0,
+              count: 0
+            }
+          }
+        };
+        
+        // Process results
+        results.forEach(row => {
+          const amount = parseFloat(row.total_amount || 0);
+          const count = parseInt(row.payment_count || 0);
+          const periodType = row.period_type;
+          const paymentSource = row.payment_source;
+          
+          if (periodType === 'current_month') {
+            if (paymentSource === 'wire') {
+              commissionData.currentMonth.wireTransfer.amount = amount;
+              commissionData.currentMonth.wireTransfer.count = count;
+            } else if (paymentSource === 'zelle') {
+              commissionData.currentMonth.zelle.amount = amount;
+              commissionData.currentMonth.zelle.count = count;
+            }
+            
+            commissionData.currentMonth.total.amount += amount;
+            commissionData.currentMonth.total.count += count;
+          } else if (periodType === 'all_time') {
+            if (paymentSource === 'wire') {
+              commissionData.allTime.wireTransfer.amount = amount;
+              commissionData.allTime.wireTransfer.count = count;
+            } else if (paymentSource === 'zelle') {
+              commissionData.allTime.zelle.amount = amount;
+              commissionData.allTime.zelle.count = count;
+            }
+            
+            commissionData.allTime.total.amount += amount;
+            commissionData.allTime.total.count += count;
+          }
+        });
+        
+        resolve(commissionData);
+      }
     });
   });
 }
@@ -340,6 +481,282 @@ router.get('/performance', auth, authorize('assignments', 'read'), async (req, r
     res.status(500).json({ 
       success: false, 
       message: 'Error fetching performance data' 
+    });
+  }
+});
+
+// Get upsell manager dashboard data
+router.get('/manager/dashboard', auth, authorize('assignments', 'read'), async (req, res) => {
+  try {
+    const { period = 'this_month', year, month } = req.query;
+    
+    // Validate user has upseller-manager role
+    const userRoleId = req.user.role_id;
+    if (userRoleId !== 6 && userRoleId !== 1) { // 6 = upseller-manager, 1 = admin
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. Upseller manager role required.' 
+      });
+    }
+    
+    // Determine date range based on period
+    let startDate, endDate, periodLabel;
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    switch (period) {
+      case 'this_year':
+        startDate = new Date(currentYear, 0, 1);
+        endDate = new Date(currentYear, 11, 31);
+        periodLabel = `${currentYear}`;
+        break;
+      case 'this_month':
+        startDate = new Date(currentYear, currentMonth - 1, 1);
+        endDate = new Date(currentYear, currentMonth - 1, new Date(currentYear, currentMonth, 0).getDate(), 23, 59, 59, 999);
+        periodLabel = `${currentDate.toLocaleString('default', { month: 'long' })} ${currentYear}`;
+        break;
+      case 'all_time':
+        startDate = new Date('2020-01-01'); // Start from a reasonable date
+        endDate = new Date();
+        periodLabel = 'All Time';
+        break;
+      case 'custom':
+        if (!year || !month) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Year and month are required for custom period' 
+          });
+        }
+        startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+        endDate = new Date(parseInt(year), parseInt(month) - 1, new Date(parseInt(year), parseInt(month), 0).getDate(), 23, 59, 59, 999);
+        periodLabel = `${new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' })} ${year}`;
+        break;
+      default:
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid period. Use: this_year, this_month, all_time, or custom' 
+        });
+    }
+    
+    // Get all upsellers
+    const upsellersSql = `
+      SELECT u.id, u.name, u.email, u.created_at
+      FROM users u
+      WHERE u.role_id = 5
+      ORDER BY u.name
+    `;
+    
+    const upsellersResults = await new Promise((resolve, reject) => {
+      db.query(upsellersSql, (err, results) => {
+        if (err) reject(err);
+        else resolve(results || []);
+      });
+    });
+    
+    // Get comprehensive analytics for each upseller
+    const analyticsPromises = upsellersResults.map(async (upseller) => {
+      const upsellerId = upseller.id;
+      
+      // Get assigned customers count
+      const assignedCustomersSql = `
+        SELECT COUNT(*) as total_customers
+        FROM customer_assignments ca
+        WHERE ca.upseller_id = ? AND ca.status = 'active'
+      `;
+      
+      // Get customers assigned in period
+      const periodCustomersSql = `
+        SELECT COUNT(*) as period_customers
+        FROM customer_assignments ca
+        WHERE ca.upseller_id = ? 
+          AND ca.status = 'active'
+          AND ca.assigned_date >= ? 
+          AND ca.assigned_date <= ?
+      `;
+      
+      // Get sales data for assigned customers
+      const salesSql = `
+        SELECT 
+          COUNT(s.id) as total_sales,
+          COALESCE(SUM(s.unit_price), 0) as total_revenue,
+          COALESCE(SUM(s.cash_in), 0) as cash_received,
+          COALESCE(SUM(s.remaining), 0) as receivables
+        FROM sales s
+        JOIN customer_assignments ca ON s.customer_id = ca.customer_id
+        WHERE ca.upseller_id = ? 
+          AND ca.status = 'active'
+          AND s.created_at >= ?
+          AND s.created_at <= ?
+      `;
+      
+      // Get target data based on period
+      let targetSql, targetParams;
+      
+      if (period === 'this_month') {
+        targetSql = `
+          SELECT 
+            COALESCE(SUM(ut.target_value), 0) as total_target,
+            COALESCE(SUM(up.metric_value), 0) as achieved_revenue
+          FROM upseller_targets ut
+          LEFT JOIN upseller_performance up ON up.user_id = ut.user_id 
+            AND up.metric_type = 'revenue_generated'
+            AND up.period_year = ut.target_year 
+            AND up.period_month = ut.target_month
+          WHERE ut.user_id = ? 
+            AND ut.target_year = ? 
+            AND ut.target_month = ?
+        `;
+        targetParams = [upsellerId, currentYear, currentMonth];
+      } else if (period === 'this_year') {
+        targetSql = `
+          SELECT 
+            COALESCE(SUM(ut.target_value), 0) as total_target,
+            COALESCE(SUM(up.metric_value), 0) as achieved_revenue
+          FROM upseller_targets ut
+          LEFT JOIN upseller_performance up ON up.user_id = ut.user_id 
+            AND up.metric_type = 'revenue_generated'
+            AND up.period_year = ut.target_year 
+            AND up.period_month = ut.target_month
+          WHERE ut.user_id = ? 
+            AND ut.target_year = ?
+        `;
+        targetParams = [upsellerId, currentYear];
+      } else if (period === 'custom') {
+        targetSql = `
+          SELECT 
+            COALESCE(SUM(ut.target_value), 0) as total_target,
+            COALESCE(SUM(up.metric_value), 0) as achieved_revenue
+          FROM upseller_targets ut
+          LEFT JOIN upseller_performance up ON up.user_id = ut.user_id 
+            AND up.metric_type = 'revenue_generated'
+            AND up.period_year = ut.target_year 
+            AND up.period_month = ut.target_month
+          WHERE ut.user_id = ? 
+            AND ut.target_year = ? 
+            AND ut.target_month = ?
+        `;
+        targetParams = [upsellerId, parseInt(year), parseInt(month)];
+      } else { // all_time
+        targetSql = `
+          SELECT 
+            COALESCE(SUM(ut.target_value), 0) as total_target,
+            COALESCE(SUM(up.metric_value), 0) as achieved_revenue
+          FROM upseller_targets ut
+          LEFT JOIN upseller_performance up ON up.user_id = ut.user_id 
+            AND up.metric_type = 'revenue_generated'
+            AND up.period_year = ut.target_year 
+            AND up.period_month = ut.target_month
+          WHERE ut.user_id = ?
+        `;
+        targetParams = [upsellerId];
+      }
+      
+      const [assignedCustomers, periodCustomers, sales, targets] = await Promise.all([
+        new Promise((resolve, reject) => {
+          db.query(assignedCustomersSql, [upsellerId], (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0]?.total_customers || 0);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(periodCustomersSql, [upsellerId, startDate, endDate], (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0]?.period_customers || 0);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(salesSql, [upsellerId, startDate, endDate], (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0] || { total_sales: 0, total_revenue: 0, cash_received: 0, receivables: 0 });
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(targetSql, targetParams, (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0] || { total_target: 0, achieved_revenue: 0 });
+          });
+        })
+      ]);
+      
+      return {
+        upsellerId: upseller.id,
+        upsellerName: upseller.name,
+        upsellerEmail: upseller.email,
+        upsellerCreatedAt: upseller.created_at,
+        metrics: {
+          totalCustomers: parseInt(assignedCustomers),
+          periodCustomers: parseInt(periodCustomers),
+          totalSales: parseInt(sales.total_sales),
+          totalRevenue: parseFloat(sales.total_revenue),
+          cashReceived: parseFloat(sales.cash_received),
+          receivables: parseFloat(sales.receivables),
+          target: parseFloat(targets.total_target),
+          achieved: parseFloat(targets.achieved_revenue),
+          progressPercentage: targets.total_target > 0 ? 
+            Math.round((targets.achieved_revenue / targets.total_target) * 100) : 0
+        }
+      };
+    });
+    
+    const upsellerAnalytics = await Promise.all(analyticsPromises);
+    
+    // Calculate team totals
+    const teamTotals = upsellerAnalytics.reduce((totals, upseller) => {
+      totals.totalCustomers += upseller.metrics.totalCustomers;
+      totals.periodCustomers += upseller.metrics.periodCustomers;
+      totals.totalSales += upseller.metrics.totalSales;
+      totals.totalRevenue += upseller.metrics.totalRevenue;
+      totals.cashReceived += upseller.metrics.cashReceived;
+      totals.receivables += upseller.metrics.receivables;
+      totals.target += upseller.metrics.target;
+      totals.achieved += upseller.metrics.achieved;
+      return totals;
+    }, {
+      totalCustomers: 0,
+      periodCustomers: 0,
+      totalSales: 0,
+      totalRevenue: 0,
+      cashReceived: 0,
+      receivables: 0,
+      target: 0,
+      achieved: 0,
+      progressPercentage: 0
+    });
+    
+    teamTotals.progressPercentage = teamTotals.target > 0 ? 
+      Math.round((teamTotals.achieved / teamTotals.target) * 100) : 0;
+    
+    // Sort upsellers by performance
+    const sortedUpsellers = upsellerAnalytics.sort((a, b) => 
+      b.metrics.achieved - a.metrics.achieved
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        period: {
+          type: period,
+          label: periodLabel,
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0]
+        },
+        teamTotals,
+        upsellers: sortedUpsellers,
+        summary: {
+          totalUpsellers: upsellerAnalytics.length,
+          topPerformer: sortedUpsellers[0] || null,
+          averagePerformance: upsellerAnalytics.length > 0 ? 
+            Math.round(upsellerAnalytics.reduce((sum, u) => sum + u.metrics.progressPercentage, 0) / upsellerAnalytics.length) : 0
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching upsell manager dashboard data:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching dashboard data' 
     });
   }
 });

@@ -204,6 +204,9 @@ router.get('/front-seller/stats', auth, checkSalesRole, async (req, res) => {
       ORDER BY progress_percentage DESC, u.name
     `;
     
+    // Get commission data for front seller's converted customers
+    const commissionData = await getCommissionDataForFrontSeller(userId);
+    
     // Execute all queries in parallel
     const [totalCustomers, previousMonthCustomers, currentMonthCustomers, currentTarget, previousTarget, pastMonths, teamPerformance] = await Promise.all([
       new Promise((resolve, reject) => {
@@ -262,6 +265,7 @@ router.get('/front-seller/stats', auth, checkSalesRole, async (req, res) => {
       totalCustomers: totalCustomers.total_customers || 0,
       previousMonthCustomers: previousMonthCustomers.previous_month_customers || 0,
       currentMonthCustomers: currentMonthCustomers.current_month_customers || 0,
+      commissionData: commissionData,
       currentTarget: {
         target: currentTarget.target_value || 0,
         achieved: currentTarget.actual_conversions || 0,
@@ -310,5 +314,117 @@ router.get('/front-seller/stats', auth, checkSalesRole, async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch front seller dashboard statistics' });
   }
 });
+
+// Get commission data for front seller's converted customers (wire transfer and Zelle payments)
+async function getCommissionDataForFrontSeller(userId) {
+  return new Promise((resolve, reject) => {
+    // Get current month data
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    const sql = `
+      SELECT 
+        pt.payment_source,
+        COALESCE(SUM(pt.amount), 0) as total_amount,
+        COUNT(pt.id) as payment_count,
+        'current_month' as period_type
+      FROM payment_transactions pt
+      JOIN sales s ON pt.sale_id = s.id
+      JOIN customers c ON s.customer_id = c.id
+      WHERE c.assigned_to = ? 
+        AND pt.payment_source IN ('wire', 'zelle')
+        AND YEAR(pt.created_at) = ?
+        AND MONTH(pt.created_at) = ?
+      GROUP BY pt.payment_source
+      
+      UNION ALL
+      
+      SELECT 
+        pt.payment_source,
+        COALESCE(SUM(pt.amount), 0) as total_amount,
+        COUNT(pt.id) as payment_count,
+        'all_time' as period_type
+      FROM payment_transactions pt
+      JOIN sales s ON pt.sale_id = s.id
+      JOIN customers c ON s.customer_id = c.id
+      WHERE c.assigned_to = ? 
+        AND pt.payment_source IN ('wire', 'zelle')
+      GROUP BY pt.payment_source
+    `;
+    
+    db.query(sql, [userId, currentYear, currentMonth, userId], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        // Initialize commission data
+        const commissionData = {
+          currentMonth: {
+            wireTransfer: {
+              amount: 0,
+              count: 0
+            },
+            zelle: {
+              amount: 0,
+              count: 0
+            },
+            total: {
+              amount: 0,
+              count: 0
+            }
+          },
+          allTime: {
+            wireTransfer: {
+              amount: 0,
+              count: 0
+            },
+            zelle: {
+              amount: 0,
+              count: 0
+            },
+            total: {
+              amount: 0,
+              count: 0
+            }
+          }
+        };
+        
+        // Process results
+        results.forEach(row => {
+          const amount = parseFloat(row.total_amount || 0);
+          const count = parseInt(row.payment_count || 0);
+          const periodType = row.period_type;
+          const paymentSource = row.payment_source;
+          
+          if (periodType === 'current_month') {
+            if (paymentSource === 'wire') {
+              commissionData.currentMonth.wireTransfer.amount = amount;
+              commissionData.currentMonth.wireTransfer.count = count;
+            } else if (paymentSource === 'zelle') {
+              commissionData.currentMonth.zelle.amount = amount;
+              commissionData.currentMonth.zelle.count = count;
+            }
+            
+            commissionData.currentMonth.total.amount += amount;
+            commissionData.currentMonth.total.count += count;
+          } else if (periodType === 'all_time') {
+            if (paymentSource === 'wire') {
+              commissionData.allTime.wireTransfer.amount = amount;
+              commissionData.allTime.wireTransfer.count = count;
+            } else if (paymentSource === 'zelle') {
+              commissionData.allTime.zelle.amount = amount;
+              commissionData.allTime.zelle.count = count;
+            }
+            
+            commissionData.allTime.total.amount += amount;
+            commissionData.allTime.total.count += count;
+          }
+        });
+        
+        resolve(commissionData);
+      }
+    });
+  });
+}
 
 module.exports = router;

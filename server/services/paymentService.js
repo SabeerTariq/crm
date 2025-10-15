@@ -58,6 +58,65 @@ class PaymentService {
       });
     });
   }
+
+  /**
+   * Create installment payments for a sale with custom dates
+   * @param {number} saleId - The sale ID
+   * @param {Array} installments - Array of installment objects with custom dates
+   * @param {number} installments[].amount - Amount for this installment
+   * @param {string} installments[].due_date - Custom due date for this installment
+   * @param {string} installments[].notes - Optional notes for this installment
+   */
+  static async createInstallmentsWithCustomDates(saleId, installments) {
+    return new Promise((resolve, reject) => {
+      const installmentData = [];
+      
+      installments.forEach((installment, index) => {
+        installmentData.push([
+          saleId,
+          index + 1, // installment_number
+          installment.amount,
+          installment.due_date,
+          0.00, // paid_amount
+          'pending', // status
+          null, // paid_at
+          installment.notes || null
+        ]);
+      });
+      
+      const sql = `
+        INSERT INTO payment_installments 
+        (sale_id, installment_number, amount, due_date, paid_amount, status, paid_at, notes)
+        VALUES ?
+      `;
+      
+      db.query(sql, [installmentData], (err, result) => {
+        if (err) return reject(err);
+        resolve(result);
+      });
+    });
+  }
+
+  /**
+   * Update installment due date and notes
+   * @param {number} installmentId - Installment ID
+   * @param {string} dueDate - New due date
+   * @param {string} notes - Optional notes
+   */
+  static async updateInstallment(installmentId, dueDate, notes = null) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE payment_installments 
+        SET due_date = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `;
+      
+      db.query(sql, [dueDate, notes, installmentId], (err, result) => {
+        if (err) return reject(err);
+        resolve(result);
+      });
+    });
+  }
   
   /**
    * Create recurring payment for a sale
@@ -79,6 +138,47 @@ class PaymentService {
       `;
       
       db.query(sql, [saleId, customerId, amount, frequency, nextPaymentDate.toISOString().split('T')[0], totalPayments], (err, result) => {
+        if (err) return reject(err);
+        resolve(result);
+      });
+    });
+  }
+
+  /**
+   * Create recurring payment with custom dates
+   * @param {number} saleId - The sale ID
+   * @param {number} customerId - The customer ID
+   * @param {Array} recurringPayments - Array of recurring payment objects with custom dates
+   * @param {number} recurringPayments[].amount - Amount for this payment
+   * @param {string} recurringPayments[].due_date - Custom due date for this payment
+   * @param {string} recurringPayments[].notes - Optional notes for this payment
+   */
+  static async createRecurringPaymentsWithCustomDates(saleId, customerId, recurringPayments) {
+    return new Promise((resolve, reject) => {
+      const recurringData = [];
+      
+      recurringPayments.forEach((payment, index) => {
+        recurringData.push([
+          saleId,
+          customerId,
+          payment.amount,
+          'custom', // Custom frequency type
+          payment.due_date,
+          null, // last_payment_date
+          'active', // status
+          recurringPayments.length, // total_payments
+          0, // payments_made
+          payment.notes || null
+        ]);
+      });
+      
+      const sql = `
+        INSERT INTO payment_recurring 
+        (sale_id, customer_id, amount, frequency, next_payment_date, last_payment_date, status, total_payments, payments_made, notes)
+        VALUES ?
+      `;
+      
+      db.query(sql, [recurringData], (err, result) => {
         if (err) return reject(err);
         resolve(result);
       });

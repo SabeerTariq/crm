@@ -11,6 +11,36 @@ export default function FrontSellerDashboard() {
       remaining: 0,
       progressPercentage: 0
     },
+    commissionData: {
+      currentMonth: {
+        wireTransfer: {
+          amount: 0,
+          count: 0
+        },
+        zelle: {
+          amount: 0,
+          count: 0
+        },
+        total: {
+          amount: 0,
+          count: 0
+        }
+      },
+      allTime: {
+        wireTransfer: {
+          amount: 0,
+          count: 0
+        },
+        zelle: {
+          amount: 0,
+          count: 0
+        },
+        total: {
+          amount: 0,
+          count: 0
+        }
+      }
+    },
     currentPeriod: {
       year: 2025,
       month: 1,
@@ -20,12 +50,17 @@ export default function FrontSellerDashboard() {
     teamPerformance: []
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchFrontSellerStats = async () => {
+    const fetchFrontSellerStats = async (isRefresh = false) => {
       try {
-        setLoading(true);
+        if (isRefresh) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
         setError(null);
         
         const token = localStorage.getItem('token');
@@ -33,13 +68,25 @@ export default function FrontSellerDashboard() {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        // Extract only the essential target data
+        // Extract all dashboard data including commission data
         setStats({
           currentTarget: response.data.currentTarget || {
             target: 0,
             achieved: 0,
             remaining: 0,
             progressPercentage: 0
+          },
+          commissionData: response.data.commissionData || {
+            currentMonth: {
+              wireTransfer: { amount: 0, count: 0 },
+              zelle: { amount: 0, count: 0 },
+              total: { amount: 0, count: 0 }
+            },
+            allTime: {
+              wireTransfer: { amount: 0, count: 0 },
+              zelle: { amount: 0, count: 0 },
+              total: { amount: 0, count: 0 }
+            }
           },
           currentPeriod: response.data.currentPeriod || {
             year: 2025,
@@ -54,10 +101,30 @@ export default function FrontSellerDashboard() {
         setError(err.response?.data?.message || 'Failed to load target information');
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     };
 
     fetchFrontSellerStats();
+    
+    // Listen for storage events (when sales are created in other tabs)
+    const handleStorageChange = (e) => {
+      if (e.key === 'salesUpdated' || e.key === 'dashboardRefresh') {
+        fetchFrontSellerStats(true);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Set up periodic refresh every 30 seconds
+    const refreshInterval = setInterval(() => {
+      fetchFrontSellerStats(true);
+    }, 30000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   const getProgressColor = (percentage) => {
@@ -75,6 +142,13 @@ export default function FrontSellerDashboard() {
 
   const formatNumber = (value) => {
     return parseFloat(value) || 0;
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
   };
 
   if (loading) {
@@ -130,6 +204,81 @@ export default function FrontSellerDashboard() {
           }}>
             Welcome, <strong>{getUserName()}</strong>
           </p>
+          
+          {/* Refresh Button */}
+          <button
+            onClick={() => {
+              const fetchFrontSellerStats = async (isRefresh = false) => {
+                try {
+                  if (isRefresh) {
+                    setRefreshing(true);
+                  } else {
+                    setLoading(true);
+                  }
+                  setError(null);
+                  
+                  const token = localStorage.getItem('token');
+                  const response = await api.get('/dashboard/front-seller/stats', {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  
+                  setStats({
+                    currentTarget: response.data.currentTarget || {
+                      target: 0,
+                      achieved: 0,
+                      remaining: 0,
+                      progressPercentage: 0
+                    },
+                    commissionData: response.data.commissionData || {
+                      currentMonth: {
+                        wireTransfer: { amount: 0, count: 0 },
+                        zelle: { amount: 0, count: 0 },
+                        total: { amount: 0, count: 0 }
+                      },
+                      allTime: {
+                        wireTransfer: { amount: 0, count: 0 },
+                        zelle: { amount: 0, count: 0 },
+                        total: { amount: 0, count: 0 }
+                      }
+                    },
+                    currentPeriod: response.data.currentPeriod || {
+                      year: 2025,
+                      month: 1,
+                      monthName: 'January'
+                    },
+                    pastMonths: response.data.pastMonths || [],
+                    teamPerformance: response.data.teamPerformance || []
+                  });
+                } catch (err) {
+                  console.error('Error fetching front seller stats:', err);
+                  setError(err.response?.data?.message || 'Failed to load target information');
+                } finally {
+                  setLoading(false);
+                  setRefreshing(false);
+                }
+              };
+              fetchFrontSellerStats(true);
+            }}
+            disabled={refreshing}
+            style={{
+              marginTop: '15px',
+              padding: '8px 16px',
+              backgroundColor: refreshing ? '#9ca3af' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              margin: '15px auto 0'
+            }}
+          >
+            <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin' : ''}`}></i>
+            {refreshing ? 'Refreshing...' : 'Refresh Data'}
+          </button>
         </div>
 
         {/* Main Target Card */}
@@ -310,6 +459,275 @@ export default function FrontSellerDashboard() {
               fontWeight: '600'
             }}>
               Progress Complete
+            </div>
+          </div>
+        </div>
+
+        {/* Commissions Section */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '2px solid #e2e8f0',
+          borderRadius: '16px',
+          padding: '40px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          maxWidth: '800px',
+          margin: '40px auto'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <h2 style={{ 
+              margin: '0 0 8px 0', 
+              color: '#1f2937',
+              fontSize: '24px',
+              fontWeight: '600'
+            }}>
+              Commission Payments
+            </h2>
+            <p style={{ 
+              color: '#6b7280',
+              margin: '0',
+              fontSize: '16px'
+            }}>
+              Wire transfer and Zelle payments from your converted customers
+            </p>
+          </div>
+          
+          {/* Current Month Commissions */}
+          <div style={{ marginBottom: '40px' }}>
+            <h3 style={{ 
+              margin: '0 0 20px 0', 
+              color: '#374151',
+              fontSize: '18px',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              This Month ({stats.currentPeriod.monthName} {stats.currentPeriod.year})
+            </h3>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(3, 1fr)', 
+              gap: '30px'
+            }}>
+              {/* Wire Transfer Payments - Current Month */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f0f9ff',
+                borderRadius: '12px',
+                border: '1px solid #bae6fd'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#0ea5e9',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(stats.commissionData?.currentMonth?.wireTransfer?.amount || 0)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Wire Transfer
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {stats.commissionData?.currentMonth?.wireTransfer?.count || 0} payments
+                </div>
+              </div>
+
+              {/* Zelle Payments - Current Month */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f0fdf4',
+                borderRadius: '12px',
+                border: '1px solid #bbf7d0'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#16a34a',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(stats.commissionData?.currentMonth?.zelle?.amount || 0)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Zelle Payments
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {stats.commissionData?.currentMonth?.zelle?.count || 0} payments
+                </div>
+              </div>
+
+              {/* Total Commission Payments - Current Month */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#fef3c7',
+                borderRadius: '12px',
+                border: '1px solid #fde68a'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#d97706',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(stats.commissionData?.currentMonth?.total?.amount || 0)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Total
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {stats.commissionData?.currentMonth?.total?.count || 0} total payments
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* All Time Commissions */}
+          <div>
+            <h3 style={{ 
+              margin: '0 0 20px 0', 
+              color: '#374151',
+              fontSize: '18px',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              All Time Performance
+            </h3>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(3, 1fr)', 
+              gap: '30px'
+            }}>
+              {/* Wire Transfer Payments - All Time */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#0ea5e9',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(stats.commissionData?.allTime?.wireTransfer?.amount || 0)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Wire Transfer
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {stats.commissionData?.allTime?.wireTransfer?.count || 0} payments
+                </div>
+              </div>
+
+              {/* Zelle Payments - All Time */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#16a34a',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(stats.commissionData?.allTime?.zelle?.amount || 0)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Zelle Payments
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {stats.commissionData?.allTime?.zelle?.count || 0} payments
+                </div>
+              </div>
+
+              {/* Total Commission Payments - All Time */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#d97706',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(stats.commissionData?.allTime?.total?.amount || 0)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Total
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {stats.commissionData?.allTime?.total?.count || 0} total payments
+                </div>
+              </div>
             </div>
           </div>
         </div>

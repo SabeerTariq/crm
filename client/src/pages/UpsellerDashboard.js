@@ -8,10 +8,41 @@ import PageLayout from '../components/PageLayout';
 export default function UpsellerDashboard() {
   const [dashboardData, setDashboardData] = useState({
     assignedCustomersCount: 0,
+    assignedCustomersThisMonth: 0,
     assignedCustomers: [],
     financialData: {
       totalCashIn: 0,
       receivables: 0
+    },
+    commissionData: {
+      currentMonth: {
+        wireTransfer: {
+          amount: 0,
+          count: 0
+        },
+        zelle: {
+          amount: 0,
+          count: 0
+        },
+        total: {
+          amount: 0,
+          count: 0
+        }
+      },
+      allTime: {
+        wireTransfer: {
+          amount: 0,
+          count: 0
+        },
+        zelle: {
+          amount: 0,
+          count: 0
+        },
+        total: {
+          amount: 0,
+          count: 0
+        }
+      }
     },
     targetData: {
       target: 0,
@@ -28,7 +59,8 @@ export default function UpsellerDashboard() {
     teamPerformance: []
   });
   const [loading, setLoading] = useState(true);
-  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const [refreshing, setRefreshing] = useState(false);
+  const { loading: permissionsLoading } = usePermissions();
 
   useEffect(() => {
     // Check if user has upseller role
@@ -37,10 +69,35 @@ export default function UpsellerDashboard() {
     }
     
     loadDashboardData();
+    
+    // Listen for storage events (when sales are created in other tabs)
+    const handleStorageChange = (e) => {
+      if (e.key === 'salesUpdated' || e.key === 'dashboardRefresh') {
+        loadDashboardData(true);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Set up periodic refresh every 30 seconds
+    const refreshInterval = setInterval(() => {
+      loadDashboardData(true);
+    }, 30000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(refreshInterval);
+    };
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (isRefresh = false) => {
     try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const token = localStorage.getItem('token');
       const response = await api.get('/upseller/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
@@ -54,7 +111,12 @@ export default function UpsellerDashboard() {
       alert('Failed to load dashboard data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadDashboardData(true);
   };
 
   const formatCurrency = (amount) => {
@@ -134,6 +196,28 @@ export default function UpsellerDashboard() {
           }}>
             Welcome, <strong>{getUserName()}</strong>
           </p>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            style={{
+              marginTop: '15px',
+              padding: '8px 16px',
+              backgroundColor: refreshing ? '#9ca3af' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              margin: '15px auto 0'
+            }}
+          >
+            <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin' : ''}`}></i>
+            {refreshing ? 'Refreshing...' : 'Refresh Data'}
+          </button>
         </div>
 
         {/* Main Target Card */}
@@ -348,7 +432,7 @@ export default function UpsellerDashboard() {
           
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
             gap: '30px'
           }}>
             {/* Total Receivables */}
@@ -416,6 +500,309 @@ export default function UpsellerDashboard() {
                 marginTop: '4px'
               }}>
                 customers under your care
+              </div>
+            </div>
+
+            {/* This Month's Assignments */}
+            <div style={{
+              textAlign: 'center',
+              padding: '20px',
+              backgroundColor: '#f0fdf4',
+              borderRadius: '12px',
+              border: '1px solid #bbf7d0'
+            }}>
+              <div style={{ 
+                fontSize: '28px', 
+                fontWeight: 'bold', 
+                color: '#16a34a',
+                marginBottom: '8px'
+              }}>
+                {dashboardData.assignedCustomersThisMonth}
+              </div>
+              <div style={{ 
+                fontSize: '16px', 
+                color: '#64748b',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                This Month's Assignments
+              </div>
+              <div style={{ 
+                fontSize: '14px', 
+                color: '#9ca3af',
+                marginTop: '4px'
+              }}>
+                new customers this month
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Commissions Section */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '2px solid #e2e8f0',
+          borderRadius: '16px',
+          padding: '40px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          maxWidth: '800px',
+          margin: '0 auto 40px'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <h2 style={{ 
+              margin: '0 0 8px 0', 
+              color: '#1f2937',
+              fontSize: '24px',
+              fontWeight: '600'
+            }}>
+              Commission Payments
+            </h2>
+            <p style={{ 
+              color: '#6b7280',
+              margin: '0',
+              fontSize: '16px'
+            }}>
+              Wire transfer and Zelle payments from your assigned customers
+            </p>
+          </div>
+          
+          {/* Current Month Commissions */}
+          <div style={{ marginBottom: '40px' }}>
+            <h3 style={{ 
+              margin: '0 0 20px 0', 
+              color: '#374151',
+              fontSize: '18px',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              This Month ({dashboardData.currentPeriod.monthName} {dashboardData.currentPeriod.year})
+            </h3>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(3, 1fr)', 
+              gap: '30px'
+            }}>
+              {/* Wire Transfer Payments - Current Month */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f0f9ff',
+                borderRadius: '12px',
+                border: '1px solid #bae6fd'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#0ea5e9',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(dashboardData.commissionData.currentMonth.wireTransfer.amount)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Wire Transfer
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {dashboardData.commissionData.currentMonth.wireTransfer.count} payments
+                </div>
+              </div>
+
+              {/* Zelle Payments - Current Month */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f0fdf4',
+                borderRadius: '12px',
+                border: '1px solid #bbf7d0'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#16a34a',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(dashboardData.commissionData.currentMonth.zelle.amount)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Zelle Payments
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {dashboardData.commissionData.currentMonth.zelle.count} payments
+                </div>
+              </div>
+
+              {/* Total Commission Payments - Current Month */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#fef3c7',
+                borderRadius: '12px',
+                border: '1px solid #fde68a'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#d97706',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(dashboardData.commissionData.currentMonth.total.amount)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Total
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {dashboardData.commissionData.currentMonth.total.count} total payments
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* All Time Commissions */}
+          <div>
+            <h3 style={{ 
+              margin: '0 0 20px 0', 
+              color: '#374151',
+              fontSize: '18px',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              All Time Performance
+            </h3>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(3, 1fr)', 
+              gap: '30px'
+            }}>
+              {/* Wire Transfer Payments - All Time */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#0ea5e9',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(dashboardData.commissionData.allTime.wireTransfer.amount)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Wire Transfer
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {dashboardData.commissionData.allTime.wireTransfer.count} payments
+                </div>
+              </div>
+
+              {/* Zelle Payments - All Time */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#16a34a',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(dashboardData.commissionData.allTime.zelle.amount)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Zelle Payments
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {dashboardData.commissionData.allTime.zelle.count} payments
+                </div>
+              </div>
+
+              {/* Total Commission Payments - All Time */}
+              <div style={{
+                textAlign: 'center',
+                padding: '20px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: '#d97706',
+                  marginBottom: '8px'
+                }}>
+                  {formatCurrency(dashboardData.commissionData.allTime.total.amount)}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Total
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af',
+                  marginTop: '4px'
+                }}>
+                  {dashboardData.commissionData.allTime.total.count} total payments
+                </div>
               </div>
             </div>
           </div>

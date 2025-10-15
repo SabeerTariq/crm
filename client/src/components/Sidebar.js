@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { usePermissions } from '../hooks/usePermissions';
 import { useUserBoards } from '../hooks/useUserBoards';
-import { hasLeadScraperRole, hasSalesRole, hasUpsellerRole, isAdmin } from '../utils/roleUtils';
+import { hasLeadScraperRole, hasSalesRole, hasUpsellerRole, hasUpsellerManagerRole, isAdmin } from '../utils/roleUtils';
 import { getUserName, getUserRole } from '../utils/userUtils';
 import './Sidebar.css';
 
@@ -236,11 +236,27 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
+        {hasUpsellerManagerRole() && (
+          <li className={`menu-item ${isActive('/upsell-manager-dashboard') ? 'active' : ''}`}>
+            <Link to="/upsell-manager-dashboard" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-chart-line menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Manager Dashboard</span>}
+            </Link>
+          </li>
+        )}
         {hasPermission('leads', 'view') && (
           <li className={`menu-item ${isActive('/leads') ? 'active' : ''}`}>
             <Link to="/leads" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-users menu-icon"></i>
               {!isCollapsed && <span className="menu-text">Leads</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('leads', 'view') && (
+          <li className={`menu-item ${isActive('/schedule-list') ? 'active' : ''}`}>
+            <Link to="/schedule-list" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-calendar-alt menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Schedule List</span>}
             </Link>
           </li>
         )}

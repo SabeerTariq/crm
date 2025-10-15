@@ -26,10 +26,21 @@ class InvoiceService {
         if (err) return reject(err);
         
         if (saleResults.length === 0) {
-          return reject(new Error('Sale not found'));
+          return reject(new Error(`Sale ${saleId} not found`));
         }
         
         const sale = saleResults[0];
+        console.log(`📊 Sale data for invoice creation:`, {
+          saleId: sale.id,
+          customer_id: sale.customer_id,
+          customer_name: sale.customer_name,
+          unit_price: sale.unit_price
+        });
+        
+        // Validate sale data
+        if (!sale.customer_id) {
+          return reject(new Error(`Sale ${saleId} has no customer_id. Cannot create invoice.`));
+        }
         
         // Generate invoice number
         const invoiceNumber = `INV-${Date.now()}-${saleId}`;
