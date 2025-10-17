@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 07, 2025 at 11:56 PM
+-- Generation Time: Oct 17, 2025 at 07:55 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -73,6 +73,19 @@ CREATE TABLE `customers` (
   `total_remaining` decimal(12,2) DEFAULT 0.00,
   `last_payment_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `customers`
+--
+
+INSERT INTO `customers` (`id`, `name`, `company_name`, `email`, `phone`, `city`, `state`, `service_required`, `source`, `notes`, `assigned_to`, `created_by`, `converted_at`, `updated_at`, `total_sales`, `total_paid`, `total_remaining`, `last_payment_date`) VALUES
+(90, 'Lisandra Benson', 'Morrow Copeland Inc', 'wuburu@mailinator.com', '+1 (806) 358-4623', 'Qui non in in minus ', 'Magni adipisicing as', 'Sit ex nisi autem q', 'Soluta rerum ipsum n', 'Aliquip et quia ulla', 1, 1, '2025-10-07 22:18:31', '2025-10-07 22:18:31', 1000.00, 500.00, 500.00, NULL),
+(92, 'Lester Lane', 'Tran Massey Plc', 'zuxozot@mailinator.com', '+1 (197) 823-6603', 'Natus et qui qui mag', 'Ea reiciendis odio f', 'Veniam ea eum qui a', 'Reprehenderit quis ', 'Et iusto error dolor', 1, 1, '2025-10-14 16:41:49', '2025-10-14 16:41:49', 1000.00, 100.00, 900.00, NULL),
+(93, 'Ruby Booth', 'Boyle and Heath Plc', 'bavidil@mailinator.com', '+1 (675) 579-2306', 'Eligendi omnis molli', 'Beatae labore Nam si', 'Nulla nisi quia est ', 'Voluptas voluptatem ', 'Placeat soluta labo', 1, 1, '2025-10-14 16:45:56', '2025-10-14 16:45:56', 1000.00, 200.00, 800.00, NULL),
+(94, 'Brendan Valentine', 'Roy and Dillon Co', 'belejoje@mailinator.com', '+1 (615) 104-8583', 'Et ipsum sed aut seq', 'Tempore quis minim ', 'Nisi similique hic m', 'Ut fugit qui rerum ', 'Sed ex a corrupti e', 1, 1, '2025-10-14 16:49:21', '2025-10-15 19:48:33', 15200.00, 6400.00, 8800.00, '2025-10-15'),
+(95, 'John Doe', 'ABC Corporation', 'john.doe@abccorp.com', '+1-555-0123', 'New York', 'NY', 'Web Development', 'Website', 'Interested in e-commerce platform', 29, 29, '2025-10-15 23:24:30', '2025-10-15 23:24:30', 1000.00, 300.00, 700.00, NULL),
+(96, 'Chaney Blankenship', 'Blake Miller Co', 'tixyfiqil@mailinator.com', '+1 (442) 382-7082', 'Aut in non aut incid', 'Modi nemo odit conse', 'Id illum quas ut ut', 'Dolor et aute qui mo', 'Sint dolor fuga Id ', 29, 29, '2025-10-15 23:25:24', '2025-10-15 23:25:24', 2000.00, 100.00, 1900.00, NULL),
+(97, 'Jane Smith', 'XYZ Industries', 'jane.smith@xyz.com', '+1-555-0456', 'Los Angeles', 'CA', 'Mobile App', 'Referral', 'Urgent project deadline', 29, 29, '2025-10-15 23:36:04', '2025-10-15 23:36:04', 1000.00, 500.00, 500.00, NULL);
 
 -- --------------------------------------------------------
 
@@ -265,15 +278,6 @@ CREATE TABLE `lead_tracking` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `lead_tracking`
---
-
-INSERT INTO `lead_tracking` (`id`, `user_id`, `lead_id`, `action`, `created_at`) VALUES
-(197, 21, 91, 'created', '2025-10-03 23:15:36'),
-(198, 21, 91, 'converted', '2025-10-03 23:16:02'),
-(199, 1, 92, 'created', '2025-10-07 21:39:26');
-
 -- --------------------------------------------------------
 
 --
@@ -322,7 +326,7 @@ CREATE TABLE `payment_recurring` (
   `sale_id` int(11) NOT NULL,
   `customer_id` int(11) NOT NULL,
   `amount` decimal(10,2) NOT NULL,
-  `frequency` enum('weekly','monthly','quarterly','yearly') NOT NULL,
+  `frequency` varchar(50) DEFAULT 'monthly',
   `next_payment_date` date NOT NULL,
   `last_payment_date` date DEFAULT NULL,
   `status` enum('active','paused','cancelled','completed') DEFAULT 'active',
@@ -1001,6 +1005,14 @@ CREATE TABLE `targets` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `targets`
+--
+
+INSERT INTO `targets` (`id`, `user_id`, `target_value`, `target_month`, `target_year`, `created_by`, `created_at`, `updated_at`) VALUES
+(14, 7, 10, 10, 2025, 30, '2025-10-15 23:29:10', '2025-10-15 23:29:10'),
+(15, 29, 15, 10, 2025, 30, '2025-10-15 23:29:22', '2025-10-15 23:29:22');
+
 -- --------------------------------------------------------
 
 --
@@ -1125,13 +1137,6 @@ CREATE TABLE `teams` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `teams`
---
-
-INSERT INTO `teams` (`id`, `name`, `description`, `created_by`, `created_at`, `updated_at`) VALUES
-(13, 'Team A', '', 9, '2025-10-01 22:49:15', '2025-10-01 22:49:15');
-
 -- --------------------------------------------------------
 
 --
@@ -1145,16 +1150,6 @@ CREATE TABLE `team_members` (
   `role` enum('leader','member') DEFAULT 'member',
   `joined_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `team_members`
---
-
-INSERT INTO `team_members` (`id`, `team_id`, `user_id`, `role`, `joined_at`) VALUES
-(39, 13, 21, 'member', '2025-10-01 22:49:15'),
-(40, 13, 22, 'member', '2025-10-01 22:49:15'),
-(41, 13, 26, 'member', '2025-10-01 22:49:15'),
-(42, 13, 20, 'member', '2025-10-01 22:49:15');
 
 -- --------------------------------------------------------
 
@@ -1215,7 +1210,8 @@ CREATE TABLE `upseller_targets` (
 --
 
 INSERT INTO `upseller_targets` (`id`, `user_id`, `target_value`, `target_month`, `target_year`, `created_by`, `created_at`, `updated_at`) VALUES
-(12, 10, 2000.00, 10, 2025, 10, '2025-10-03 23:26:15', '2025-10-03 23:26:15');
+(12, 10, 2000.00, 10, 2025, 10, '2025-10-03 23:26:15', '2025-10-03 23:26:15'),
+(13, 12, 5000.00, 10, 2025, 1, '2025-10-14 20:30:06', '2025-10-14 20:30:06');
 
 -- --------------------------------------------------------
 
@@ -1232,6 +1228,13 @@ CREATE TABLE `upseller_teams` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `upseller_teams`
+--
+
+INSERT INTO `upseller_teams` (`id`, `name`, `description`, `created_by`, `created_at`, `updated_at`) VALUES
+(15, 'Team A', '', 1, '2025-10-14 20:29:06', '2025-10-14 20:29:06');
+
 -- --------------------------------------------------------
 
 --
@@ -1245,6 +1248,14 @@ CREATE TABLE `upseller_team_members` (
   `role` enum('leader','member') DEFAULT 'member',
   `joined_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `upseller_team_members`
+--
+
+INSERT INTO `upseller_team_members` (`id`, `team_id`, `user_id`, `role`, `joined_at`) VALUES
+(25, 15, 10, 'member', '2025-10-14 20:29:06'),
+(26, 15, 12, 'member', '2025-10-14 20:29:06');
 
 -- --------------------------------------------------------
 
@@ -1290,7 +1301,9 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`, `role_id`)
 (25, 'Vincent Welfred Khan', 'vincent@crm.com', '$2b$10$2wIycws1OCuIHzmWKH4PPeeZJwM38RmOMTnJ02UoAO/rLhEwvAfha', '2025-10-01 19:59:00', 3),
 (26, 'Bilal Ahmed ', 'bilal@crm.com', '$2b$10$BwcOLWPypwR3WZYKbh3mn.GsRX9SBkvjQI/zqRog.dpFZojACDOsq', '2025-10-01 19:59:25', 3),
 (27, 'Sharjeel Ahmed', 'sharjeel@crm.com', '$2b$10$.gDVaOM.gBWsctAEztBn9e0dxg8KjncnQzw3pieFcrV8B5xVOPO.K', '2025-10-07 21:41:21', 3),
-(28, 'Muheet', 'muheet@crm.com', '$2b$10$3G37APrgzrbsdxJW2XGOIOk.f6jBxlrnnczSmaEBV84v.WuWDNNMC', '2025-10-07 21:41:45', 3);
+(28, 'Muheet', 'muheet@crm.com', '$2b$10$3G37APrgzrbsdxJW2XGOIOk.f6jBxlrnnczSmaEBV84v.WuWDNNMC', '2025-10-07 21:41:45', 3),
+(29, 'Sales2', 'sales2@example.com', '$2b$10$KPHIK37jnSi7GjuOQ3/HHOpKcqW.U3lRupSNkNV.7IoV3bHumJ.P.', '2025-10-15 18:32:12', 3),
+(30, 'Front Manager', 'frontmanager@example.com', '$2b$10$2BEBgA/7TRKJ.KEyZJPYY.S6qy4J5gkfmeudVWx9TLUPxPRV7hVim', '2025-10-15 23:28:40', 4);
 
 --
 -- Indexes for dumped tables
@@ -1650,13 +1663,13 @@ ALTER TABLE `boards`
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=90;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=98;
 
 --
 -- AUTO_INCREMENT for table `customer_assignments`
 --
 ALTER TABLE `customer_assignments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `customer_subscriptions`
@@ -1680,43 +1693,43 @@ ALTER TABLE `department_team_members`
 -- AUTO_INCREMENT for table `invoices`
 --
 ALTER TABLE `invoices`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=109;
 
 --
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=114;
 
 --
 -- AUTO_INCREMENT for table `lead_notes`
 --
 ALTER TABLE `lead_notes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `lead_schedules`
 --
 ALTER TABLE `lead_schedules`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `lead_tracking`
 --
 ALTER TABLE `lead_tracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=200;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=217;
 
 --
 -- AUTO_INCREMENT for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `payment_installments`
 --
 ALTER TABLE `payment_installments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `payment_recurring`
@@ -1728,7 +1741,7 @@ ALTER TABLE `payment_recurring`
 -- AUTO_INCREMENT for table `payment_transactions`
 --
 ALTER TABLE `payment_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=104;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=120;
 
 --
 -- AUTO_INCREMENT for table `permissions`
@@ -1740,31 +1753,31 @@ ALTER TABLE `permissions`
 -- AUTO_INCREMENT for table `projects`
 --
 ALTER TABLE `projects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `project_attachments`
 --
 ALTER TABLE `project_attachments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `project_departments`
 --
 ALTER TABLE `project_departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `project_tasks`
 --
 ALTER TABLE `project_tasks`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `reminders`
 --
 ALTER TABLE `reminders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -1776,13 +1789,13 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=81;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=95;
 
 --
 -- AUTO_INCREMENT for table `targets`
 --
 ALTER TABLE `targets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `task_activity_logs`
@@ -1812,7 +1825,7 @@ ALTER TABLE `task_comments`
 -- AUTO_INCREMENT for table `task_members`
 --
 ALTER TABLE `task_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `task_statuses`
@@ -1824,49 +1837,49 @@ ALTER TABLE `task_statuses`
 -- AUTO_INCREMENT for table `teams`
 --
 ALTER TABLE `teams`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `team_members`
 --
 ALTER TABLE `team_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
 -- AUTO_INCREMENT for table `upcoming_payments`
 --
 ALTER TABLE `upcoming_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- AUTO_INCREMENT for table `upseller_performance`
 --
 ALTER TABLE `upseller_performance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `upseller_targets`
 --
 ALTER TABLE `upseller_targets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `upseller_teams`
 --
 ALTER TABLE `upseller_teams`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `upseller_team_members`
 --
 ALTER TABLE `upseller_team_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- Constraints for dumped tables
