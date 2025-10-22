@@ -205,7 +205,7 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
             LIMIT 1
           `;
           
-          db.query(upsellerQuery, [customerId], async (err, upsellerResults) => {
+          db.query(upsellerQuery, [customerId], (err, upsellerResults) => {
             if (err) {
               console.error('Error getting upseller for customer:', err);
               return;
@@ -215,8 +215,10 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
               const upsellerId = upsellerResults[0].upseller_id;
               console.log(`📊 Updating upseller performance for upseller ${upsellerId} with amount ${cash_in}`);
               
-              await PaymentService.updateUpsellerPerformance(upsellerId, cash_in);
-              console.log(`✅ Upseller performance updated successfully`);
+              PaymentService.updateUpsellerPerformance(upsellerId, cash_in).catch(err => {
+                console.error('Error updating upseller performance:', err);
+              });
+              console.log(`✅ Upseller performance update initiated`);
             } else {
               console.log(`⚠️ No active upseller found for customer ${customerId}`);
             }
@@ -322,68 +324,55 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
             req.user.id
           ];
           
-          db.query(customerSql, customerParams, async (err, customerResult) => {
-            if (err) return res.status(500).json({ message: 'Error creating customer' });
+          db.query(customerSql, customerParams, (err, customerResult) => {
+            if (err) {
+              console.error('Error creating customer:', err);
+              return res.status(500).json({ message: 'Error creating customer' });
+            }
             
             // Update sale with the new customer ID
             const updateSaleSql = 'UPDATE sales SET customer_id = ? WHERE id = ?';
-            db.query(updateSaleSql, [customerResult.insertId, result.insertId], async (err) => {
-              if (err) return res.status(500).json({ message: 'Error updating sale with customer ID' });
+            db.query(updateSaleSql, [customerResult.insertId, result.insertId], (err) => {
+              if (err) {
+                console.error('Error updating sale with customer ID:', err);
+                return res.status(500).json({ message: 'Error updating sale with customer ID' });
+              }
               
-              try {
-                // Update customer totals after sale is linked to customer
-                await CustomerSalesService.updateCustomerTotals(customerResult.insertId);
-                
-                // Track lead conversion for the converter (sales person)
-                await StatsService.trackLeadConverted(converterUserId, lead_id);
-                
-                // Track conversion for the original lead creator (lead-scraper)
-                if (originalLeadCreator && originalLeadCreator !== converterUserId) {
-                  await StatsService.trackLeadConverted(originalLeadCreator, lead_id);
-                }
-                
-                // Note: Invoice creation is handled by the general sale creation process above
-                // No need to create invoice again here to avoid duplicates
-                
-                // Delete the lead
-                console.log('Attempting to delete lead with id:', lead_id);
-                db.query('DELETE FROM leads WHERE id = ?', [lead_id], (err, deleteResult) => {
-                  if (err) {
-                    console.error('Error deleting lead:', err);
-                    return res.status(500).json({ message: 'Error deleting lead' });
-                  }
-                  
-                  console.log('Lead deletion result:', deleteResult);
-                  console.log('Lead successfully deleted');
-                  
-                  res.json({ 
-                    message: 'Sale added and lead converted successfully', 
-                    saleId: result.insertId,
-                    customerId: customerResult.insertId,
-                    leadConverted: true
-                  });
-                });
-              } catch (statsErr) {
-                console.error('Error tracking lead conversion:', statsErr);
-                // Still delete the lead even if tracking fails
-                console.log('Fallback: Attempting to delete lead with id:', lead_id);
-                db.query('DELETE FROM leads WHERE id = ?', [lead_id], (err, deleteResult) => {
-                  if (err) {
-                    console.error('Fallback: Error deleting lead:', err);
-                    return res.status(500).json({ message: 'Error deleting lead' });
-                  }
-                  
-                  console.log('Fallback: Lead deletion result:', deleteResult);
-                  console.log('Fallback: Lead successfully deleted');
-                  
-                  res.json({ 
-                    message: 'Sale added and lead converted successfully (stats tracking failed)', 
-                    saleId: result.insertId,
-                    customerId: customerResult.insertId,
-                    leadConverted: true
-                  });
+              // Update customer totals after sale is linked to customer
+              CustomerSalesService.updateCustomerTotals(customerResult.insertId).catch(err => {
+                console.error('Error updating customer totals:', err);
+              });
+              
+              // Track lead conversion for the converter (sales person)
+              StatsService.trackLeadConverted(converterUserId, lead_id).catch(err => {
+                console.error('Error tracking lead conversion for converter:', err);
+              });
+              
+              // Track conversion for the original lead creator (lead-scraper)
+              if (originalLeadCreator && originalLeadCreator !== converterUserId) {
+                StatsService.trackLeadConverted(originalLeadCreator, lead_id).catch(err => {
+                  console.error('Error tracking lead conversion for original creator:', err);
                 });
               }
+              
+              // Delete the lead
+              console.log('Attempting to delete lead with id:', lead_id);
+              db.query('DELETE FROM leads WHERE id = ?', [lead_id], (err, deleteResult) => {
+                if (err) {
+                  console.error('Error deleting lead:', err);
+                  return res.status(500).json({ message: 'Error deleting lead' });
+                }
+                
+                console.log('Lead deletion result:', deleteResult);
+                console.log('Lead successfully deleted');
+                
+                res.json({ 
+                  message: 'Sale added and lead converted successfully', 
+                  saleId: result.insertId,
+                  customerId: customerResult.insertId,
+                  leadConverted: true
+                });
+              });
             });
           });
         });

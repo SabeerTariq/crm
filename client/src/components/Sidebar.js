@@ -284,6 +284,14 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
+        {hasPermission('chargeback_refunds', 'view') && (
+          <li className={`menu-item ${isActive('/chargeback-refunds') ? 'active' : ''}`}>
+            <Link to="/chargeback-refunds" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-exclamation-triangle menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Chargebacks & Refunds</span>}
+            </Link>
+          </li>
+        )}
         {hasPermission('assignments', 'view') && (
           <li className={`menu-item ${isActive('/assignments') ? 'active' : ''}`}>
             <Link to="/assignments" className="menu-link" onClick={handleMenuClick}>

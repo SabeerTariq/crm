@@ -26,3 +26,4 @@ WHERE r.name IN ('admin', 'sales', 'upseller', 'front-sales-manager')
 AND p.module = 'lead_notes';
 
 
+

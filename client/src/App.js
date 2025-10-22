@@ -25,6 +25,7 @@ import ProjectDetails from './pages/ProjectDetails';
 import Departments from './pages/Departments';
 import TaskManagement from './pages/TaskManagement';
 import Calendar from './pages/Calendar';
+import ChargebackRefunds from './pages/ChargebackRefunds';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -144,6 +145,11 @@ function App() {
         <Route path="/calendar" element={
           <ProtectedRoute module="reminders">
             <Calendar />
+          </ProtectedRoute>
+        } />
+        <Route path="/chargeback-refunds" element={
+          <ProtectedRoute module="chargeback_refunds" action="view">
+            <ChargebackRefunds />
           </ProtectedRoute>
         } />
       </Routes>

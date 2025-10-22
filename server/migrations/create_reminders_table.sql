@@ -38,3 +38,4 @@ WHERE r.name IN ('Admin', 'Upseller', 'Front Sales Manager', 'Sales', 'Upseller 
 AND p.module = 'reminders' AND p.action IN ('create', 'read', 'update', 'delete', 'view');
 
 
+
