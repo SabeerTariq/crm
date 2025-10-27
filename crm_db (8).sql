@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 17, 2025 at 07:55 PM
+-- Generation Time: Oct 27, 2025 at 05:49 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -50,6 +50,63 @@ INSERT INTO `boards` (`id`, `board_name`, `department_id`, `description`, `is_de
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `chargeback_refunds`
+--
+
+CREATE TABLE `chargeback_refunds` (
+  `id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `sale_id` int(11) NOT NULL,
+  `type` enum('chargeback','refund','retained') NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `amount_received` decimal(10,2) DEFAULT NULL,
+  `refund_amount` decimal(10,2) DEFAULT NULL,
+  `original_amount` decimal(12,2) NOT NULL COMMENT 'Original payment amount',
+  `refund_type` enum('full','partial') DEFAULT 'full',
+  `reason` text DEFAULT NULL,
+  `status` enum('pending','approved','rejected','processed') DEFAULT 'pending',
+  `processed_by` int(11) DEFAULT NULL,
+  `processed_at` timestamp NULL DEFAULT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `chargeback_refunds`
+--
+
+INSERT INTO `chargeback_refunds` (`id`, `customer_id`, `sale_id`, `type`, `amount`, `amount_received`, `refund_amount`, `original_amount`, `refund_type`, `reason`, `status`, `processed_by`, `processed_at`, `created_by`, `created_at`, `updated_at`) VALUES
+(12, 99, 99, 'refund', 500.00, NULL, NULL, 1000.00, 'partial', '', 'approved', 1, '2025-10-22 22:27:20', 1, '2025-10-22 22:26:58', '2025-10-22 22:27:20'),
+(13, 100, 100, 'chargeback', 500.00, 500.00, NULL, 1500.00, 'full', '', 'approved', 1, '2025-10-22 22:47:49', 1, '2025-10-22 22:47:46', '2025-10-22 22:47:49');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chargeback_refund_audit`
+--
+
+CREATE TABLE `chargeback_refund_audit` (
+  `id` int(11) NOT NULL,
+  `chargeback_refund_id` int(11) NOT NULL,
+  `action` enum('created','updated','status_changed','processed') NOT NULL,
+  `old_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`old_values`)),
+  `new_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`new_values`)),
+  `performed_by` int(11) NOT NULL,
+  `performed_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `chargeback_refund_audit`
+--
+
+INSERT INTO `chargeback_refund_audit` (`id`, `chargeback_refund_id`, `action`, `old_values`, `new_values`, `performed_by`, `performed_at`) VALUES
+(12, 12, 'status_changed', '{\"status\":\"pending\"}', '{\"status\":\"approved\"}', 1, '2025-10-22 22:27:20'),
+(13, 13, 'status_changed', '{\"status\":\"pending\"}', '{\"status\":\"approved\",\"customer_status\":\"chargeback\"}', 1, '2025-10-22 22:47:49');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `customers`
 --
 
@@ -71,21 +128,25 @@ CREATE TABLE `customers` (
   `total_sales` decimal(12,2) DEFAULT 0.00,
   `total_paid` decimal(12,2) DEFAULT 0.00,
   `total_remaining` decimal(12,2) DEFAULT 0.00,
-  `last_payment_date` date DEFAULT NULL
+  `last_payment_date` date DEFAULT NULL,
+  `customer_status` enum('active','chargeback','refunded','retained') DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`id`, `name`, `company_name`, `email`, `phone`, `city`, `state`, `service_required`, `source`, `notes`, `assigned_to`, `created_by`, `converted_at`, `updated_at`, `total_sales`, `total_paid`, `total_remaining`, `last_payment_date`) VALUES
-(90, 'Lisandra Benson', 'Morrow Copeland Inc', 'wuburu@mailinator.com', '+1 (806) 358-4623', 'Qui non in in minus ', 'Magni adipisicing as', 'Sit ex nisi autem q', 'Soluta rerum ipsum n', 'Aliquip et quia ulla', 1, 1, '2025-10-07 22:18:31', '2025-10-07 22:18:31', 1000.00, 500.00, 500.00, NULL),
-(92, 'Lester Lane', 'Tran Massey Plc', 'zuxozot@mailinator.com', '+1 (197) 823-6603', 'Natus et qui qui mag', 'Ea reiciendis odio f', 'Veniam ea eum qui a', 'Reprehenderit quis ', 'Et iusto error dolor', 1, 1, '2025-10-14 16:41:49', '2025-10-14 16:41:49', 1000.00, 100.00, 900.00, NULL),
-(93, 'Ruby Booth', 'Boyle and Heath Plc', 'bavidil@mailinator.com', '+1 (675) 579-2306', 'Eligendi omnis molli', 'Beatae labore Nam si', 'Nulla nisi quia est ', 'Voluptas voluptatem ', 'Placeat soluta labo', 1, 1, '2025-10-14 16:45:56', '2025-10-14 16:45:56', 1000.00, 200.00, 800.00, NULL),
-(94, 'Brendan Valentine', 'Roy and Dillon Co', 'belejoje@mailinator.com', '+1 (615) 104-8583', 'Et ipsum sed aut seq', 'Tempore quis minim ', 'Nisi similique hic m', 'Ut fugit qui rerum ', 'Sed ex a corrupti e', 1, 1, '2025-10-14 16:49:21', '2025-10-15 19:48:33', 15200.00, 6400.00, 8800.00, '2025-10-15'),
-(95, 'John Doe', 'ABC Corporation', 'john.doe@abccorp.com', '+1-555-0123', 'New York', 'NY', 'Web Development', 'Website', 'Interested in e-commerce platform', 29, 29, '2025-10-15 23:24:30', '2025-10-15 23:24:30', 1000.00, 300.00, 700.00, NULL),
-(96, 'Chaney Blankenship', 'Blake Miller Co', 'tixyfiqil@mailinator.com', '+1 (442) 382-7082', 'Aut in non aut incid', 'Modi nemo odit conse', 'Id illum quas ut ut', 'Dolor et aute qui mo', 'Sint dolor fuga Id ', 29, 29, '2025-10-15 23:25:24', '2025-10-15 23:25:24', 2000.00, 100.00, 1900.00, NULL),
-(97, 'Jane Smith', 'XYZ Industries', 'jane.smith@xyz.com', '+1-555-0456', 'Los Angeles', 'CA', 'Mobile App', 'Referral', 'Urgent project deadline', 29, 29, '2025-10-15 23:36:04', '2025-10-15 23:36:04', 1000.00, 500.00, 500.00, NULL);
+INSERT INTO `customers` (`id`, `name`, `company_name`, `email`, `phone`, `city`, `state`, `service_required`, `source`, `notes`, `assigned_to`, `created_by`, `converted_at`, `updated_at`, `total_sales`, `total_paid`, `total_remaining`, `last_payment_date`, `customer_status`) VALUES
+(90, 'Lisandra Benson', 'Morrow Copeland Inc', 'wuburu@mailinator.com', '+1 (806) 358-4623', 'Qui non in in minus ', 'Magni adipisicing as', 'Sit ex nisi autem q', 'Soluta rerum ipsum n', 'Aliquip et quia ulla', 1, 1, '2025-10-07 22:18:31', '2025-10-21 23:25:41', 1000.00, 500.00, 500.00, NULL, 'active'),
+(92, 'Lester Lane', 'Tran Massey Plc', 'zuxozot@mailinator.com', '+1 (197) 823-6603', 'Natus et qui qui mag', 'Ea reiciendis odio f', 'Veniam ea eum qui a', 'Reprehenderit quis ', 'Et iusto error dolor', 1, 1, '2025-10-14 16:41:49', '2025-10-21 23:25:43', 1000.00, 100.00, 900.00, NULL, 'active'),
+(93, 'Ruby Booth', 'Boyle and Heath Plc', 'bavidil@mailinator.com', '+1 (675) 579-2306', 'Eligendi omnis molli', 'Beatae labore Nam si', 'Nulla nisi quia est ', 'Voluptas voluptatem ', 'Placeat soluta labo', 1, 1, '2025-10-14 16:45:56', '2025-10-21 23:31:01', 1000.00, 200.00, 800.00, NULL, 'active'),
+(94, 'Brendan Valentine', 'Roy and Dillon Co', 'belejoje@mailinator.com', '+1 (615) 104-8583', 'Et ipsum sed aut seq', 'Tempore quis minim ', 'Nisi similique hic m', 'Ut fugit qui rerum ', 'Sed ex a corrupti e', 1, 1, '2025-10-14 16:49:21', '2025-10-15 19:48:33', 15200.00, 6400.00, 8800.00, '2025-10-15', 'active'),
+(95, 'John Doe', 'ABC Corporation', 'john.doe@abccorp.com', '+1-555-0123', 'New York', 'NY', 'Web Development', 'Website', 'Interested in e-commerce platform', 29, 29, '2025-10-15 23:24:30', '2025-10-15 23:24:30', 1000.00, 300.00, 700.00, NULL, 'active'),
+(96, 'Chaney Blankenship', 'Blake Miller Co', 'tixyfiqil@mailinator.com', '+1 (442) 382-7082', 'Aut in non aut incid', 'Modi nemo odit conse', 'Id illum quas ut ut', 'Dolor et aute qui mo', 'Sint dolor fuga Id ', 29, 29, '2025-10-15 23:25:24', '2025-10-15 23:25:24', 2000.00, 100.00, 1900.00, NULL, 'active'),
+(97, 'Jane Smith', 'XYZ Industries', 'jane.smith@xyz.com', '+1-555-0456', 'Los Angeles', 'CA', 'Mobile App', 'Referral', 'Urgent project deadline', 29, 29, '2025-10-15 23:36:04', '2025-10-15 23:36:04', 1000.00, 500.00, 500.00, NULL, 'active'),
+(98, 'Camden Graves', 'Clemons and Mcneil Inc', 'lefi@mailinator.com', '+1 (822) 203-3275', 'Amet tempore ipsa', 'Magnam nobis magnam ', 'Amet sunt minim com', 'Et doloribus cupidit', 'Et sunt inventore n', 8, 8, '2025-10-21 23:59:44', '2025-10-22 22:18:18', 2000.00, 1000.00, 1000.00, NULL, 'active'),
+(99, 'Chastity Mack', 'Osborn and Tillman LLC', 'ranukuqine@mailinator.com', '+1 (243) 355-6826', 'Nisi similique omnis', 'Numquam ut alias bea', 'Animi explicabo Ve', 'Qui fugiat esse de', 'Quam laudantium err', 1, 1, '2025-10-22 22:01:08', '2025-10-22 22:26:58', 3000.00, 1000.00, 2000.00, NULL, 'refunded'),
+(100, 'Molly Marquez', 'Stevens and Berg Plc', 'fovokazaky@mailinator.com', '+1 (757) 208-3131', 'Aperiam officia ipsu', 'Consequuntur repudia', 'Voluptatem dolore pr', 'Libero ipsum dolores', 'Velit magna cumque ', 1, 1, '2025-10-22 22:15:44', '2025-10-22 22:47:46', 1000.00, 500.00, 500.00, NULL, 'chargeback');
 
 -- --------------------------------------------------------
 
@@ -104,6 +165,14 @@ CREATE TABLE `customer_assignments` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `customer_assignments`
+--
+
+INSERT INTO `customer_assignments` (`id`, `customer_id`, `upseller_id`, `assigned_date`, `status`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
+(25, 94, 10, '2025-10-22 22:40:33', 'active', '', 1, '2025-10-22 22:40:33', '2025-10-22 22:40:33'),
+(26, 100, 10, '2025-10-22 22:40:46', 'active', '', 1, '2025-10-22 22:40:46', '2025-10-22 22:40:46');
 
 -- --------------------------------------------------------
 
@@ -278,6 +347,18 @@ CREATE TABLE `lead_tracking` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `lead_tracking`
+--
+
+INSERT INTO `lead_tracking` (`id`, `user_id`, `lead_id`, `action`, `created_at`) VALUES
+(217, 8, 114, 'created', '2025-10-21 23:59:08'),
+(218, 8, 114, 'converted', '2025-10-21 23:59:44'),
+(219, 1, 115, 'created', '2025-10-22 22:00:34'),
+(220, 1, 115, 'converted', '2025-10-22 22:01:08'),
+(221, 1, 116, 'created', '2025-10-22 22:15:25'),
+(222, 1, 116, 'converted', '2025-10-22 22:15:44');
+
 -- --------------------------------------------------------
 
 --
@@ -294,6 +375,14 @@ CREATE TABLE `monthly_lead_stats` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `monthly_lead_stats`
+--
+
+INSERT INTO `monthly_lead_stats` (`id`, `user_id`, `year`, `month`, `leads_added`, `leads_converted`, `created_at`, `updated_at`) VALUES
+(48, 8, 2025, 10, 1, 1, '2025-10-21 23:59:08', '2025-10-21 23:59:44'),
+(49, 1, 2025, 10, 2, 2, '2025-10-22 22:00:34', '2025-10-22 22:15:44');
 
 -- --------------------------------------------------------
 
@@ -354,8 +443,18 @@ CREATE TABLE `payment_transactions` (
   `notes` text DEFAULT NULL,
   `created_by` int(11) NOT NULL,
   `received_by` int(11) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `chargeback_refund_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payment_transactions`
+--
+
+INSERT INTO `payment_transactions` (`id`, `sale_id`, `installment_id`, `recurring_id`, `amount`, `payment_source`, `transaction_reference`, `notes`, `created_by`, `received_by`, `created_at`, `chargeback_refund_id`) VALUES
+(120, 98, NULL, NULL, 1000.00, 'zelle', 'Initial payment for sale 98', 'Initial payment received at sale creation', 8, 8, '2025-10-21 23:59:44', NULL),
+(121, 99, NULL, NULL, 1000.00, 'wire', 'Initial payment for sale 99', 'Initial payment received at sale creation', 1, 1, '2025-10-22 22:01:08', NULL),
+(122, 100, NULL, NULL, 500.00, 'wire', 'Initial payment for sale 100', 'Initial payment received at sale creation', 1, 1, '2025-10-22 22:15:44', NULL);
 
 -- --------------------------------------------------------
 
@@ -379,6 +478,11 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (76, 'assignments', 'read'),
 (77, 'assignments', 'update'),
 (79, 'assignments', 'view'),
+(136, 'chargeback_refunds', 'create'),
+(138, 'chargeback_refunds', 'delete'),
+(139, 'chargeback_refunds', 'read'),
+(137, 'chargeback_refunds', 'update'),
+(135, 'chargeback_refunds', 'view'),
 (5, 'customers', 'create'),
 (8, 'customers', 'delete'),
 (6, 'customers', 'read'),
@@ -459,6 +563,11 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (51, 'teams', 'read'),
 (52, 'teams', 'update'),
 (54, 'teams', 'view'),
+(144, 'todos', 'create'),
+(147, 'todos', 'delete'),
+(145, 'todos', 'read'),
+(146, 'todos', 'update'),
+(148, 'todos', 'view'),
 (91, 'upseller_performance', 'create'),
 (94, 'upseller_performance', 'delete'),
 (92, 'upseller_performance', 'read'),
@@ -730,6 +839,16 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (1, 132),
 (1, 133),
 (1, 134),
+(1, 135),
+(1, 136),
+(1, 137),
+(1, 138),
+(1, 139),
+(1, 144),
+(1, 145),
+(1, 146),
+(1, 147),
+(1, 148),
 (2, 1),
 (2, 2),
 (2, 3),
@@ -739,6 +858,11 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (2, 127),
 (2, 128),
 (2, 129),
+(2, 144),
+(2, 145),
+(2, 146),
+(2, 147),
+(2, 148),
 (3, 1),
 (3, 2),
 (3, 3),
@@ -783,6 +907,11 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (3, 132),
 (3, 133),
 (3, 134),
+(3, 144),
+(3, 145),
+(3, 146),
+(3, 147),
+(3, 148),
 (4, 1),
 (4, 2),
 (4, 3),
@@ -836,6 +965,11 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (4, 132),
 (4, 133),
 (4, 134),
+(4, 144),
+(4, 145),
+(4, 146),
+(4, 147),
+(4, 148),
 (5, 5),
 (5, 6),
 (5, 7),
@@ -894,6 +1028,16 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (5, 132),
 (5, 133),
 (5, 134),
+(5, 135),
+(5, 136),
+(5, 137),
+(5, 138),
+(5, 139),
+(5, 144),
+(5, 145),
+(5, 146),
+(5, 147),
+(5, 148),
 (6, 5),
 (6, 6),
 (6, 7),
@@ -987,6 +1131,18 @@ CREATE TABLE `sales` (
   `last_payment_date` date DEFAULT NULL,
   `payment_status` enum('pending','partial','completed','overdue') DEFAULT 'pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `sales`
+--
+
+INSERT INTO `sales` (`id`, `customer_id`, `customer_name`, `customer_email`, `customer_phone`, `unit_price`, `gross_value`, `net_value`, `cash_in`, `remaining`, `payment_type`, `payment_source`, `payment_company`, `brand`, `notes`, `services`, `service_details`, `agreement_file_name`, `agreement_file_path`, `agreement_file_size`, `agreement_file_type`, `agreement_uploaded_at`, `created_by`, `created_at`, `updated_at`, `next_payment_date`, `last_payment_date`, `payment_status`) VALUES
+(95, 90, 'Lisandra Benson', 'wuburu@mailinator.com', '555-0101', 5000.00, 5000.00, 4500.00, 10000.00, 0.00, 'one_time', 'stripe', 'american_digital_agency', 'liberty_web_studio', NULL, 'Web Development', NULL, NULL, NULL, NULL, NULL, NULL, 1, '2025-10-21 22:34:01', '2025-10-21 23:25:41', NULL, NULL, 'pending'),
+(96, 92, 'Lester Lane', 'zuxozot@mailinator.com', '555-0102', 3000.00, 3000.00, 2700.00, 6000.00, 0.00, 'one_time', 'paypal', 'logicworks', 'liberty_web_studio', NULL, 'SEO Services', NULL, NULL, NULL, NULL, NULL, NULL, 1, '2025-10-21 22:34:01', '2025-10-21 23:25:43', NULL, NULL, 'pending'),
+(97, 93, 'Ruby Booth', 'bavidil@mailinator.com', '555-0103', 2000.00, 2000.00, 1800.00, 4000.00, 0.00, 'recurring', 'stripe', 'oscs', 'liberty_web_studio', NULL, 'Maintenance', NULL, NULL, NULL, NULL, NULL, NULL, 1, '2025-10-21 22:34:01', '2025-10-21 23:31:03', NULL, NULL, 'pending'),
+(98, 98, 'Camden Graves', 'lefi@mailinator.com', '+1 (822) 203-3275', 2000.00, 2000.00, 2000.00, 3000.00, 1000.00, 'one_time', 'zelle', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Clemons and Mcneil Inc - Amet sunt minim com - Et sunt inventore n', '[{\"id\":1761091184597,\"name\":\"Webdesign\",\"details\":\"Design\"}]', 'Design', 'agreement-65.pdf', 'C:\\Users\\MT\\Desktop\\crm\\server\\uploads\\sales\\agreement-65-1761091184626-843143283.pdf', 9030, 'application/pdf', '2025-10-21 23:59:44', 8, '2025-10-21 23:59:44', '2025-10-22 22:18:18', NULL, NULL, 'partial'),
+(99, 99, 'Chastity Mack', 'ranukuqine@mailinator.com', '+1 (243) 355-6826', 3000.00, 3000.00, 3000.00, 500.00, 2000.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Osborn and Tillman LLC - Animi explicabo Ve - Quam laudantium err', '[{\"id\":1761170468089,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Fresh website', NULL, NULL, NULL, NULL, NULL, 1, '2025-10-22 22:01:08', '2025-10-22 22:26:58', NULL, NULL, 'partial'),
+(100, 100, 'Molly Marquez', 'fovokazaky@mailinator.com', '+1 (757) 208-3131', 1000.00, 1000.00, 1000.00, 1000.00, 500.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Stevens and Berg Plc - Voluptatem dolore pr - Velit magna cumque', '[{\"id\":1761171344201,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Fresh website', NULL, NULL, NULL, NULL, NULL, 1, '2025-10-22 22:15:44', '2025-10-22 22:47:46', NULL, NULL, 'partial');
 
 -- --------------------------------------------------------
 
@@ -1150,6 +1306,34 @@ CREATE TABLE `team_members` (
   `role` enum('leader','member') DEFAULT 'member',
   `joined_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `todos`
+--
+
+CREATE TABLE `todos` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `status` enum('pending','in_progress','completed','cancelled') DEFAULT 'pending',
+  `priority` enum('low','medium','high','urgent') DEFAULT 'medium',
+  `due_date` date DEFAULT NULL,
+  `completed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `todos`
+--
+
+INSERT INTO `todos` (`id`, `user_id`, `title`, `description`, `status`, `priority`, `due_date`, `completed_at`, `created_at`, `updated_at`) VALUES
+(1, 1, 'New task', 'Todo Task', 'pending', 'high', '2025-10-28', NULL, '2025-10-27 16:42:43', '2025-10-27 16:45:34'),
+(2, 1, 'NEw Task', 'New Task', 'completed', 'low', '2025-10-29', '2025-10-27 16:45:25', '2025-10-27 16:45:21', '2025-10-27 16:45:25'),
+(3, 10, 'My New Task', 'Working on it', 'pending', 'medium', '2025-10-29', NULL, '2025-10-27 16:46:47', '2025-10-27 16:46:47');
 
 -- --------------------------------------------------------
 
@@ -1318,13 +1502,37 @@ ALTER TABLE `boards`
   ADD KEY `created_by` (`created_by`);
 
 --
+-- Indexes for table `chargeback_refunds`
+--
+ALTER TABLE `chargeback_refunds`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `processed_by` (`processed_by`),
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_customer_id` (`customer_id`),
+  ADD KEY `idx_sale_id` (`sale_id`),
+  ADD KEY `idx_type` (`type`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
+-- Indexes for table `chargeback_refund_audit`
+--
+ALTER TABLE `chargeback_refund_audit`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `performed_by` (`performed_by`),
+  ADD KEY `idx_chargeback_refund_id` (`chargeback_refund_id`),
+  ADD KEY `idx_action` (`action`),
+  ADD KEY `idx_performed_at` (`performed_at`);
+
+--
 -- Indexes for table `customers`
 --
 ALTER TABLE `customers`
   ADD PRIMARY KEY (`id`),
   ADD KEY `assigned_to` (`assigned_to`),
   ADD KEY `idx_customers_total_remaining` (`total_remaining`),
-  ADD KEY `idx_created_by` (`created_by`);
+  ADD KEY `idx_created_by` (`created_by`),
+  ADD KEY `idx_customer_status` (`customer_status`);
 
 --
 -- Indexes for table `customer_assignments`
@@ -1444,7 +1652,8 @@ ALTER TABLE `payment_transactions`
   ADD KEY `idx_installment_id` (`installment_id`),
   ADD KEY `idx_recurring_id` (`recurring_id`),
   ADD KEY `idx_created_at` (`created_at`),
-  ADD KEY `received_by` (`received_by`);
+  ADD KEY `received_by` (`received_by`),
+  ADD KEY `idx_chargeback_refund_id` (`chargeback_refund_id`);
 
 --
 -- Indexes for table `permissions`
@@ -1599,6 +1808,16 @@ ALTER TABLE `team_members`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indexes for table `todos`
+--
+ALTER TABLE `todos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_priority` (`priority`),
+  ADD KEY `idx_due_date` (`due_date`);
+
+--
 -- Indexes for table `upcoming_payments`
 --
 ALTER TABLE `upcoming_payments`
@@ -1660,16 +1879,28 @@ ALTER TABLE `boards`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
+-- AUTO_INCREMENT for table `chargeback_refunds`
+--
+ALTER TABLE `chargeback_refunds`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT for table `chargeback_refund_audit`
+--
+ALTER TABLE `chargeback_refund_audit`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=98;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
 
 --
 -- AUTO_INCREMENT for table `customer_assignments`
 --
 ALTER TABLE `customer_assignments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `customer_subscriptions`
@@ -1699,7 +1930,7 @@ ALTER TABLE `invoices`
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=114;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=117;
 
 --
 -- AUTO_INCREMENT for table `lead_notes`
@@ -1717,13 +1948,13 @@ ALTER TABLE `lead_schedules`
 -- AUTO_INCREMENT for table `lead_tracking`
 --
 ALTER TABLE `lead_tracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=217;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=223;
 
 --
 -- AUTO_INCREMENT for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT for table `payment_installments`
@@ -1741,13 +1972,13 @@ ALTER TABLE `payment_recurring`
 -- AUTO_INCREMENT for table `payment_transactions`
 --
 ALTER TABLE `payment_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=120;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=123;
 
 --
 -- AUTO_INCREMENT for table `permissions`
 --
 ALTER TABLE `permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=135;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=149;
 
 --
 -- AUTO_INCREMENT for table `projects`
@@ -1789,7 +2020,7 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=95;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
 
 --
 -- AUTO_INCREMENT for table `targets`
@@ -1846,6 +2077,12 @@ ALTER TABLE `team_members`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
+-- AUTO_INCREMENT for table `todos`
+--
+ALTER TABLE `todos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT for table `upcoming_payments`
 --
 ALTER TABLE `upcoming_payments`
@@ -1891,6 +2128,22 @@ ALTER TABLE `users`
 ALTER TABLE `boards`
   ADD CONSTRAINT `boards_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `boards_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `chargeback_refunds`
+--
+ALTER TABLE `chargeback_refunds`
+  ADD CONSTRAINT `chargeback_refunds_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `chargeback_refunds_ibfk_2` FOREIGN KEY (`sale_id`) REFERENCES `sales` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `chargeback_refunds_ibfk_3` FOREIGN KEY (`processed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `chargeback_refunds_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `chargeback_refund_audit`
+--
+ALTER TABLE `chargeback_refund_audit`
+  ADD CONSTRAINT `chargeback_refund_audit_ibfk_1` FOREIGN KEY (`chargeback_refund_id`) REFERENCES `chargeback_refunds` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `chargeback_refund_audit_ibfk_2` FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `customers`
@@ -1976,7 +2229,8 @@ ALTER TABLE `payment_transactions`
   ADD CONSTRAINT `payment_transactions_ibfk_2` FOREIGN KEY (`installment_id`) REFERENCES `payment_installments` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `payment_transactions_ibfk_3` FOREIGN KEY (`recurring_id`) REFERENCES `payment_recurring` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `payment_transactions_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `payment_transactions_ibfk_5` FOREIGN KEY (`received_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `payment_transactions_ibfk_5` FOREIGN KEY (`received_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `payment_transactions_ibfk_6` FOREIGN KEY (`chargeback_refund_id`) REFERENCES `chargeback_refunds` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `projects`
@@ -2087,6 +2341,12 @@ ALTER TABLE `teams`
 ALTER TABLE `team_members`
   ADD CONSTRAINT `team_members_ibfk_1` FOREIGN KEY (`team_id`) REFERENCES `teams` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `team_members_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `todos`
+--
+ALTER TABLE `todos`
+  ADD CONSTRAINT `todos_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `upcoming_payments`
