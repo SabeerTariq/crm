@@ -1,5 +1,6 @@
 import React from 'react';
 import Sidebar from './Sidebar';
+import TodoSidebar from './TodoSidebar';
 import './PageLayout.css';
 
 const PageLayout = ({ children, className = '' }) => {
@@ -11,6 +12,7 @@ const PageLayout = ({ children, className = '' }) => {
       >
         {children}
       </div>
+      <TodoSidebar />
     </div>
   );
 };

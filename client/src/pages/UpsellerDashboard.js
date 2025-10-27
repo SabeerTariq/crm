@@ -44,6 +44,27 @@ export default function UpsellerDashboard() {
         }
       }
     },
+    chargebackData: {
+      currentMonth: {
+        chargeback: { count: 0, amount: 0, amount_received: 0 },
+        refund: { count: 0, amount: 0, refund_amount: 0 },
+        retained: { count: 0, amount: 0 },
+        total: { count: 0, amount: 0 }
+      },
+      pastMonths: {
+        chargeback: { count: 0, amount: 0, amount_received: 0 },
+        refund: { count: 0, amount: 0, refund_amount: 0 },
+        retained: { count: 0, amount: 0 },
+        total: { count: 0, amount: 0 }
+      },
+      total: {
+        chargeback: { count: 0, amount: 0, amount_received: 0 },
+        refund: { count: 0, amount: 0, refund_amount: 0 },
+        retained: { count: 0, amount: 0 },
+        total: { count: 0, amount: 0 }
+      },
+      monthlyBreakdown: {}
+    },
     targetData: {
       target: 0,
       achieved: 0,
@@ -52,8 +73,8 @@ export default function UpsellerDashboard() {
     },
     currentPeriod: {
       year: 2025,
-      month: 1,
-      monthName: 'January'
+      month: 10,
+      monthName: 'October'
     },
     pastMonths: [],
     teamPerformance: []
@@ -99,16 +120,112 @@ export default function UpsellerDashboard() {
       }
       
       const token = localStorage.getItem('token');
+      
+      // Fetch main dashboard data
       const response = await api.get('/upseller/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.data.success) {
-        setDashboardData(response.data.data);
+        const dashboardData = response.data.data;
+        console.log('=== DASHBOARD DATA DEBUG ===');
+        console.log('Full dashboard response:', response.data);
+        console.log('Dashboard data:', dashboardData);
+        console.log('User ID from dashboard:', dashboardData.userId);
+        console.log('User ID type:', typeof dashboardData.userId);
+        console.log('=== DASHBOARD DATA DEBUG END ===');
+        
+        // Ensure we have a valid user ID
+        const userId = dashboardData.userId;
+        console.log('Using user ID:', userId);
+        
+        if (!userId) {
+          console.error('No user ID available for chargeback API calls');
+          return;
+        }
+        
+        // Combine all data
+        const combinedData = {
+          ...dashboardData,
+          currentPeriod: dashboardData.currentPeriod || {
+            year: 2025,
+            month: 10,
+            monthName: 'October'
+          },
+          chargebackData: {
+            currentMonth: {
+              chargeback: { count: 0, amount: 0, amount_received: 0 },
+              refund: { count: 0, amount: 0, refund_amount: 0 },
+              retained: { count: 0, amount: 0 },
+              total: { count: 0, amount: 0 }
+            },
+            pastMonths: {
+              chargeback: { count: 0, amount: 0, amount_received: 0 },
+              refund: { count: 0, amount: 0, refund_amount: 0 },
+              retained: { count: 0, amount: 0 },
+              total: { count: 0, amount: 0 }
+            },
+            total: {
+              chargeback: { count: 0, amount: 0, amount_received: 0 },
+              refund: { count: 0, amount: 0, refund_amount: 0 },
+              retained: { count: 0, amount: 0 },
+              total: { count: 0, amount: 0 }
+            },
+            monthlyBreakdown: {}
+          }
+        };
+        
+        // Try to fetch and combine chargeback data
+        try {
+          console.log('=== CHARGEBACK DEBUG START ===');
+          console.log('Fetching chargeback data for user:', userId);
+          console.log('API Base URL:', api.defaults.baseURL);
+          
+          const [currentMonthResponse, totalResponse] = await Promise.all([
+            api.get(`/chargeback-refunds/upseller/${userId}?period=current`, {
+              headers: { Authorization: `Bearer ${token}` }
+            }),
+            api.get(`/chargeback-refunds/upseller/${userId}?period=total`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          ]);
+          
+          console.log('=== CHARGEBACK API RESPONSES ===');
+          console.log('Current Month Response:', currentMonthResponse.data);
+          console.log('Total Response:', totalResponse.data);
+          
+          if (currentMonthResponse.data.success) {
+            console.log('Setting current month data:', currentMonthResponse.data.data.stats);
+            combinedData.chargebackData.currentMonth = currentMonthResponse.data.data.stats;
+          } else {
+            console.log('Current month API failed:', currentMonthResponse.data);
+          }
+          
+          if (totalResponse.data.success) {
+            console.log('Setting total data:', totalResponse.data.data.stats);
+            combinedData.chargebackData.total = totalResponse.data.data.stats;
+          } else {
+            console.log('Total API failed:', totalResponse.data);
+          }
+          
+          console.log('Final combined chargeback data:', combinedData.chargebackData);
+          console.log('=== CHARGEBACK DEBUG END ===');
+        } catch (error) {
+          console.warn('Chargeback data not available:', error.message);
+          console.error('Full error:', error);
+          console.error('Error response:', error.response?.data);
+        }
+        
+        setDashboardData(combinedData);
       }
     } catch (error) {
       console.error('Error loading upseller dashboard:', error);
-      alert('Failed to load dashboard data');
+      // Don't show alert for chargeback data errors, just log them
+      if (error.response?.config?.url?.includes('chargeback-refunds')) {
+        console.warn('Chargeback data not available:', error.message);
+      } else {
+        alert('Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -802,6 +919,320 @@ export default function UpsellerDashboard() {
                   marginTop: '4px'
                 }}>
                   {dashboardData.commissionData.allTime.total.count} total payments
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Chargeback & Refund Statistics */}
+        <div style={{ 
+          backgroundColor: '#ffffff',
+          border: '2px solid #e2e8f0',
+          borderRadius: '16px',
+          padding: '40px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          marginBottom: '40px'
+        }}>
+          <h2 style={{ 
+            margin: '0 0 30px 0',
+            color: '#1f2937',
+            fontSize: '24px',
+            fontWeight: '700',
+            textAlign: 'center'
+          }}>
+            Chargeback & Refund Statistics
+          </h2>
+
+          {/* Current Month Chargeback Data */}
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ 
+              margin: '0 0 20px 0',
+              color: '#374151',
+              fontSize: '18px',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              Current Month ({dashboardData.currentPeriod.monthName} {dashboardData.currentPeriod.year})
+            </h3>
+            
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '20px'
+            }}>
+              {/* Chargebacks - Current Month */}
+              <div style={{
+                backgroundColor: '#fef2f2',
+                border: '2px solid #fecaca',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  color: '#dc2626',
+                  fontWeight: '700',
+                  marginBottom: '8px'
+                }}>
+                  {dashboardData.chargebackData.currentMonth.chargeback.count}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  marginBottom: '4px'
+                }}>
+                  Chargebacks
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af'
+                }}>
+                  {formatCurrency(dashboardData.chargebackData.currentMonth.chargeback.amount)}
+                </div>
+              </div>
+
+              {/* Refunds - Current Month */}
+              <div style={{
+                backgroundColor: '#fffbeb',
+                border: '2px solid #fed7aa',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  color: '#d97706',
+                  fontWeight: '700',
+                  marginBottom: '8px'
+                }}>
+                  {dashboardData.chargebackData.currentMonth.refund.count}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  marginBottom: '4px'
+                }}>
+                  Refunds
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af'
+                }}>
+                  {formatCurrency(dashboardData.chargebackData.currentMonth.refund.amount)}
+                </div>
+              </div>
+
+              {/* Retained - Current Month */}
+              <div style={{
+                backgroundColor: '#f0fdf4',
+                border: '2px solid #bbf7d0',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  color: '#16a34a',
+                  fontWeight: '700',
+                  marginBottom: '8px'
+                }}>
+                  {dashboardData.chargebackData.currentMonth.retained.count}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  marginBottom: '4px'
+                }}>
+                  Retained
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af'
+                }}>
+                  {formatCurrency(dashboardData.chargebackData.currentMonth.retained.amount)}
+                </div>
+              </div>
+
+              {/* Total - Current Month */}
+              <div style={{
+                backgroundColor: '#f8fafc',
+                border: '2px solid #cbd5e1',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  color: '#475569',
+                  fontWeight: '700',
+                  marginBottom: '8px'
+                }}>
+                  {dashboardData.chargebackData.currentMonth.total.count}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  marginBottom: '4px'
+                }}>
+                  Total Issues
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af'
+                }}>
+                  {formatCurrency(dashboardData.chargebackData.currentMonth.total.amount)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Total All Time Chargeback Data */}
+          <div>
+            <h3 style={{ 
+              margin: '0 0 20px 0',
+              color: '#374151',
+              fontSize: '18px',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              Total All Time
+            </h3>
+            
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '20px'
+            }}>
+              {/* Chargebacks - Total */}
+              <div style={{
+                backgroundColor: '#fef2f2',
+                border: '2px solid #fecaca',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  color: '#dc2626',
+                  fontWeight: '700',
+                  marginBottom: '8px'
+                }}>
+                  {dashboardData.chargebackData.total.chargeback.count}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  marginBottom: '4px'
+                }}>
+                  Chargebacks
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af'
+                }}>
+                  {formatCurrency(dashboardData.chargebackData.total.chargeback.amount)}
+                </div>
+              </div>
+
+              {/* Refunds - Total */}
+              <div style={{
+                backgroundColor: '#fffbeb',
+                border: '2px solid #fed7aa',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  color: '#d97706',
+                  fontWeight: '700',
+                  marginBottom: '8px'
+                }}>
+                  {dashboardData.chargebackData.total.refund.count}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  marginBottom: '4px'
+                }}>
+                  Refunds
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af'
+                }}>
+                  {formatCurrency(dashboardData.chargebackData.total.refund.amount)}
+                </div>
+              </div>
+
+              {/* Retained - Total */}
+              <div style={{
+                backgroundColor: '#f0fdf4',
+                border: '2px solid #bbf7d0',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  color: '#16a34a',
+                  fontWeight: '700',
+                  marginBottom: '8px'
+                }}>
+                  {dashboardData.chargebackData.total.retained.count}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  marginBottom: '4px'
+                }}>
+                  Retained
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af'
+                }}>
+                  {formatCurrency(dashboardData.chargebackData.total.retained.amount)}
+                </div>
+              </div>
+
+              {/* Total - All Time */}
+              <div style={{
+                backgroundColor: '#f8fafc',
+                border: '2px solid #cbd5e1',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  color: '#475569',
+                  fontWeight: '700',
+                  marginBottom: '8px'
+                }}>
+                  {dashboardData.chargebackData.total.total.count}
+                </div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  fontWeight: '600',
+                  marginBottom: '4px'
+                }}>
+                  Total Issues
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#9ca3af'
+                }}>
+                  {formatCurrency(dashboardData.chargebackData.total.total.amount)}
                 </div>
               </div>
             </div>

@@ -16,6 +16,8 @@ const ChargebackRefunds = () => {
     sale_id: '',
     type: 'chargeback',
     amount: '',
+    amount_received: '',
+    refund_amount: '',
     refund_type: 'full',
     reason: ''
   });
@@ -109,9 +111,37 @@ const ChargebackRefunds = () => {
         [name]: value
       };
       
-      // If type is changed to retained, set amount to 0
-      if (name === 'type' && value === 'retained') {
-        newData.amount = 0;
+      // Auto-fetch cash_in amount when sale is selected
+      if (name === 'sale_id' && value) {
+        const selectedSale = sales.find(sale => sale.id === parseInt(value));
+        if (selectedSale) {
+          newData.amount_received = selectedSale.cash_in;
+          // Auto-set amount based on current type
+          if (prev.type === 'chargeback') {
+            newData.amount = selectedSale.cash_in;
+          }
+        }
+      }
+      
+      // Auto-set amount based on type
+      if (name === 'type') {
+        if (value === 'retained') {
+          newData.amount = 0;
+        } else if (value === 'chargeback') {
+          newData.amount = newData.amount_received || 0;
+        } else if (value === 'refund') {
+          newData.amount = newData.refund_amount || 0;
+        }
+      }
+      
+      // Auto-set amount when refund_amount changes
+      if (name === 'refund_amount' && prev.type === 'refund') {
+        newData.amount = parseFloat(value) || 0;
+      }
+      
+      // Auto-set amount when amount_received changes for chargeback
+      if (name === 'amount_received' && prev.type === 'chargeback') {
+        newData.amount = parseFloat(value) || 0;
       }
       
       return newData;
@@ -133,6 +163,8 @@ const ChargebackRefunds = () => {
         sale_id: '',
         type: activeTab,
         amount: '',
+        amount_received: '',
+        refund_amount: '',
         refund_type: 'full',
         reason: ''
       });
@@ -234,6 +266,36 @@ const ChargebackRefunds = () => {
         console.error('Error deleting record:', error);
         alert('Error deleting record');
       }
+    }
+  };
+
+  const getCustomerStatusBadge = (status) => {
+    switch (status) {
+      case 'active':
+        return 'status-badge status-clear';
+      case 'chargeback':
+        return 'status-badge status-chargeback';
+      case 'refunded':
+        return 'status-badge status-refunded';
+      case 'retained':
+        return 'status-badge status-retained';
+      default:
+        return 'status-badge status-pending';
+    }
+  };
+
+  const getCustomerStatusText = (status) => {
+    switch (status) {
+      case 'active':
+        return 'Clear';
+      case 'chargeback':
+        return 'Chargeback';
+      case 'refunded':
+        return 'Refunded';
+      case 'retained':
+        return 'Retained';
+      default:
+        return 'Unknown';
     }
   };
 
@@ -378,7 +440,8 @@ const ChargebackRefunds = () => {
               Loading...
             </div>
           ) : (
-            <table className="records-table">
+            <div className="table-container">
+              <table className="records-table">
               <thead>
                 <tr>
                   <th>Customer</th>
@@ -386,6 +449,7 @@ const ChargebackRefunds = () => {
                   <th>Amount</th>
                   <th>Type</th>
                   <th>Status</th>
+                  <th>Customer Status</th>
                   <th>Created</th>
                   <th>Actions</th>
                 </tr>
@@ -419,6 +483,11 @@ const ChargebackRefunds = () => {
                         {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
                       </span>
                     </td>
+                    <td>
+                      <span className={getCustomerStatusBadge(record.customer_status)}>
+                        {getCustomerStatusText(record.customer_status)}
+                      </span>
+                    </td>
                     <td>{formatDate(record.created_at)}</td>
                     <td>
                       <div className="action-buttons">
@@ -430,31 +499,29 @@ const ChargebackRefunds = () => {
                           <i className="fas fa-edit"></i>
                         </button>
                         {record.status === 'pending' && (
-                          <button
-                            className="btn btn-sm btn-outline-success"
-                            onClick={() => handleStatusChange(record.id, 'approved')}
-                            title="Approve"
-                          >
-                            <i className="fas fa-check"></i>
-                          </button>
-                        )}
-                        {record.status === 'pending' && (
-                          <button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => handleStatusChange(record.id, 'rejected')}
-                            title="Reject"
-                          >
-                            <i className="fas fa-times"></i>
-                          </button>
-                        )}
-                        {record.status === 'pending' && (
-                          <button
-                            className="btn btn-sm btn-outline-info"
-                            onClick={() => handleRetainCustomer(record.id)}
-                            title="Retain Customer (Resolve Dispute)"
-                          >
-                            <i className="fas fa-handshake"></i>
-                          </button>
+                          <>
+                            <button
+                              className="btn btn-sm btn-outline-success"
+                              onClick={() => handleStatusChange(record.id, 'approved')}
+                              title="Approve"
+                            >
+                              <i className="fas fa-check"></i>
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleStatusChange(record.id, 'rejected')}
+                              title="Reject"
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-info"
+                              onClick={() => handleRetainCustomer(record.id)}
+                              title="Retain Customer (Resolve Dispute)"
+                            >
+                              <i className="fas fa-handshake"></i>
+                            </button>
+                          </>
                         )}
                         {(record.type === 'chargeback' || record.type === 'refund') && record.status !== 'retained' && (
                           <button
@@ -478,6 +545,7 @@ const ChargebackRefunds = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
@@ -577,7 +645,38 @@ const ChargebackRefunds = () => {
                     )}
                   </div>
                   <div className="form-group">
-                    <label>Amount</label>
+                    <label>Amount Received from Customer</label>
+                    <input
+                      type="number"
+                      name="amount_received"
+                      value={formData.amount_received || ''}
+                      readOnly
+                      className="form-control-readonly"
+                    />
+                    <small style={{color: '#666'}}>
+                      Automatically fetched from sale's cash_in amount
+                    </small>
+                  </div>
+                  {formData.type === 'refund' && (
+                    <div className="form-group">
+                      <label>Refund Amount</label>
+                      <input
+                        type="number"
+                        name="refund_amount"
+                        value={formData.refund_amount || ''}
+                        onChange={handleInputChange}
+                        step="0.01"
+                        min="0"
+                        max={formData.amount_received || 0}
+                        required
+                      />
+                      <small style={{color: '#666'}}>
+                        Amount to refund (cannot exceed amount received: {formatCurrency(formData.amount_received || 0)})
+                      </small>
+                    </div>
+                  )}
+                  <div className="form-group">
+                    <label>Chargeback/Refund Amount</label>
                     <input
                       type="number"
                       name="amount"
@@ -586,11 +685,21 @@ const ChargebackRefunds = () => {
                       step="0.01"
                       min="0"
                       required
-                      disabled={formData.type === 'retained'}
+                      disabled={formData.type === 'retained' || formData.type === 'refund'}
                     />
                     {formData.type === 'retained' && (
                       <small style={{color: '#666'}}>
                         Amount automatically set to 0 for retained customers
+                      </small>
+                    )}
+                    {formData.type === 'refund' && (
+                      <small style={{color: '#666'}}>
+                        Amount automatically set to refund amount
+                      </small>
+                    )}
+                    {formData.type === 'chargeback' && (
+                      <small style={{color: '#666'}}>
+                        Amount automatically set to amount received
                       </small>
                     )}
                   </div>

@@ -77,11 +77,20 @@ router.get('/dashboard', auth, authorize('assignments', 'read'), async (req, res
     };
     
     if (customerIds.length > 0) {
-      // Get receivables - remaining amount of ALL assigned customers (regardless of who created the sales)
+      // Get receivables - use customer's total_remaining field which is more accurate
+      // and subtract chargebacks and refunds from the remaining amount
       const receivablesSql = `
-        SELECT COALESCE(SUM(remaining), 0) as receivables
-        FROM sales 
-        WHERE customer_id IN (${customerIds.map(() => '?').join(',')})
+        SELECT 
+          COALESCE(SUM(c.total_remaining), 0) as base_receivables,
+          COALESCE(SUM(CASE 
+            WHEN cr.type = 'chargeback' AND cr.status IN ('approved', 'processed') THEN cr.amount
+            WHEN cr.type = 'refund' AND cr.status IN ('approved', 'processed') THEN cr.amount
+            ELSE 0 
+          END), 0) as chargeback_refund_amount
+        FROM customers c
+        LEFT JOIN chargeback_refunds cr ON c.id = cr.customer_id 
+          AND cr.status IN ('approved', 'processed')
+        WHERE c.id IN (${customerIds.map(() => '?').join(',')})
       `;
       
       const receivablesResults = await new Promise((resolve, reject) => {
@@ -92,7 +101,9 @@ router.get('/dashboard', auth, authorize('assignments', 'read'), async (req, res
       });
       
       if (receivablesResults.length > 0) {
-        financialData.receivables = parseFloat(receivablesResults[0].receivables || 0);
+        const baseReceivables = parseFloat(receivablesResults[0].base_receivables || 0);
+        const chargebackRefundAmount = parseFloat(receivablesResults[0].chargeback_refund_amount || 0);
+        financialData.receivables = Math.max(0, baseReceivables - chargebackRefundAmount);
       }
     }
     
@@ -199,6 +210,7 @@ router.get('/dashboard', auth, authorize('assignments', 'read'), async (req, res
     res.json({
       success: true,
       data: {
+        userId: upsellerId,
         assignedCustomersCount: assignedCustomers.length,
         assignedCustomersThisMonth: assignedCustomersThisMonth,
         assignedCustomers: assignedCustomers,

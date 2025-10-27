@@ -129,16 +129,45 @@ router.post('/', auth, authorize('chargeback_refunds', 'create'), (req, res) => 
     sale_id,
     type,
     amount,
+    amount_received,
+    refund_amount,
     refund_type = 'full',
     reason
   } = req.body;
   
   // Validate required fields
-  if (!customer_id || !sale_id || !type || !amount) {
+  if (!customer_id || !sale_id || !type) {
     return res.status(400).json({
       success: false,
       message: 'Missing required fields'
     });
+  }
+  
+  // Validate amount based on type
+  if (type === 'chargeback' && !amount_received) {
+    return res.status(400).json({
+      success: false,
+      message: 'Amount received is required for chargebacks'
+    });
+  }
+  
+  if (type === 'refund' && !refund_amount) {
+    return res.status(400).json({
+      success: false,
+      message: 'Refund amount is required for refunds'
+    });
+  }
+  
+  if (type === 'refund' && parseFloat(refund_amount) > parseFloat(amount_received || 0)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Refund amount cannot exceed amount received'
+    });
+  }
+  
+  // Auto-set amount_received from sale's cash_in if not provided
+  if (!amount_received) {
+    // This will be handled in the sale lookup below
   }
   
   // Get original sale amount
@@ -156,6 +185,15 @@ router.post('/', auth, authorize('chargeback_refunds', 'create'), (req, res) => 
     }
     
     const originalAmount = saleResult[0].cash_in;
+    const actualAmountReceived = amount_received || saleResult[0].cash_in;
+    
+    // Validate refund amount against actual amount received
+    if (type === 'refund' && parseFloat(refund_amount) > parseFloat(actualAmountReceived)) {
+      return res.status(400).json({
+        success: false,
+        message: `Refund amount cannot exceed amount received (${actualAmountReceived})`
+      });
+    }
     
     // Check for duplicate records
     const duplicateCheckQuery = `
@@ -177,23 +215,25 @@ router.post('/', auth, authorize('chargeback_refunds', 'create'), (req, res) => 
         });
       }
       
-      // Create chargeback/refund record
-      const insertQuery = `
-        INSERT INTO chargeback_refunds 
-        (customer_id, sale_id, type, amount, original_amount, refund_type, reason, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      
-      db.query(insertQuery, [
-        customer_id,
-        sale_id,
-        type,
-        amount,
-        originalAmount,
-        refund_type,
-        reason,
-        req.user.id
-      ], (err, result) => {
+    // Create chargeback/refund record
+    const insertQuery = `
+      INSERT INTO chargeback_refunds 
+      (customer_id, sale_id, type, amount, amount_received, refund_amount, original_amount, refund_type, reason, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    db.query(insertQuery, [
+      customer_id,
+      sale_id,
+      type,
+      amount,
+      actualAmountReceived,
+      refund_amount,
+      originalAmount,
+      refund_type,
+      reason,
+      req.user.id
+    ], (err, result) => {
         if (err) {
           console.error('Error creating record:', err);
           return res.status(500).json({ success: false, message: 'Failed to create record' });
@@ -329,27 +369,63 @@ router.patch('/:id/status', auth, authorize('chargeback_refunds', 'update'), (re
           return res.status(500).json({ success: false, message: 'Failed to update status' });
         }
         
-        // Create audit log
-        db.query(`
-          INSERT INTO chargeback_refund_audit 
-          (chargeback_refund_id, action, old_values, new_values, performed_by)
-          VALUES (?, 'status_changed', ?, ?, ?)
-        `, [
-          id,
-          JSON.stringify({ status: record.status }),
-          JSON.stringify({ status }),
-          req.user.id
-        ], (err, auditResult) => {
-          if (err) {
-            console.error('Error creating audit log:', err);
-            // Don't fail the request for audit log errors
+        // Update customer status based on chargeback/refund status
+        let customerStatus = 'active'; // Default to clear/active
+        
+        if (status === 'approved') {
+          // If approved, set customer status based on record type
+          if (record.type === 'chargeback') {
+            customerStatus = 'chargeback';
+          } else if (record.type === 'refund') {
+            customerStatus = 'refunded';
+          } else if (record.type === 'retained') {
+            customerStatus = 'retained';
           }
-          
-          res.json({
-            success: true,
-            message: 'Status updated successfully'
-          });
-        });
+        } else if (status === 'rejected') {
+          // If rejected, keep customer as active (dispute denied)
+          customerStatus = 'active';
+        } else if (status === 'processed') {
+          // If processed, set based on final type
+          if (record.type === 'retained') {
+            customerStatus = 'retained';
+          } else {
+            customerStatus = 'active';
+          }
+        }
+        
+        // Update customer status
+        db.query(
+          'UPDATE customers SET customer_status = ? WHERE id = ?',
+          [customerStatus, record.customer_id],
+          (err, customerResult) => {
+            if (err) {
+              console.error('Error updating customer status:', err);
+            }
+            
+            // Create audit log
+            db.query(`
+              INSERT INTO chargeback_refund_audit 
+              (chargeback_refund_id, action, old_values, new_values, performed_by)
+              VALUES (?, 'status_changed', ?, ?, ?)
+            `, [
+              id,
+              JSON.stringify({ status: record.status }),
+              JSON.stringify({ status, customer_status: customerStatus }),
+              req.user.id
+            ], (err, auditResult) => {
+              if (err) {
+                console.error('Error creating audit log:', err);
+                // Don't fail the request for audit log errors
+              }
+              
+              res.json({
+                success: true,
+                message: 'Status updated successfully',
+                customer_status: customerStatus
+              });
+            });
+          }
+        );
       }
     );
   });
@@ -633,6 +709,154 @@ router.get('/stats/summary', auth, authorize('chargeback_refunds', 'view'), (req
       data: {
         byType: totals,
         details: records
+      }
+    });
+  });
+});
+
+// Get chargeback/refund statistics for a specific upseller
+router.get('/upseller/:upsellerId', auth, authorize('chargeback_refunds', 'read'), (req, res) => {
+  const { upsellerId } = req.params;
+  const { period = 'current' } = req.query; // current, past, total
+  
+  console.log('=== CHARGEBACK API DEBUG START ===');
+  console.log('Upseller ID:', upsellerId);
+  console.log('Period:', period);
+  
+  let dateFilter = '';
+  let params = [upsellerId];
+  
+  if (period === 'current') {
+    dateFilter = 'AND MONTH(cr.created_at) = MONTH(CURRENT_DATE()) AND YEAR(cr.created_at) = YEAR(CURRENT_DATE())';
+  } else if (period === 'past') {
+    dateFilter = 'AND cr.created_at < DATE_FORMAT(CURRENT_DATE(), "%Y-%m-01")';
+  }
+  // For 'total', no date filter is applied
+  
+  const query = `
+    SELECT 
+      cr.type,
+      COUNT(*) as count,
+      SUM(cr.amount) as total_amount,
+      SUM(cr.amount_received) as total_amount_received,
+      SUM(cr.refund_amount) as total_refund_amount
+    FROM chargeback_refunds cr
+    INNER JOIN customer_assignments ca ON cr.customer_id = ca.customer_id
+    WHERE ca.upseller_id = ? AND ca.status = 'active'
+    ${dateFilter}
+    GROUP BY cr.type
+  `;
+  
+  console.log('Query:', query);
+  console.log('Params:', params);
+  
+  db.query(query, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching upseller chargeback stats:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch chargeback statistics'
+      });
+    }
+    
+    console.log('Raw results:', results);
+    
+    // Format results
+    const stats = {
+      chargeback: { count: 0, amount: 0, amount_received: 0 },
+      refund: { count: 0, amount: 0, refund_amount: 0 },
+      retained: { count: 0, amount: 0 },
+      total: { count: 0, amount: 0 }
+    };
+    
+    results.forEach(row => {
+      console.log('Processing row:', row);
+      if (row.type === 'chargeback') {
+        stats.chargeback.count = row.count;
+        stats.chargeback.amount = parseFloat(row.total_amount) || 0;
+        stats.chargeback.amount_received = parseFloat(row.total_amount_received) || 0;
+      } else if (row.type === 'refund') {
+        stats.refund.count = row.count;
+        stats.refund.amount = parseFloat(row.total_amount) || 0;
+        stats.refund.refund_amount = parseFloat(row.total_refund_amount) || 0;
+      } else if (row.type === 'retained') {
+        stats.retained.count = row.count;
+        stats.retained.amount = parseFloat(row.total_amount) || 0;
+      }
+      
+      stats.total.count += row.count;
+      stats.total.amount += parseFloat(row.total_amount) || 0;
+    });
+    
+    console.log('Formatted stats:', stats);
+    
+    const response = {
+      success: true,
+      data: {
+        upseller_id: upsellerId,
+        period: period,
+        stats: stats
+      }
+    };
+    
+    console.log('Final response:', response);
+    console.log('=== CHARGEBACK API DEBUG END ===');
+    
+    res.json(response);
+  });
+});
+
+// Get monthly chargeback/refund breakdown for upseller
+router.get('/upseller/:upsellerId/monthly', auth, authorize('chargeback_refunds', 'read'), (req, res) => {
+  const { upsellerId } = req.params;
+  const { months = 12 } = req.query;
+  
+  const query = `
+    SELECT 
+      DATE_FORMAT(cr.created_at, '%Y-%m') as month,
+      cr.type,
+      COUNT(*) as count,
+      SUM(cr.amount) as total_amount
+    FROM chargeback_refunds cr
+    INNER JOIN customer_assignments ca ON cr.customer_id = ca.customer_id
+    WHERE ca.upseller_id = ? AND ca.status = 'active'
+    AND cr.created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL ? MONTH)
+    GROUP BY DATE_FORMAT(cr.created_at, '%Y-%m'), cr.type
+    ORDER BY month DESC, cr.type
+  `;
+  
+  db.query(query, [upsellerId, months], (err, results) => {
+    if (err) {
+      console.error('Error fetching monthly chargeback stats:', err);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to fetch monthly chargeback statistics' 
+      });
+    }
+    
+    // Format monthly data
+    const monthlyStats = {};
+    results.forEach(row => {
+      if (!monthlyStats[row.month]) {
+        monthlyStats[row.month] = {
+          chargeback: { count: 0, amount: 0 },
+          refund: { count: 0, amount: 0 },
+          retained: { count: 0, amount: 0 },
+          total: { count: 0, amount: 0 }
+        };
+      }
+      
+      monthlyStats[row.month][row.type].count = row.count;
+      monthlyStats[row.month][row.type].amount = parseFloat(row.total_amount) || 0;
+      monthlyStats[row.month].total.count += row.count;
+      monthlyStats[row.month].total.amount += parseFloat(row.total_amount) || 0;
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        upseller_id: upsellerId,
+        monthly_stats: monthlyStats
       }
     });
   });
