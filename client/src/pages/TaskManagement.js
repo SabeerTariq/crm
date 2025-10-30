@@ -233,21 +233,31 @@ const TaskManagement = () => {
   // Fetch detailed task information
   const fetchTaskDetails = async (taskId) => {
     try {
-      const [taskRes, commentsRes, attachmentsRes, checklistsRes, activityRes, membersRes] = await Promise.all([
+      // Fetch all task details with error handling for each endpoint
+      const results = await Promise.allSettled([
         api.get(`/tasks/${taskId}`),
-        api.get(`/tasks/${taskId}/comments`),
-        api.get(`/tasks/${taskId}/attachments`),
-        api.get(`/tasks/${taskId}/checklists`),
-        api.get(`/tasks/${taskId}/activity`),
-        api.get(`/tasks/${taskId}/members`)
+        api.get(`/tasks/${taskId}/comments`).catch(() => ({ data: [] })),
+        api.get(`/tasks/${taskId}/attachments`).catch(() => ({ data: [] })),
+        api.get(`/tasks/${taskId}/checklists`).catch(() => ({ data: [] })),
+        api.get(`/tasks/${taskId}/activity`).catch(() => ({ data: [] })),
+        api.get(`/tasks/${taskId}/members`).catch(() => ({ data: [] }))
       ]);
 
-      setTaskDetails(taskRes.data);
-      setTaskComments(commentsRes.data || []);
-      setTaskAttachments(attachmentsRes.data || []);
-      setTaskChecklists(checklistsRes.data || []);
-      setTaskActivity(activityRes.data || []);
-      setTaskMembers(membersRes.data || []);
+      // Task details must succeed
+      if (results[0].status === 'fulfilled') {
+        setTaskDetails(results[0].value.data);
+      } else {
+        console.error('Error fetching main task details:', results[0].reason);
+        setError('Failed to fetch task details');
+        return;
+      }
+
+      // Optional details - set to empty array if failed or if no data
+      setTaskComments(results[1].status === 'fulfilled' ? (results[1].value.data || []) : []);
+      setTaskAttachments(results[2].status === 'fulfilled' ? (results[2].value.data || []) : []);
+      setTaskChecklists(results[3].status === 'fulfilled' ? (results[3].value.data || []) : []);
+      setTaskActivity(results[4].status === 'fulfilled' ? (results[4].value.data || []) : []);
+      setTaskMembers(results[5].status === 'fulfilled' ? (results[5].value.data || []) : []);
     } catch (err) {
       console.error('Error fetching task details:', err);
       setError('Failed to fetch task details');
@@ -1160,7 +1170,21 @@ const TaskManagement = () => {
             setSelectedTask(null);
             setTaskDetails(null);
           }}
-          onRefresh={() => fetchTaskDetails(selectedTask?.id)}
+          onRefresh={async () => {
+            // Refresh task details and task list
+            if (selectedTask?.id) {
+              await fetchTaskDetails(selectedTask.id);
+            }
+            // Refresh the main task list
+            if (selectedBoard) {
+              await fetchTasks(selectedBoard.id);
+            } else {
+              await fetchTasks(null);
+            }
+            // Trigger storage event to refresh dashboards
+            window.localStorage.setItem('tasksUpdated', Date.now().toString());
+            window.dispatchEvent(new StorageEvent('storage', { key: 'tasksUpdated' }));
+          }}
           getPriorityColor={getPriorityColor}
           formatDate={formatDate}
           hasPermission={hasPermission}

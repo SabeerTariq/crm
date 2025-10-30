@@ -28,6 +28,13 @@ export default function Login() {
         redirectUrl = '/front-seller-dashboard';
       } else if (user.role_id === 5) { // Upseller
         redirectUrl = '/upseller-dashboard';
+      } else if (user.role_id === 8) { // Production Head
+        redirectUrl = '/production-head-dashboard';
+      } else if ([9, 11, 13, 15, 17].includes(user.role_id)) { // Department Leaders
+        // Department leaders will be redirected by ProductionHeadDashboard component
+        redirectUrl = '/production-head-dashboard';
+      } else if ([10, 12, 14, 16, 18].includes(user.role_id)) { // Team Members
+        redirectUrl = '/team-member-dashboard';
       }
       
       window.location.href = redirectUrl;

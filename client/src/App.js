@@ -12,6 +12,9 @@ import LeadScraperDashboard from './pages/LeadScraperDashboard';
 import FrontSellerDashboard from './pages/FrontSellerDashboard';
 import UpsellerDashboard from './pages/UpsellerDashboard';
 import UpsellManagerDashboard from './pages/UpsellManagerDashboard';
+import ProductionHeadDashboard from './pages/ProductionHeadDashboard';
+import DepartmentLeaderDashboard from './pages/DepartmentLeaderDashboard';
+import TeamMemberDashboard from './pages/TeamMemberDashboard';
 import UpsellerTeams from './pages/UpsellerTeams';
 import UpsellerTargets from './pages/UpsellerTargets';
 import UpsellerPerformance from './pages/UpsellerPerformance';
@@ -77,6 +80,9 @@ function App() {
         <Route path="/front-seller-dashboard" element={<FrontSellerDashboard />} />
         <Route path="/upseller-dashboard" element={<UpsellerDashboard />} />
         <Route path="/upsell-manager-dashboard" element={<UpsellManagerDashboard />} />
+        <Route path="/production-head-dashboard" element={<ProductionHeadDashboard />} />
+        <Route path="/department-leader-dashboard/:departmentId" element={<DepartmentLeaderDashboard />} />
+        <Route path="/team-member-dashboard" element={<TeamMemberDashboard />} />
         <Route path="/upseller-teams" element={
           <ProtectedRoute module="upseller_teams" action="view">
             <UpsellerTeams />

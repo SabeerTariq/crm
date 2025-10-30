@@ -265,8 +265,8 @@ class TaskService {
           u1.email as assigned_to_email,
           u2.name as created_by_name,
           p.project_name,
-          c.name as customer_name,
-          c.email as customer_email
+          COALESCE(c.name, '') as customer_name,
+          COALESCE(c.email, '') as customer_email
         FROM project_tasks pt
         LEFT JOIN departments d ON pt.department_id = d.id
         LEFT JOIN users u1 ON pt.assigned_to = u1.id
@@ -277,7 +277,10 @@ class TaskService {
       `;
 
       db.query(sql, [taskId], (err, results) => {
-        if (err) return reject(err);
+        if (err) {
+          console.error('Error in getTaskById query:', err);
+          return reject(err);
+        }
         if (results.length === 0) {
           return reject(new Error('Task not found'));
         }
@@ -304,9 +307,13 @@ class TaskService {
       Object.keys(updateData).forEach(key => {
         if (allowedFields.includes(key) && updateData[key] !== undefined) {
           updateFields.push(`${key} = ?`);
-          // Handle empty strings for foreign key fields
-          if (key === 'assigned_to' && updateData[key] === '') {
-            values.push(null);
+          // Handle empty strings and null values for foreign key fields
+          if (key === 'assigned_to') {
+            if (updateData[key] === '' || updateData[key] === null || updateData[key] === undefined) {
+              values.push(null);
+            } else {
+              values.push(updateData[key]);
+            }
           } else if (key === 'due_date' && updateData[key] === '') {
             values.push(null);
           } else if (key === 'estimated_hours' && updateData[key] === '') {
@@ -825,7 +832,7 @@ class TaskService {
           r.name as role_name
         FROM users u
         LEFT JOIN roles r ON u.role_id = r.id
-        WHERE u.role_id IN (1, 3, 4, 5)
+        WHERE u.role_id IN (1, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
         ORDER BY u.name ASC
       `;
 
@@ -862,6 +869,39 @@ class TaskService {
       db.query(sql, [projectId], (err, results) => {
         if (err) return reject(err);
         resolve(results[0]);
+      });
+    });
+  }
+
+  /**
+   * Get tasks by department
+   * @param {number} departmentId - Department ID
+   */
+  static async getTasksByDepartment(departmentId) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          pt.*,
+          p.project_name,
+          u_assigned.name as assigned_to_name,
+          u_assigned.email as assigned_to_email,
+          u_creator.name as created_by_name,
+          d.department_name,
+          ts.status_name,
+          ts.status_color
+        FROM project_tasks pt
+        INNER JOIN projects p ON pt.project_id = p.id
+        INNER JOIN departments d ON pt.department_id = d.id
+        LEFT JOIN users u_assigned ON pt.assigned_to = u_assigned.id
+        LEFT JOIN users u_creator ON pt.created_by = u_creator.id
+        LEFT JOIN task_statuses ts ON pt.status = ts.status_name
+        WHERE pt.department_id = ?
+        ORDER BY pt.created_at DESC
+      `;
+      
+      db.query(sql, [departmentId], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
       });
     });
   }

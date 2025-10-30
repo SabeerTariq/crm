@@ -526,7 +526,7 @@ class DepartmentService {
         LEFT JOIN roles r ON u.role_id = r.id
         LEFT JOIN department_team_members dtm ON u.id = dtm.user_id AND dtm.is_active = 1
         LEFT JOIN departments d ON dtm.department_id = d.id
-        WHERE r.name = 'production'
+        WHERE r.id IN (7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
         ORDER BY u.name ASC
       `;
 

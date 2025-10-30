@@ -62,3 +62,36 @@ export const hasUpsellerManagerRole = () => {
 export const isAdmin = () => {
   return getUserRoleId() === 1;
 };
+
+export const hasProductionHeadRole = () => {
+  // Check admin role first (role_id = 1)
+  const userRoleId = getUserRoleId();
+  if (userRoleId === 1) {
+    return true;
+  }
+  
+  // Check production-head role (role_id = 8)
+  return userRoleId === 8;
+};
+
+export const hasProductionLeadRole = () => {
+  // Check admin role first (role_id = 1)
+  const userRoleId = getUserRoleId();
+  if (userRoleId === 1) {
+    return true;
+  }
+  
+  // Check production lead roles (role_id = 9, 11, 13, 15, 17)
+  return [9, 11, 13, 15, 17].includes(userRoleId);
+};
+
+export const hasProductionMemberRole = () => {
+  // Check admin role first (role_id = 1)
+  const userRoleId = getUserRoleId();
+  if (userRoleId === 1) {
+    return true;
+  }
+  
+  // Check production member roles (role_id = 10, 12, 14, 16, 18)
+  return [10, 12, 14, 16, 18].includes(userRoleId);
+};

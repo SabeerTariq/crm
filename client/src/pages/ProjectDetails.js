@@ -99,6 +99,9 @@ const ProjectDetails = () => {
         department_id: ''
       });
       fetchProjectDetails();
+      // Trigger storage event to refresh dashboards
+      window.localStorage.setItem('tasksUpdated', Date.now().toString());
+      window.dispatchEvent(new StorageEvent('storage', { key: 'tasksUpdated' }));
     } catch (err) {
       console.error('Error creating task:', err);
       setError('Failed to create task');
@@ -152,6 +155,9 @@ const ProjectDetails = () => {
         department_id: ''
       });
       fetchProjectDetails();
+      // Trigger storage event to refresh dashboards
+      window.localStorage.setItem('tasksUpdated', Date.now().toString());
+      window.dispatchEvent(new StorageEvent('storage', { key: 'tasksUpdated' }));
     } catch (err) {
       console.error('Error updating task:', err);
       setError('Failed to update task');

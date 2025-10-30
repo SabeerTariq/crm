@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 27, 2025 at 05:49 PM
+-- Generation Time: Oct 30, 2025 at 08:03 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -236,20 +236,22 @@ CREATE TABLE `department_team_members` (
   `is_active` tinyint(1) DEFAULT 1,
   `assigned_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `production_role_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `department_team_members`
 --
 
-INSERT INTO `department_team_members` (`id`, `department_id`, `user_id`, `role`, `is_active`, `assigned_at`, `created_at`, `updated_at`) VALUES
-(7, 13, 14, 'team_leader', 0, '2025-10-06 22:38:01', '2025-10-06 22:38:01', '2025-10-06 22:38:17'),
-(8, 13, 15, 'team_member', 0, '2025-10-06 22:38:07', '2025-10-06 22:38:07', '2025-10-06 22:38:17'),
-(9, 13, 16, 'team_leader', 1, '2025-10-06 22:38:22', '2025-10-06 22:38:22', '2025-10-06 22:38:22'),
-(10, 13, 17, 'team_member', 0, '2025-10-06 22:38:24', '2025-10-06 22:38:24', '2025-10-06 22:38:31'),
-(11, 15, 14, 'team_leader', 1, '2025-10-06 22:38:29', '2025-10-06 22:38:29', '2025-10-06 22:38:29'),
-(12, 15, 17, 'team_member', 1, '2025-10-06 22:38:31', '2025-10-06 22:38:31', '2025-10-06 22:38:31');
+INSERT INTO `department_team_members` (`id`, `department_id`, `user_id`, `role`, `is_active`, `assigned_at`, `created_at`, `updated_at`, `production_role_id`) VALUES
+(7, 13, 14, 'team_leader', 0, '2025-10-06 22:38:01', '2025-10-06 22:38:01', '2025-10-06 22:38:17', NULL),
+(8, 13, 15, 'team_member', 0, '2025-10-06 22:38:07', '2025-10-06 22:38:07', '2025-10-06 22:38:17', NULL),
+(9, 13, 16, 'team_leader', 1, '2025-10-06 22:38:22', '2025-10-06 22:38:22', '2025-10-06 22:38:22', NULL),
+(10, 13, 17, 'team_member', 1, '2025-10-06 22:38:24', '2025-10-06 22:38:24', '2025-10-27 20:04:52', NULL),
+(11, 15, 14, 'team_leader', 1, '2025-10-06 22:38:29', '2025-10-06 22:38:29', '2025-10-06 22:38:29', NULL),
+(12, 15, 17, 'team_member', 0, '2025-10-06 22:38:31', '2025-10-06 22:38:31', '2025-10-27 19:27:14', NULL),
+(13, 15, 15, 'team_member', 1, '2025-10-27 20:04:40', '2025-10-27 20:04:40', '2025-10-27 20:04:40', NULL);
 
 -- --------------------------------------------------------
 
@@ -513,6 +515,11 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (61, 'performance', 'read'),
 (62, 'performance', 'update'),
 (64, 'performance', 'view'),
+(149, 'production', 'create'),
+(152, 'production', 'delete'),
+(153, 'production', 'manage'),
+(150, 'production', 'read'),
+(151, 'production', 'update'),
 (95, 'projects', 'create'),
 (98, 'projects', 'delete'),
 (96, 'projects', 'read'),
@@ -592,6 +599,27 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `production_performance`
+--
+
+CREATE TABLE `production_performance` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `department_id` int(11) NOT NULL,
+  `project_id` int(11) DEFAULT NULL,
+  `task_id` int(11) DEFAULT NULL,
+  `date_tracked` date NOT NULL,
+  `tasks_completed` int(11) DEFAULT 0,
+  `tasks_assigned` int(11) DEFAULT 0,
+  `hours_logged` decimal(5,2) DEFAULT 0.00,
+  `efficiency_score` decimal(5,2) DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `projects`
 --
 
@@ -611,6 +639,13 @@ CREATE TABLE `projects` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `projects`
+--
+
+INSERT INTO `projects` (`id`, `customer_id`, `project_name`, `description`, `status`, `priority`, `start_date`, `end_date`, `budget`, `created_by`, `project_manager_id`, `assigned_upseller_id`, `created_at`, `updated_at`) VALUES
+(17, 100, 'Storie Valut', 'New Design for landing page', 'active', 'medium', '2025-10-28', '2025-12-28', NULL, 10, 1, 1, '2025-10-27 19:13:55', '2025-10-27 19:13:55');
 
 -- --------------------------------------------------------
 
@@ -647,6 +682,13 @@ CREATE TABLE `project_departments` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `project_departments`
+--
+
+INSERT INTO `project_departments` (`id`, `project_id`, `department_id`, `team_leader_id`, `status`, `start_date`, `end_date`, `created_at`, `updated_at`) VALUES
+(32, 17, 15, NULL, 'not_started', NULL, NULL, '2025-10-27 19:14:57', '2025-10-27 19:14:57');
+
 -- --------------------------------------------------------
 
 --
@@ -671,6 +713,14 @@ CREATE TABLE `project_tasks` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `board_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_tasks`
+--
+
+INSERT INTO `project_tasks` (`id`, `project_id`, `department_id`, `task_name`, `description`, `status`, `priority`, `assigned_to`, `created_by`, `due_date`, `completed_date`, `estimated_hours`, `actual_hours`, `created_at`, `updated_at`, `board_id`) VALUES
+(27, 17, 15, 'New Website Design', 'Design a landing page for ecommerce site', 'Completed', 'medium', 15, 10, '2025-10-29', NULL, NULL, 0.00, '2025-10-27 19:15:47', '2025-10-27 22:51:42', 10),
+(28, 17, 15, 'Logo', 'Create a logo for this website', 'In Progress', 'medium', 15, 10, '2025-10-30', NULL, NULL, 0.00, '2025-10-29 18:12:55', '2025-10-29 20:10:15', 10);
 
 -- --------------------------------------------------------
 
@@ -716,7 +766,18 @@ INSERT INTO `roles` (`id`, `name`, `description`, `created_at`) VALUES
 (4, 'front-sales-manager', NULL, '2025-09-15 20:06:21'),
 (5, 'upseller', 'Create Upsells and Manage Projects', '2025-09-16 23:29:27'),
 (6, 'upseller-manager', 'Manage Upsell Teams and Performance', '2025-09-17 05:07:43'),
-(7, 'production', '', '2025-09-23 23:28:47');
+(7, 'production', '', '2025-09-23 23:28:47'),
+(8, 'production-head', 'Production head - manages all departments', '2025-10-27 18:25:33'),
+(9, 'designer-lead', 'Design department leader', '2025-10-27 18:25:33'),
+(10, 'designer-member', 'Design team member', '2025-10-27 18:25:33'),
+(11, 'developer-lead', 'Development department leader', '2025-10-27 18:25:33'),
+(12, 'developer-member', 'Development team member', '2025-10-27 18:25:33'),
+(13, 'seo-lead', 'SEO department leader', '2025-10-27 18:25:33'),
+(14, 'seo-member', 'SEO team member', '2025-10-27 18:25:33'),
+(15, 'content-lead', 'Content department leader', '2025-10-27 18:25:33'),
+(16, 'content-member', 'Content team member', '2025-10-27 18:25:33'),
+(17, 'qa-lead', 'QA department leader', '2025-10-27 18:25:33'),
+(18, 'qa-member', 'QA team member', '2025-10-27 18:25:33');
 
 -- --------------------------------------------------------
 
@@ -998,6 +1059,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (5, 96),
 (5, 97),
 (5, 99),
+(5, 101),
 (5, 105),
 (5, 106),
 (5, 107),
@@ -1093,7 +1155,169 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (7, 126),
 (7, 127),
 (7, 128),
-(7, 129);
+(7, 129),
+(8, 95),
+(8, 96),
+(8, 97),
+(8, 98),
+(8, 99),
+(8, 100),
+(8, 101),
+(8, 102),
+(8, 103),
+(8, 104),
+(8, 105),
+(8, 106),
+(8, 107),
+(8, 108),
+(8, 109),
+(8, 149),
+(8, 150),
+(8, 151),
+(8, 152),
+(8, 153),
+(9, 96),
+(9, 105),
+(9, 106),
+(9, 107),
+(9, 109),
+(9, 111),
+(9, 115),
+(9, 116),
+(9, 117),
+(9, 120),
+(9, 121),
+(9, 122),
+(9, 124),
+(9, 149),
+(9, 150),
+(9, 151),
+(9, 152),
+(9, 153),
+(10, 106),
+(10, 107),
+(10, 109),
+(10, 149),
+(10, 150),
+(10, 151),
+(10, 152),
+(10, 153),
+(11, 105),
+(11, 106),
+(11, 107),
+(11, 108),
+(11, 109),
+(11, 115),
+(11, 116),
+(11, 117),
+(11, 118),
+(11, 119),
+(11, 120),
+(11, 121),
+(11, 122),
+(11, 123),
+(11, 124),
+(11, 149),
+(11, 150),
+(11, 151),
+(11, 152),
+(11, 153),
+(12, 106),
+(12, 107),
+(12, 109),
+(12, 119),
+(12, 149),
+(12, 150),
+(12, 151),
+(12, 152),
+(12, 153),
+(13, 105),
+(13, 106),
+(13, 107),
+(13, 108),
+(13, 109),
+(13, 115),
+(13, 116),
+(13, 117),
+(13, 118),
+(13, 119),
+(13, 120),
+(13, 121),
+(13, 122),
+(13, 123),
+(13, 124),
+(13, 149),
+(13, 150),
+(13, 151),
+(13, 152),
+(13, 153),
+(14, 106),
+(14, 107),
+(14, 109),
+(14, 119),
+(14, 149),
+(14, 150),
+(14, 151),
+(14, 152),
+(14, 153),
+(15, 105),
+(15, 106),
+(15, 107),
+(15, 108),
+(15, 109),
+(15, 115),
+(15, 116),
+(15, 117),
+(15, 118),
+(15, 119),
+(15, 120),
+(15, 121),
+(15, 122),
+(15, 123),
+(15, 124),
+(15, 149),
+(15, 150),
+(15, 151),
+(15, 152),
+(15, 153),
+(16, 106),
+(16, 107),
+(16, 109),
+(16, 119),
+(16, 149),
+(16, 150),
+(16, 151),
+(16, 152),
+(16, 153),
+(17, 105),
+(17, 106),
+(17, 107),
+(17, 108),
+(17, 109),
+(17, 115),
+(17, 116),
+(17, 117),
+(17, 118),
+(17, 119),
+(17, 120),
+(17, 121),
+(17, 122),
+(17, 123),
+(17, 124),
+(17, 149),
+(17, 150),
+(17, 151),
+(17, 152),
+(17, 153),
+(18, 106),
+(18, 107),
+(18, 109),
+(18, 119),
+(18, 149),
+(18, 150),
+(18, 151),
+(18, 152),
+(18, 153);
 
 -- --------------------------------------------------------
 
@@ -1186,6 +1410,14 @@ CREATE TABLE `task_activity_logs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `task_activity_logs`
+--
+
+INSERT INTO `task_activity_logs` (`id`, `task_id`, `user_id`, `action`, `description`, `old_value`, `new_value`, `created_at`) VALUES
+(5, 27, 14, 'member_added', 'Added member with role: assignee', NULL, NULL, '2025-10-27 22:43:27'),
+(6, 28, 14, 'member_added', 'Added member with role: assignee', NULL, NULL, '2025-10-29 18:13:46');
+
 -- --------------------------------------------------------
 
 --
@@ -1250,6 +1482,18 @@ CREATE TABLE `task_members` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `task_members`
+--
+
+INSERT INTO `task_members` (`id`, `task_id`, `user_id`, `role`, `assigned_by`, `assigned_at`, `is_active`, `created_at`, `updated_at`) VALUES
+(23, 27, 10, 'collaborator', 10, '2025-10-27 19:15:47', 1, '2025-10-27 19:15:47', '2025-10-27 19:15:47'),
+(24, 27, 14, 'reviewer', 10, '2025-10-27 19:15:47', 1, '2025-10-27 19:15:47', '2025-10-27 19:15:47'),
+(25, 27, 15, 'assignee', 14, '2025-10-27 22:43:27', 1, '2025-10-27 22:43:27', '2025-10-27 22:43:27'),
+(26, 28, 10, 'collaborator', 10, '2025-10-29 18:12:55', 1, '2025-10-29 18:12:55', '2025-10-29 18:12:55'),
+(27, 28, 14, 'reviewer', 10, '2025-10-29 18:12:55', 1, '2025-10-29 18:12:55', '2025-10-29 18:12:55'),
+(28, 28, 15, 'assignee', 14, '2025-10-29 18:13:46', 1, '2025-10-29 18:13:46', '2025-10-29 18:13:46');
 
 -- --------------------------------------------------------
 
@@ -1471,10 +1715,10 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`, `role_id`)
 (11, 'Test User', 'test@example.com', '$2b$10$3XOL9qo7GsTNKos4f6o2C.vhrJSmRKOHLLwr.Us3t8.vSvoSaUZc2', '2025-09-16 23:47:51', 1),
 (12, 'Upseller2', 'upseller2@example.com', '$2b$10$2UN4v2IRCMe3m2FFKtdfM.IMlHfOy/JFnus8iz8bbEsZOLPAvqy.O', '2025-09-17 00:03:00', 5),
 (13, 'Upsell Manager', 'upsellmanager@example.com', '$2b$10$lLAWT3ChReDwQ42xZdn8R.tAVAZY84CwZrzQis8.Sil6W5Lp1oVSW', '2025-09-17 05:15:00', 6),
-(14, 'Designer Lead', 'designerlead@example.com', '$2b$10$qw1eNoHEglWHp.YatzKZ6eoc6PFGO4t5z6JpeUIfmcpbUbVhfGG7m', '2025-09-23 23:30:21', 7),
-(15, 'Designer', 'designer@example.com', '$2b$10$0gsHzVUJ2Z2fa9S/fXDMqO40mnIT2cj./iJqWCF5nZiemPHw3wQFC', '2025-09-23 23:30:40', 7),
-(16, 'Developmer Lead', 'developerlead@example.com', '$2b$10$xA6Dmu/GUI45r.6btaAFgunuHKfaWShU4UQhibZZjFoCCgMHtPamW', '2025-10-01 00:21:56', 7),
-(17, 'Developer', 'developer@example.com', '$2b$10$qSHD/bDbQNtLp/gjPQHoNeU0pQ5aAoB5rfmtYHvpdCm8G95nVEF3.', '2025-10-01 00:22:22', 7),
+(14, 'Designer Lead', 'designerlead@example.com', '$2b$10$qw1eNoHEglWHp.YatzKZ6eoc6PFGO4t5z6JpeUIfmcpbUbVhfGG7m', '2025-09-23 23:30:21', 9),
+(15, 'Designer', 'designer@example.com', '$2b$10$0gsHzVUJ2Z2fa9S/fXDMqO40mnIT2cj./iJqWCF5nZiemPHw3wQFC', '2025-09-23 23:30:40', 10),
+(16, 'Developmer Lead', 'developerlead@example.com', '$2b$10$xA6Dmu/GUI45r.6btaAFgunuHKfaWShU4UQhibZZjFoCCgMHtPamW', '2025-10-01 00:21:56', 11),
+(17, 'Developer', 'developer@example.com', '$2b$10$qSHD/bDbQNtLp/gjPQHoNeU0pQ5aAoB5rfmtYHvpdCm8G95nVEF3.', '2025-10-01 00:22:22', 12),
 (18, 'Jahan Rasoli', 'jahan@crm.com', '$2b$10$3Yt/8LcavbbO/NecHH9wn.bpklTqViZspdybNGoeXGqCi1JG7n9zu', '2025-10-01 19:10:42', 2),
 (19, 'Musawir Rasoli', 'musawir@crm.com', '$2b$10$pl8Nl/XaPbMWGWtbMiKsR.5ws6whuuga481IHsPOFZZJdPSiHRrFi', '2025-10-01 19:20:49', 2),
 (20, 'Hassaan Umer Ansari ', 'hassan@crm.com', '$2b$10$7ntHdGnxg/o4Qpcz.QKJL.xujcrJfBP2t7A4p93jmY0.EDEZHFYRG', '2025-10-01 19:26:23', 3),
@@ -1487,7 +1731,9 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`, `role_id`)
 (27, 'Sharjeel Ahmed', 'sharjeel@crm.com', '$2b$10$.gDVaOM.gBWsctAEztBn9e0dxg8KjncnQzw3pieFcrV8B5xVOPO.K', '2025-10-07 21:41:21', 3),
 (28, 'Muheet', 'muheet@crm.com', '$2b$10$3G37APrgzrbsdxJW2XGOIOk.f6jBxlrnnczSmaEBV84v.WuWDNNMC', '2025-10-07 21:41:45', 3),
 (29, 'Sales2', 'sales2@example.com', '$2b$10$KPHIK37jnSi7GjuOQ3/HHOpKcqW.U3lRupSNkNV.7IoV3bHumJ.P.', '2025-10-15 18:32:12', 3),
-(30, 'Front Manager', 'frontmanager@example.com', '$2b$10$2BEBgA/7TRKJ.KEyZJPYY.S6qy4J5gkfmeudVWx9TLUPxPRV7hVim', '2025-10-15 23:28:40', 4);
+(30, 'Front Manager', 'frontmanager@example.com', '$2b$10$2BEBgA/7TRKJ.KEyZJPYY.S6qy4J5gkfmeudVWx9TLUPxPRV7hVim', '2025-10-15 23:28:40', 4),
+(31, 'Ghazali Khan', 'ghazalikhan@crm.com', '$2b$10$oGEVvQzLBsYmV4U0M.V3eekdNyif9ZVFt220TqkU6lgadj7GfAPim', '2025-10-27 19:07:08', 2),
+(32, 'Production Head', 'productionhead@example.com', '$2b$10$Swk0ArqZ/TkrwQCLWdIYW.0SzLiOc.pRCeQxQBfw.miLst6KPynem', '2025-10-27 19:09:41', 8);
 
 --
 -- Indexes for dumped tables
@@ -1570,7 +1816,8 @@ ALTER TABLE `department_team_members`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_department_user` (`department_id`,`user_id`),
   ADD KEY `fk_dept_members_department` (`department_id`),
-  ADD KEY `fk_dept_members_user` (`user_id`);
+  ADD KEY `fk_dept_members_user` (`user_id`),
+  ADD KEY `fk_production_role` (`production_role_id`);
 
 --
 -- Indexes for table `invoices`
@@ -1661,6 +1908,17 @@ ALTER TABLE `payment_transactions`
 ALTER TABLE `permissions`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `module` (`module`,`action`);
+
+--
+-- Indexes for table `production_performance`
+--
+ALTER TABLE `production_performance`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `project_id` (`project_id`),
+  ADD KEY `task_id` (`task_id`),
+  ADD KEY `idx_user_dept` (`user_id`,`department_id`),
+  ADD KEY `idx_date` (`date_tracked`),
+  ADD KEY `idx_department` (`department_id`);
 
 --
 -- Indexes for table `projects`
@@ -1918,7 +2176,7 @@ ALTER TABLE `departments`
 -- AUTO_INCREMENT for table `department_team_members`
 --
 ALTER TABLE `department_team_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `invoices`
@@ -1978,13 +2236,19 @@ ALTER TABLE `payment_transactions`
 -- AUTO_INCREMENT for table `permissions`
 --
 ALTER TABLE `permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=149;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=154;
+
+--
+-- AUTO_INCREMENT for table `production_performance`
+--
+ALTER TABLE `production_performance`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `projects`
 --
 ALTER TABLE `projects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `project_attachments`
@@ -1996,13 +2260,13 @@ ALTER TABLE `project_attachments`
 -- AUTO_INCREMENT for table `project_departments`
 --
 ALTER TABLE `project_departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT for table `project_tasks`
 --
 ALTER TABLE `project_tasks`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `reminders`
@@ -2014,7 +2278,7 @@ ALTER TABLE `reminders`
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `sales`
@@ -2032,7 +2296,7 @@ ALTER TABLE `targets`
 -- AUTO_INCREMENT for table `task_activity_logs`
 --
 ALTER TABLE `task_activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `task_checklists`
@@ -2056,7 +2320,7 @@ ALTER TABLE `task_comments`
 -- AUTO_INCREMENT for table `task_members`
 --
 ALTER TABLE `task_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `task_statuses`
@@ -2116,7 +2380,7 @@ ALTER TABLE `upseller_team_members`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- Constraints for dumped tables
@@ -2172,7 +2436,8 @@ ALTER TABLE `customer_subscriptions`
 --
 ALTER TABLE `department_team_members`
   ADD CONSTRAINT `fk_dept_members_department` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_dept_members_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_dept_members_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_production_role` FOREIGN KEY (`production_role_id`) REFERENCES `roles` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `leads`
@@ -2231,6 +2496,15 @@ ALTER TABLE `payment_transactions`
   ADD CONSTRAINT `payment_transactions_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `payment_transactions_ibfk_5` FOREIGN KEY (`received_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `payment_transactions_ibfk_6` FOREIGN KEY (`chargeback_refund_id`) REFERENCES `chargeback_refunds` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `production_performance`
+--
+ALTER TABLE `production_performance`
+  ADD CONSTRAINT `production_performance_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `production_performance_ibfk_2` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `production_performance_ibfk_3` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `production_performance_ibfk_4` FOREIGN KEY (`task_id`) REFERENCES `project_tasks` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `projects`

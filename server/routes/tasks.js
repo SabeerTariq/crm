@@ -602,4 +602,38 @@ router.get('/:id/available-users', auth, authorize('task_members', 'read'), asyn
   }
 });
 
+// Get tasks by department (for department leaders)
+router.get('/department/:departmentId', auth, authorize('tasks', 'read'), async (req, res) => {
+  try {
+    const departmentId = req.params.departmentId;
+    const tasks = await TaskService.getTasksByDepartment(departmentId);
+    res.json({ tasks });
+  } catch (error) {
+    console.error('Error fetching department tasks:', error);
+    res.status(500).json({ message: 'Error fetching department tasks' });
+  }
+});
+
+// Assign task to department member
+router.post('/:id/assign', auth, authorize('tasks', 'update'), async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const { assigned_to } = req.body;
+    
+    // Get the task
+    const task = await TaskService.getTaskById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+    
+    // Update task assignment
+    await TaskService.updateTask(taskId, { assigned_to });
+    
+    res.json({ message: 'Task assigned successfully' });
+  } catch (error) {
+    console.error('Error assigning task:', error);
+    res.status(500).json({ message: 'Error assigning task' });
+  }
+});
+
 module.exports = router;

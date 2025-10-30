@@ -27,6 +27,7 @@ const boardRoutes = require('./routes/boards');
 const reminderRoutes = require('./routes/reminders');
 const chargebackRefundRoutes = require('./routes/chargebackRefunds');
 const todoRoutes = require('./routes/todos');
+const productionRoutes = require('./routes/production');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -59,6 +60,7 @@ app.use('/api/boards', boardRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/chargeback-refunds', chargebackRefundRoutes);
 app.use('/api/todos', todoRoutes);
+app.use('/api/production', productionRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

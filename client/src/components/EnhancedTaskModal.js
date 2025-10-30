@@ -27,6 +27,8 @@ const EnhancedTaskModal = ({
   const [availableUsers, setAvailableUsers] = useState([]);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedAssignee, setSelectedAssignee] = useState('');
 
   // Handle adding comment
   const handleAddComment = async () => {
@@ -164,6 +166,30 @@ const EnhancedTaskModal = ({
     }
   };
 
+  // Handle assigning task (primary assignee)
+  const handleAssignTask = async () => {
+    if (!selectedAssignee && taskDetails?.assigned_to) {
+      // Unassigning
+      try {
+        await api.put(`/tasks/${selectedTask.id}`, { assigned_to: null });
+        setShowAssignModal(false);
+        onRefresh();
+      } catch (err) {
+        console.error('Error unassigning task:', err);
+        alert('Failed to unassign task');
+      }
+    } else if (selectedAssignee) {
+      try {
+        await api.put(`/tasks/${selectedTask.id}`, { assigned_to: selectedAssignee });
+        setShowAssignModal(false);
+        onRefresh();
+      } catch (err) {
+        console.error('Error assigning task:', err);
+        alert('Failed to assign task');
+      }
+    }
+  };
+
   // Fetch available users
   const fetchAvailableUsers = async () => {
     try {
@@ -224,7 +250,16 @@ const EnhancedTaskModal = ({
     if (showModal && selectedTask && showAddMember) {
       fetchAvailableUsers();
     }
-  }, [showModal, selectedTask, showAddMember]);
+    if (showModal && taskDetails) {
+      setSelectedAssignee(taskDetails.assigned_to || '');
+    }
+  }, [showModal, selectedTask, showAddMember, taskDetails]);
+
+  useEffect(() => {
+    if (showModal && selectedTask && showAssignModal) {
+      fetchAvailableUsers();
+    }
+  }, [showModal, selectedTask, showAssignModal]);
 
   if (!showModal || !selectedTask || !taskDetails) return null;
 
@@ -319,16 +354,27 @@ const EnhancedTaskModal = ({
             </button>
           </div>
           
-          {/* Quick Info Bar */}
+            {/* Quick Info Bar */}
           <div style={{ 
             display: 'flex', 
             gap: '16px', 
             alignItems: 'center',
             fontSize: '14px',
             color: '#5e6c84',
-            marginTop: '8px'
+            marginTop: '8px',
+            flexWrap: 'wrap'
           }}>
             <span><i className="fas fa-project-diagram" style={{ marginRight: '4px' }}></i>{taskDetails.project_name}</span>
+            {taskDetails.assigned_to_name ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <i className="fas fa-user"></i>
+                Assigned to: {taskDetails.assigned_to_name}
+              </span>
+            ) : (
+              <span style={{ color: '#de350b', fontStyle: 'italic' }}>
+                <i className="fas fa-user-times" style={{ marginRight: '4px' }}></i>Unassigned
+              </span>
+            )}
             {taskDetails.due_date && (
               <span><i className="fas fa-calendar" style={{ marginRight: '4px' }}></i>{formatDate(taskDetails.due_date)}</span>
             )}
@@ -797,6 +843,43 @@ const EnhancedTaskModal = ({
                 </div>
               </div>
 
+              {/* Task Assignment */}
+              {hasPermission('tasks', 'update') && (
+                <div>
+                  <h4 style={{ 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#6b778c', 
+                    margin: '0 0 8px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Assignment
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <button
+                      onClick={() => setShowAssignModal(true)}
+                      style={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e1e5e9',
+                        borderRadius: '3px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        color: '#172b4d',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <i className="fas fa-user-check"></i>
+                      {taskDetails.assigned_to_name ? `Change Assignee` : 'Assign Task'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               <div>
                 <h4 style={{ 
@@ -995,6 +1078,95 @@ const EnhancedTaskModal = ({
                   }}
                 >
                   Upload Files
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Assign Task Modal */}
+        {showAssignModal && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15)',
+            zIndex: 1001,
+            width: '400px'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600', color: '#172b4d' }}>
+              {taskDetails.assigned_to_name ? 'Change Assignee' : 'Assign Task'}
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#172b4d' }}>
+                  Select User
+                </label>
+                <select
+                  value={selectedAssignee}
+                  onChange={(e) => setSelectedAssignee(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e1e5e9',
+                    borderRadius: '3px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="">Unassign (No one)</option>
+                  {availableUsers.map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.role_name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {taskDetails.assigned_to_name && (
+                <div style={{ 
+                  padding: '8px', 
+                  backgroundColor: '#f4f5f7', 
+                  borderRadius: '3px',
+                  fontSize: '12px',
+                  color: '#6b778c'
+                }}>
+                  Currently assigned to: <strong>{taskDetails.assigned_to_name}</strong>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setSelectedAssignee(taskDetails?.assigned_to || '');
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#6b778c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '3px',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAssignTask}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#0079bf',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '3px',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {selectedAssignee ? 'Assign' : 'Unassign'}
                 </button>
               </div>
             </div>

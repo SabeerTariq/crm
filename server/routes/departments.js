@@ -162,7 +162,7 @@ router.get('/:id/available-users', auth, authorize('departments', 'read'), async
   try {
     const departmentId = req.params.id;
     const availableUsers = await DepartmentService.getAvailableUsers(departmentId);
-    res.json(availableUsers);
+    res.json(availableUsers); // Return array directly, not wrapped in data
   } catch (error) {
     console.error('Error fetching available users:', error);
     res.status(500).json({ message: 'Error fetching available users' });

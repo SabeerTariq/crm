@@ -96,9 +96,13 @@ const Departments = () => {
   const fetchAvailableUsers = useCallback(async (departmentId) => {
     try {
       const response = await api.get(`/departments/${departmentId}/available-users`);
-      setAvailableUsers(response.data || []);
+      console.log('Available users response:', response.data);
+      // Response.data might be an array or wrapped in an object
+      const users = Array.isArray(response.data) ? response.data : (response.data.data || []);
+      setAvailableUsers(users);
     } catch (err) {
       console.error('Error fetching available users:', err);
+      setAvailableUsers([]); // Set to empty array on error
     }
   }, []);
 
@@ -142,6 +146,7 @@ const Departments = () => {
 
   // Handle department selection for team management
   const handleSelectDepartment = async (department) => {
+    console.log('Opening team modal for department:', department);
     setSelectedDepartment(department);
     setShowTeamModal(true);
     await Promise.all([
@@ -960,13 +965,17 @@ const Departments = () => {
                       }}
                       required
                     >
-                      <option value="">Select a user...</option>
-                      {availableUsers.map(user => (
-                        <option key={user.id} value={user.id}>
-                          {user.name} ({user.email}) - {user.role_name}
-                          {user.current_department_name && ` - Currently in ${user.current_department_name}`}
-                        </option>
-                      ))}
+                      <option value="">{availableUsers.length === 0 ? 'No users available' : 'Select a user...'}</option>
+                      {availableUsers.length > 0 ? (
+                        availableUsers.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {user.name} ({user.email}) - {user.role_name}
+                            {user.current_department_name && ` - Currently in ${user.current_department_name}`}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>No users available for this department</option>
+                      )}
                     </select>
                   </div>
                   <div style={{ minWidth: '150px' }}>

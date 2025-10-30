@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { usePermissions } from '../hooks/usePermissions';
 import { useUserBoards } from '../hooks/useUserBoards';
-import { hasLeadScraperRole, hasSalesRole, hasUpsellerRole, hasUpsellerManagerRole, isAdmin } from '../utils/roleUtils';
+import { hasLeadScraperRole, hasSalesRole, hasUpsellerRole, hasUpsellerManagerRole, hasProductionHeadRole, hasProductionLeadRole, hasProductionMemberRole, isAdmin } from '../utils/roleUtils';
 import { getUserName, getUserRole } from '../utils/userUtils';
 import './Sidebar.css';
 
@@ -241,6 +241,30 @@ export default function Sidebar() {
             <Link to="/upsell-manager-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-chart-line menu-icon"></i>
               {!isCollapsed && <span className="menu-text">Manager Dashboard</span>}
+            </Link>
+          </li>
+        )}
+        {hasProductionHeadRole() && (
+          <li className={`menu-item ${isActive('/production-head-dashboard') ? 'active' : ''}`}>
+            <Link to="/production-head-dashboard" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-cogs menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Production Dashboard</span>}
+            </Link>
+          </li>
+        )}
+        {hasProductionLeadRole() && (
+          <li className={`menu-item ${isActive('/production-head-dashboard') || isActive('/department-leader-dashboard') ? 'active' : ''}`}>
+            <Link to="/production-head-dashboard" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-user-tie menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">My Department</span>}
+            </Link>
+          </li>
+        )}
+        {hasProductionMemberRole() && (
+          <li className={`menu-item ${isActive('/team-member-dashboard') ? 'active' : ''}`}>
+            <Link to="/team-member-dashboard" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-tasks menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">My Tasks</span>}
             </Link>
           </li>
         )}
