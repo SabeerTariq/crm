@@ -676,6 +676,57 @@ class TaskService {
   }
 
   /**
+   * Update checklist title
+   * @param {number} checklistId - Checklist ID
+   * @param {string} title - New title
+   */
+  static async updateChecklist(checklistId, title) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE task_checklists 
+        SET title = ?
+        WHERE id = ?
+      `;
+
+      db.query(sql, [title, checklistId], (err, result) => {
+        if (err) return reject(err);
+        resolve(result.affectedRows > 0);
+      });
+    });
+  }
+
+  /**
+   * Delete checklist
+   * @param {number} checklistId - Checklist ID
+   */
+  static async deleteChecklist(checklistId) {
+    return new Promise((resolve, reject) => {
+      // Delete checklist (cascade will delete items)
+      const sql = `DELETE FROM task_checklists WHERE id = ?`;
+
+      db.query(sql, [checklistId], (err, result) => {
+        if (err) return reject(err);
+        resolve(result.affectedRows > 0);
+      });
+    });
+  }
+
+  /**
+   * Delete checklist item
+   * @param {number} itemId - Item ID
+   */
+  static async deleteChecklistItem(itemId) {
+    return new Promise((resolve, reject) => {
+      const sql = `DELETE FROM task_checklist_items WHERE id = ?`;
+
+      db.query(sql, [itemId], (err, result) => {
+        if (err) return reject(err);
+        resolve(result.affectedRows > 0);
+      });
+    });
+  }
+
+  /**
    * Add activity log entry
    * @param {number} taskId - Task ID
    * @param {number} userId - User ID

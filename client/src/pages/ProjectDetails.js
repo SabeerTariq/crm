@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions';
+import { hasProductionHeadRole } from '../utils/roleUtils';
 import PageLayout from '../components/PageLayout';
 import api from '../services/api';
 
@@ -24,6 +25,7 @@ const ProjectDetails = () => {
   const [editingTask, setEditingTask] = useState(null);
   const [allDepartments, setAllDepartments] = useState([]);
   const [attachmentFiles, setAttachmentFiles] = useState([]);
+  const [availableUsers, setAvailableUsers] = useState([]);
   const [taskFormData, setTaskFormData] = useState({
     task_name: '',
     description: '',
@@ -75,6 +77,54 @@ const ProjectDetails = () => {
     }
   };
 
+  // Fetch available users for task assignment
+  const fetchAvailableUsers = async (departmentId) => {
+    if (!departmentId) {
+      setAvailableUsers([]);
+      return;
+    }
+    try {
+      // If Production Head, get all production users across all departments
+      if (hasProductionHeadRole()) {
+        const availableResponse = await api.get(`/departments/${departmentId}/available-users`);
+        const available = availableResponse.data || [];
+        setAvailableUsers(available);
+        return;
+      }
+      
+      // For other roles, get department members and available users
+      const membersResponse = await api.get(`/departments/${departmentId}/members`);
+      const members = membersResponse.data || [];
+      
+      const availableResponse = await api.get(`/departments/${departmentId}/available-users`);
+      const available = availableResponse.data || [];
+      
+      // Combine and deduplicate
+      const allUsers = [...members, ...available].filter((user, index, self) =>
+        index === self.findIndex(u => u.id === user.id)
+      );
+      
+      setAvailableUsers(allUsers);
+    } catch (err) {
+      console.error('Error fetching available users:', err);
+      // Fallback: try to get all users from tasks endpoint if task exists
+      try {
+        // For new tasks, we'll use a different approach - get all production users
+        const response = await api.get('/users');
+        const allUsers = response.data?.users || response.data || [];
+        // Filter for production users (roles 7-18) and admin
+        const productionUsers = allUsers.filter(user => {
+          const roleId = user.role_id;
+          return roleId === 1 || (roleId >= 7 && roleId <= 18);
+        });
+        setAvailableUsers(productionUsers);
+      } catch (fallbackErr) {
+        console.error('Error fetching users fallback:', fallbackErr);
+        setAvailableUsers([]);
+      }
+    }
+  };
+
   useEffect(() => {
     fetchProjectDetails();
     fetchAllDepartments();
@@ -98,6 +148,7 @@ const ProjectDetails = () => {
         estimated_hours: '',
         department_id: ''
       });
+      setAvailableUsers([]);
       fetchProjectDetails();
       // Trigger storage event to refresh dashboards
       window.localStorage.setItem('tasksUpdated', Date.now().toString());
@@ -291,6 +342,10 @@ const ProjectDetails = () => {
     });
     setEditingTask(task);
     setShowEditTask(true);
+    // Fetch available users for the task's department
+    if (task.department_id) {
+      fetchAvailableUsers(task.department_id);
+    }
   };
 
   // Get status color
@@ -536,19 +591,6 @@ const ProjectDetails = () => {
                 Completed Tasks
               </div>
             </div>
-            <div style={{ 
-              backgroundColor: '#fef2f2', 
-              padding: '16px', 
-              borderRadius: '8px', 
-              border: '1px solid #fecaca' 
-            }}>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: '#dc2626' }}>
-                {formatCurrency(project.budget)}
-              </div>
-              <div style={{ fontSize: '14px', color: '#991b1b', marginTop: '4px' }}>
-                Budget
-              </div>
-            </div>
           </div>
         </div>
 
@@ -623,10 +665,6 @@ const ProjectDetails = () => {
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: '#6b7280' }}>End Date:</span>
                         <span style={{ fontWeight: '500' }}>{formatDate(project.end_date)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#6b7280' }}>Budget:</span>
-                        <span style={{ fontWeight: '500' }}>{formatCurrency(project.budget)}</span>
                       </div>
                     </div>
                   </div>
@@ -1079,7 +1117,11 @@ const ProjectDetails = () => {
                   </label>
                   <select
                     value={taskFormData.department_id}
-                    onChange={(e) => setTaskFormData(prev => ({ ...prev, department_id: e.target.value }))}
+                    onChange={(e) => {
+                      const deptId = e.target.value;
+                      setTaskFormData(prev => ({ ...prev, department_id: deptId, assigned_to: '' }));
+                      fetchAvailableUsers(deptId);
+                    }}
                     required
                     style={{
                       width: '100%',
@@ -1097,6 +1139,39 @@ const ProjectDetails = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    Assign To
+                  </label>
+                  <select
+                    value={taskFormData.assigned_to}
+                    onChange={(e) => setTaskFormData(prev => ({ ...prev, assigned_to: e.target.value }))}
+                    disabled={!taskFormData.department_id}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      outline: 'none',
+                      backgroundColor: !taskFormData.department_id ? '#f9fafb' : 'white',
+                      cursor: !taskFormData.department_id ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <option value="">Unassigned (Select later)</option>
+                    {availableUsers.map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} {user.role_name ? `(${user.role_name})` : ''} {user.email ? `- ${user.email}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {!taskFormData.department_id && (
+                    <p style={{ marginTop: '4px', fontSize: '12px', color: '#6b7280' }}>
+                      Please select a department first to see available users
+                    </p>
+                  )}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
@@ -1800,7 +1875,11 @@ const ProjectDetails = () => {
                   </label>
                   <select
                     value={taskFormData.department_id}
-                    onChange={(e) => setTaskFormData(prev => ({ ...prev, department_id: e.target.value }))}
+                    onChange={(e) => {
+                      const deptId = e.target.value;
+                      setTaskFormData(prev => ({ ...prev, department_id: deptId, assigned_to: '' }));
+                      fetchAvailableUsers(deptId);
+                    }}
                     required
                     style={{
                       width: '100%',
@@ -1818,6 +1897,39 @@ const ProjectDetails = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    Assign To
+                  </label>
+                  <select
+                    value={taskFormData.assigned_to}
+                    onChange={(e) => setTaskFormData(prev => ({ ...prev, assigned_to: e.target.value }))}
+                    disabled={!taskFormData.department_id}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      outline: 'none',
+                      backgroundColor: !taskFormData.department_id ? '#f9fafb' : 'white',
+                      cursor: !taskFormData.department_id ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <option value="">Unassigned (Select later)</option>
+                    {availableUsers.map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} {user.role_name ? `(${user.role_name})` : ''} {user.email ? `- ${user.email}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {!taskFormData.department_id && (
+                    <p style={{ marginTop: '4px', fontSize: '12px', color: '#6b7280' }}>
+                      Please select a department first to see available users
+                    </p>
+                  )}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>

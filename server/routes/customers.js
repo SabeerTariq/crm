@@ -42,7 +42,7 @@ router.get('/', auth, authorize('customers','read'), (req, res) => {
     return;
   }
   
-  // For other roles (front-sales-manager, sales, etc.), show all customers
+  // For other roles (front-sales-manager, sales, production-head, etc.), show all customers
   db.query('SELECT * FROM customers ORDER BY id DESC', (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);

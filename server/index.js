@@ -28,11 +28,15 @@ const reminderRoutes = require('./routes/reminders');
 const chargebackRefundRoutes = require('./routes/chargebackRefunds');
 const todoRoutes = require('./routes/todos');
 const productionRoutes = require('./routes/production');
+const notificationRoutes = require('./routes/notifications');
+const chatRoutes = require('./routes/chat');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // Register all routes before starting the server
 app.use('/api/auth', authRoutes);
@@ -61,6 +65,8 @@ app.use('/api/reminders', reminderRoutes);
 app.use('/api/chargeback-refunds', chargebackRefundRoutes);
 app.use('/api/todos', todoRoutes);
 app.use('/api/production', productionRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

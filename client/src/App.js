@@ -29,6 +29,7 @@ import Departments from './pages/Departments';
 import TaskManagement from './pages/TaskManagement';
 import Calendar from './pages/Calendar';
 import ChargebackRefunds from './pages/ChargebackRefunds';
+import Chat from './pages/Chat';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -47,7 +48,7 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/schedule-list" element={
-          <ProtectedRoute module="leads">
+          <ProtectedRoute module="schedule-list" action="read">
             <ScheduleList />
           </ProtectedRoute>
         } />
@@ -156,6 +157,11 @@ function App() {
         <Route path="/chargeback-refunds" element={
           <ProtectedRoute module="chargeback_refunds" action="view">
             <ChargebackRefunds />
+          </ProtectedRoute>
+        } />
+        <Route path="/chat" element={
+          <ProtectedRoute module="chat" action="view">
+            <Chat />
           </ProtectedRoute>
         } />
       </Routes>

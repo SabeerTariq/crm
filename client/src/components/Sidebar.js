@@ -276,7 +276,7 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
-        {hasPermission('leads', 'view') && (
+        {hasPermission('schedule-list', 'view') && (
           <li className={`menu-item ${isActive('/schedule-list') ? 'active' : ''}`}>
             <Link to="/schedule-list" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-calendar-alt menu-icon"></i>
@@ -345,6 +345,14 @@ export default function Sidebar() {
             <Link to="/calendar" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-calendar-alt menu-icon"></i>
               {!isCollapsed && <span className="menu-text">Calendar</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('chat', 'view') && (
+          <li className={`menu-item ${isActive('/chat') ? 'active' : ''}`}>
+            <Link to="/chat" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-comments menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Chat</span>}
             </Link>
           </li>
         )}

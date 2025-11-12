@@ -56,18 +56,35 @@ router.get('/production-head/dashboard', auth, async (req, res) => {
       });
     });
 
+    // Format dates for MySQL (YYYY-MM-DD HH:MM:SS)
+    const formatDateForMySQL = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
     // Get overall statistics
     const overallStats = await new Promise((resolve, reject) => {
       db.query(`
         SELECT 
           COUNT(DISTINCT p.id) as total_projects,
+          COUNT(DISTINCT CASE WHEN p.status = 'active' THEN p.id END) as projects_in_progress,
+          COUNT(DISTINCT CASE WHEN p.status = 'planning' OR p.status = 'on_hold' THEN p.id END) as projects_pending,
+          COUNT(DISTINCT CASE WHEN p.status = 'completed' THEN p.id END) as projects_completed,
           COUNT(DISTINCT prt.id) as total_tasks,
+          COUNT(DISTINCT CASE WHEN LOWER(prt.status) LIKE '%progress%' 
+                             OR LOWER(prt.status) LIKE '%revision%'
+                             OR prt.status = 'in_progress' THEN prt.id END) as tasks_in_progress,
+          COUNT(DISTINCT CASE WHEN LOWER(prt.status) LIKE '%pending%' 
+                             OR LOWER(prt.status) LIKE '%new task%'
+                             OR prt.status = 'pending' THEN prt.id END) as tasks_pending,
           COUNT(DISTINCT CASE WHEN LOWER(prt.status) IN ('completed', 'complete') 
                              OR prt.status LIKE '%completed%' 
-                             OR prt.status LIKE '%complete%' THEN prt.id END) as completed_tasks,
-          COUNT(DISTINCT CASE WHEN LOWER(prt.status) NOT IN ('completed', 'complete') 
-                             AND prt.status NOT LIKE '%completed%' 
-                             AND prt.status NOT LIKE '%complete%' THEN prt.id END) as pending_tasks,
+                             OR prt.status LIKE '%complete%' THEN prt.id END) as tasks_completed,
           ROUND(
             AVG(
               CASE WHEN LOWER(prt.status) IN ('completed', 'complete') 
@@ -86,35 +103,57 @@ router.get('/production-head/dashboard', auth, async (req, res) => {
       });
     });
 
-    // Get department-wise performance
+    // Get department-wise performance for selected month
+    const { deptMonth, deptYear } = req.query;
+    const deptSelectedDate = deptMonth && deptYear 
+      ? new Date(parseInt(deptYear), parseInt(deptMonth) - 1, 1)
+      : new Date();
+    
+    const deptMonthStart = new Date(deptSelectedDate.getFullYear(), deptSelectedDate.getMonth(), 1);
+    const deptMonthEnd = new Date(deptSelectedDate.getFullYear(), deptSelectedDate.getMonth() + 1, 0, 23, 59, 59);
+
+    const deptMonthStartStr = formatDateForMySQL(deptMonthStart);
+    const deptMonthEndStr = formatDateForMySQL(deptMonthEnd);
+
     const departmentStats = await new Promise((resolve, reject) => {
       db.query(`
         SELECT 
           d.id as department_id,
           d.department_name,
           COUNT(DISTINCT dtm.user_id) as team_size,
-          COUNT(DISTINCT prt.id) as total_tasks,
-          COUNT(DISTINCT CASE WHEN LOWER(prt.status) IN ('completed', 'complete') 
-                             OR prt.status LIKE '%completed%' 
-                             OR prt.status LIKE '%complete%' THEN prt.id END) as completed_tasks,
+          COUNT(DISTINCT CASE WHEN prt.created_at >= ? AND prt.created_at <= ? THEN prt.id END) as total_tasks,
+          COUNT(DISTINCT CASE WHEN prt.created_at >= ? AND prt.created_at <= ? 
+                            AND (LOWER(prt.status) IN ('completed', 'complete') 
+                                 OR prt.status LIKE '%completed%' 
+                                 OR prt.status LIKE '%complete%') THEN prt.id END) as completed_tasks,
           ROUND(
             CASE 
-              WHEN COUNT(DISTINCT prt.id) > 0 
-              THEN (COUNT(DISTINCT CASE WHEN LOWER(prt.status) IN ('completed', 'complete') 
-                                       OR prt.status LIKE '%completed%' 
-                                       OR prt.status LIKE '%complete%' THEN prt.id END) / COUNT(DISTINCT prt.id)) * 100
+              WHEN COUNT(DISTINCT CASE WHEN prt.created_at >= ? AND prt.created_at <= ? THEN prt.id END) > 0 
+              THEN (COUNT(DISTINCT CASE WHEN prt.created_at >= ? AND prt.created_at <= ? 
+                                       AND (LOWER(prt.status) IN ('completed', 'complete') 
+                                            OR prt.status LIKE '%completed%' 
+                                            OR prt.status LIKE '%complete%') THEN prt.id END) / 
+                    COUNT(DISTINCT CASE WHEN prt.created_at >= ? AND prt.created_at <= ? THEN prt.id END)) * 100
               ELSE 0 
             END, 2
           ) as completion_rate,
-          ROUND(AVG(pp.efficiency_score), 2) as avg_efficiency
+          ROUND(AVG(CASE WHEN prt.created_at >= ? AND prt.created_at <= ? THEN pp.efficiency_score ELSE NULL END), 2) as avg_efficiency
         FROM departments d
         LEFT JOIN department_team_members dtm ON d.id = dtm.department_id AND dtm.is_active = 1
         LEFT JOIN project_departments pd ON d.id = pd.department_id
         LEFT JOIN projects pt ON pd.project_id = pt.id
         LEFT JOIN project_tasks prt ON pt.id = prt.project_id
-        LEFT JOIN production_performance pp ON d.id = pp.department_id
+        LEFT JOIN production_performance pp ON d.id = pp.department_id AND prt.id = pp.task_id
         GROUP BY d.id, d.department_name
-      `, (err, results) => {
+      `, [
+        deptMonthStartStr, deptMonthEndStr,  // Total tasks filter
+        deptMonthStartStr, deptMonthEndStr,  // Completed tasks filter
+        deptMonthStartStr, deptMonthEndStr,  // Completion rate calculation - total
+        deptMonthStartStr, deptMonthEndStr,  // Completion rate calculation - completed
+        deptMonthStartStr, deptMonthEndStr,  // Completion rate calculation - total (again)
+        deptMonthStartStr, deptMonthEndStr,  // Efficiency filter
+        deptMonthStartStr, deptMonthEndStr   // Efficiency filter (again)
+      ], (err, results) => {
         if (err) reject(err);
         else resolve(results);
       });
@@ -233,6 +272,62 @@ router.get('/production-head/dashboard', auth, async (req, res) => {
     // Get recent tasks (limit 20 for overview)
     const recentTasks = allTasks.slice(0, 20);
 
+    // Get all production members performance for selected month
+    const { month, year } = req.query;
+    const selectedDate = month && year 
+      ? new Date(parseInt(year), parseInt(month) - 1, 1)
+      : new Date();
+    
+    const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59);
+
+    const monthStartStr = formatDateForMySQL(monthStart);
+    const monthEndStr = formatDateForMySQL(monthEnd);
+
+    const memberPerformance = await new Promise((resolve, reject) => {
+      db.query(`
+        SELECT 
+          u.id,
+          u.name,
+          u.email,
+          d.id as department_id,
+          d.department_name,
+          dtm.role,
+          -- Selected Month Stats
+          COUNT(DISTINCT CASE WHEN prt.created_at >= ? AND prt.created_at <= ? THEN prt.id END) as total_tasks,
+          COUNT(DISTINCT CASE WHEN prt.created_at >= ? AND prt.created_at <= ? 
+                            AND (LOWER(prt.status) IN ('completed', 'complete') 
+                                 OR prt.status LIKE '%completed%' 
+                                 OR prt.status LIKE '%complete%') THEN prt.id END) as completed_tasks
+        FROM department_team_members dtm
+        JOIN users u ON dtm.user_id = u.id
+        JOIN departments d ON dtm.department_id = d.id
+        LEFT JOIN project_tasks prt ON prt.assigned_to = u.id
+        WHERE dtm.is_active = 1
+        GROUP BY u.id, u.name, u.email, d.id, d.department_name, dtm.role
+        ORDER BY d.department_name ASC, u.name ASC
+      `, [
+        monthStartStr, monthEndStr,  // Month total
+        monthStartStr, monthEndStr   // Month completed
+      ], (err, results) => {
+        if (err) reject(err);
+        else {
+          // Calculate completion rates and group by department
+          const processedResults = results.map(member => {
+            const completionRate = member.total_tasks > 0
+              ? Math.round((member.completed_tasks / member.total_tasks) * 100)
+              : 0;
+            
+            return {
+              ...member,
+              completion_rate: completionRate
+            };
+          });
+          resolve(processedResults);
+        }
+      });
+    });
+
     res.json({
       success: true,
       data: {
@@ -242,7 +337,8 @@ router.get('/production-head/dashboard', auth, async (req, res) => {
         departmentStats,
         allTasks,
         recentTasks,
-        departmentMembersDetails
+        departmentMembersDetails,
+        memberPerformance
       }
     });
   } catch (error) {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions';
-import { isAdmin, hasUpsellerRole, hasSalesRole } from '../utils/roleUtils';
 import PageLayout from '../components/PageLayout';
 import api from '../services/api';
 
@@ -24,6 +23,9 @@ const Projects = () => {
   const [editingProject, setEditingProject] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [formData, setFormData] = useState({
     customer_id: '',
     project_name: '',
@@ -56,8 +58,16 @@ const Projects = () => {
     try {
       const response = await api.get('/customers');
       setCustomers(response.data || []);
+      if (response.data && response.data.length === 0) {
+        console.warn('No customers found');
+      }
     } catch (err) {
       console.error('Error fetching customers:', err);
+      // Set empty array to prevent errors in dropdown
+      setCustomers([]);
+      if (err.response?.status === 403) {
+        setError('You do not have permission to view customers');
+      }
     }
   }, []);
 
@@ -76,6 +86,50 @@ const Projects = () => {
     fetchCustomers();
     fetchDepartments();
   }, [fetchProjects, fetchCustomers, fetchDepartments]);
+
+  // Filter customers based on search term
+  useEffect(() => {
+    if (customerSearch.trim() === '') {
+      // Show all customers when search is empty
+      setFilteredCustomers(customers);
+    } else {
+      const searchLower = customerSearch.toLowerCase();
+      const filtered = customers.filter(customer => 
+        customer.name?.toLowerCase().includes(searchLower) ||
+        customer.email?.toLowerCase().includes(searchLower) ||
+        customer.phone?.includes(customerSearch) ||
+        customer.company_name?.toLowerCase().includes(searchLower)
+      );
+      setFilteredCustomers(filtered);
+    }
+  }, [customerSearch, customers]);
+
+  // Handle customer search
+  const handleCustomerSearch = (e) => {
+    const searchTerm = e.target.value;
+    setCustomerSearch(searchTerm);
+    setShowCustomerDropdown(true);
+  };
+
+  // Handle customer selection
+  const handleCustomerSelect = (customer) => {
+    setFormData(prev => ({
+      ...prev,
+      customer_id: customer.id
+    }));
+    setCustomerSearch(customer.name || customer.email || '');
+    setShowCustomerDropdown(false);
+  };
+
+  // Clear customer selection
+  const clearCustomerSelection = () => {
+    setFormData(prev => ({
+      ...prev,
+      customer_id: ''
+    }));
+    setCustomerSearch('');
+    setShowCustomerDropdown(false);
+  };
 
   // Apply filters
   const applyFilters = useCallback(() => {
@@ -194,6 +248,7 @@ const Projects = () => {
 
   // Open edit project modal
   const openEditProject = (project) => {
+    const selectedCustomer = customers.find(c => c.id === project.customer_id);
     setFormData({
       customer_id: project.customer_id,
       project_name: project.project_name,
@@ -205,6 +260,7 @@ const Projects = () => {
       budget: project.budget || '',
       departments: project.departments || []
     });
+    setCustomerSearch(selectedCustomer ? (selectedCustomer.name || selectedCustomer.email || '') : '');
     setEditingProject(project);
     setShowEditForm(true);
   };
@@ -223,6 +279,8 @@ const Projects = () => {
       departments: [],
       attachments: []
     });
+    setCustomerSearch('');
+    setShowCustomerDropdown(false);
   };
 
   // Handle department selection
@@ -256,14 +314,6 @@ const Projects = () => {
       urgent: '#ef4444'
     };
     return colors[priority] || '#6b7280';
-  };
-
-  // Format currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount || 0);
   };
 
   // Format date
@@ -408,19 +458,6 @@ const Projects = () => {
               </div>
               <div style={{ fontSize: '14px', color: '#78350f', marginTop: '4px' }}>
                 Completed Projects
-              </div>
-            </div>
-            <div style={{ 
-              backgroundColor: '#fef2f2', 
-              padding: '16px', 
-              borderRadius: '8px', 
-              border: '1px solid #fecaca' 
-            }}>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: '#dc2626' }}>
-                {formatCurrency(filteredProjects.reduce((sum, project) => sum + (parseFloat(project.budget) || 0), 0))}
-              </div>
-              <div style={{ fontSize: '14px', color: '#991b1b', marginTop: '4px' }}>
-                Total Budget
               </div>
             </div>
           </div>
@@ -780,14 +817,6 @@ const Projects = () => {
                       <strong>Manager:</strong> {project.project_manager_name}
                     </span>
                   </div>
-                  {project.budget && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <i className="fas fa-dollar-sign" style={{ color: '#6b7280', fontSize: '14px' }}></i>
-                      <span style={{ fontSize: '14px', color: '#374151' }}>
-                        <strong>Budget:</strong> {formatCurrency(project.budget)}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 <div style={{ 
@@ -874,33 +903,153 @@ const Projects = () => {
               </div>
 
               <form onSubmit={handleSubmit}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px', alignItems: 'start', position: 'relative' }}>
+                  <div style={{ position: 'relative', zIndex: showCustomerDropdown ? 1001 : 'auto', overflow: 'visible' }}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
                       Customer *
                     </label>
-                    <select
-                      value={formData.customer_id}
-                      onChange={(e) => setFormData(prev => ({ ...prev, customer_id: e.target.value }))}
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '12px',
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        placeholder="Type to search customers..."
+                        value={customerSearch}
+                        onChange={handleCustomerSearch}
+                        required
+                        style={{
+                          width: '80%',
+                          padding: '12px 40px 12px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          outline: 'none',
+                          transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#3b82f6';
+                          setShowCustomerDropdown(true);
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#d1d5db';
+                          // Delay hiding dropdown to allow click on option
+                          setTimeout(() => setShowCustomerDropdown(false), 200);
+                        }}
+                      />
+                      {formData.customer_id && (
+                        <button
+                          type="button"
+                          onClick={clearCustomerSelection}
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            color: '#6b7280',
+                            cursor: 'pointer',
+                            fontSize: '20px',
+                            lineHeight: 1,
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
+                      <i 
+                        className="fas fa-search" 
+                        style={{
+                          position: 'absolute',
+                          right: formData.customer_id ? '36px' : '12px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          color: '#9ca3af',
+                          fontSize: '14px',
+                          pointerEvents: 'none'
+                        }}
+                      ></i>
+                    </div>
+                    
+                    {/* Customer Dropdown */}
+                    {showCustomerDropdown && filteredCustomers.length > 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        backgroundColor: 'white',
                         border: '1px solid #d1d5db',
                         borderRadius: '8px',
-                        fontSize: '16px',
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="">Select Customer</option>
-                      {customers.map(customer => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name} ({customer.email})
-                        </option>
-                      ))}
-                    </select>
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        zIndex: 1002,
+                        maxHeight: '250px',
+                        overflowY: 'auto',
+                        marginTop: '4px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}>
+                        {filteredCustomers.map(customer => (
+                          <div
+                            key={customer.id}
+                            onClick={() => handleCustomerSelect(customer)}
+                            style={{
+                              padding: '12px 16px',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #f3f4f6',
+                              transition: 'background-color 0.15s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                          >
+                            <div style={{ fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>
+                              {customer.name}
+                            </div>
+                            {customer.email && (
+                              <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '2px' }}>
+                                {customer.email}
+                              </div>
+                            )}
+                            {customer.phone && (
+                              <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                                {customer.phone}
+                              </div>
+                            )}
+                            {customer.company_name && (
+                              <div style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic', marginTop: '2px' }}>
+                                {customer.company_name}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {showCustomerDropdown && customerSearch.trim() !== '' && filteredCustomers.length === 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        backgroundColor: 'white',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                        zIndex: 1002,
+                        padding: '16px',
+                        marginTop: '4px',
+                        textAlign: 'center',
+                        color: '#6b7280',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}>
+                        No customers found matching "{customerSearch}"
+                      </div>
+                    )}
                   </div>
-                  <div>
+                  <div style={{ position: 'relative', zIndex: showCustomerDropdown ? 1 : 'auto' }}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
                       Project Name *
                     </label>
@@ -1257,30 +1406,146 @@ const Projects = () => {
               </div>
 
               <form onSubmit={handleEditProject}>
-                <div style={{ marginBottom: '16px' }}>
+                <div style={{ marginBottom: '16px', position: 'relative' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
                     Customer *
                   </label>
-                  <select
-                    value={formData.customer_id}
-                    onChange={(e) => setFormData(prev => ({ ...prev, customer_id: e.target.value }))}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      placeholder="Type to search customers..."
+                      value={customerSearch}
+                      onChange={handleCustomerSearch}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '12px 40px 12px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3b82f6';
+                        setShowCustomerDropdown(true);
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        // Delay hiding dropdown to allow click on option
+                        setTimeout(() => setShowCustomerDropdown(false), 200);
+                      }}
+                    />
+                    {formData.customer_id && (
+                      <button
+                        type="button"
+                        onClick={clearCustomerSelection}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: '#6b7280',
+                          cursor: 'pointer',
+                          fontSize: '20px',
+                          lineHeight: 1,
+                          padding: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
+                    <i 
+                      className="fas fa-search" 
+                      style={{
+                        position: 'absolute',
+                        right: formData.customer_id ? '36px' : '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#9ca3af',
+                        fontSize: '14px',
+                        pointerEvents: 'none'
+                      }}
+                    ></i>
+                  </div>
+                  
+                  {/* Customer Dropdown */}
+                  {showCustomerDropdown && filteredCustomers.length > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      backgroundColor: 'white',
                       border: '1px solid #d1d5db',
                       borderRadius: '8px',
-                      fontSize: '16px',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="">Select Customer</option>
-                    {customers.map(customer => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </option>
-                    ))}
-                  </select>
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                      zIndex: 1000,
+                      maxHeight: '250px',
+                      overflowY: 'auto',
+                      marginTop: '4px'
+                    }}>
+                      {filteredCustomers.map(customer => (
+                        <div
+                          key={customer.id}
+                          onClick={() => handleCustomerSelect(customer)}
+                          style={{
+                            padding: '12px 16px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #f3f4f6',
+                            transition: 'background-color 0.15s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                        >
+                          <div style={{ fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>
+                            {customer.name}
+                          </div>
+                          {customer.email && (
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '2px' }}>
+                              {customer.email}
+                            </div>
+                          )}
+                          {customer.phone && (
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                              {customer.phone}
+                            </div>
+                          )}
+                          {customer.company_name && (
+                            <div style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic', marginTop: '2px' }}>
+                              {customer.company_name}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {showCustomerDropdown && customerSearch.trim() !== '' && filteredCustomers.length === 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      backgroundColor: 'white',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      zIndex: 1000,
+                      padding: '16px',
+                      marginTop: '4px',
+                      textAlign: 'center',
+                      color: '#6b7280',
+                      fontSize: '14px'
+                    }}>
+                      No customers found matching "{customerSearch}"
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>

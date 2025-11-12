@@ -29,6 +29,12 @@ const EnhancedTaskModal = ({
   const [editedDescription, setEditedDescription] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState('');
+  const [showAddChecklist, setShowAddChecklist] = useState(false);
+  const [showAddItemForChecklist, setShowAddItemForChecklist] = useState(null);
+  const [editingChecklistId, setEditingChecklistId] = useState(null);
+  const [editingChecklistTitle, setEditingChecklistTitle] = useState('');
+  const [availableStatuses, setAvailableStatuses] = useState([]);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   // Handle adding comment
   const handleAddComment = async () => {
@@ -50,6 +56,7 @@ const EnhancedTaskModal = ({
     try {
       await api.post(`/tasks/${selectedTask.id}/checklists`, { title: newChecklistTitle });
       setNewChecklistTitle('');
+      setShowAddChecklist(false);
       onRefresh();
     } catch (err) {
       console.error('Error adding checklist:', err);
@@ -63,16 +70,86 @@ const EnhancedTaskModal = ({
     try {
       await api.post(`/tasks/checklists/${checklistId}/items`, { item_text: newChecklistItem });
       setNewChecklistItem('');
+      setShowAddItemForChecklist(null);
       onRefresh();
     } catch (err) {
       console.error('Error adding checklist item:', err);
     }
   };
 
+  // Handle updating checklist
+  const handleUpdateChecklist = async (checklistId) => {
+    if (!editingChecklistTitle.trim()) return;
+    
+    try {
+      await api.put(`/tasks/checklists/${checklistId}`, { 
+        title: editingChecklistTitle,
+        task_id: selectedTask.id
+      });
+      setEditingChecklistId(null);
+      setEditingChecklistTitle('');
+      onRefresh();
+    } catch (err) {
+      console.error('Error updating checklist:', err);
+    }
+  };
+
+  // Handle deleting checklist
+  const handleDeleteChecklist = async (checklistId) => {
+    if (!window.confirm('Are you sure you want to delete this checklist? All items will be deleted as well.')) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/tasks/checklists/${checklistId}`, { 
+        data: { task_id: selectedTask.id }
+      });
+      onRefresh();
+    } catch (err) {
+      console.error('Error deleting checklist:', err);
+      alert('Failed to delete checklist. Please try again.');
+    }
+  };
+
+  // Handle deleting checklist item
+  const handleDeleteChecklistItem = async (itemId) => {
+    try {
+      await api.delete(`/tasks/checklist-items/${itemId}`);
+      onRefresh();
+    } catch (err) {
+      console.error('Error deleting checklist item:', err);
+    }
+  };
+
+  // Start editing checklist
+  const startEditingChecklist = (checklist) => {
+    setEditingChecklistId(checklist.id);
+    setEditingChecklistTitle(checklist.title);
+  };
+
+  // Cancel editing checklist
+  const cancelEditingChecklist = () => {
+    setEditingChecklistId(null);
+    setEditingChecklistTitle('');
+  };
+
   // Handle toggling checklist item
   const handleToggleChecklistItem = async (itemId) => {
     try {
-      await api.put(`/tasks/checklist-items/${itemId}/toggle`);
+      // Find the item to get its current state
+      let currentState = false;
+      for (const checklist of taskChecklists) {
+        const item = checklist.items?.find(i => i.id === itemId);
+        if (item) {
+          currentState = item.is_completed || false;
+          break;
+        }
+      }
+      
+      // Toggle the state
+      await api.put(`/tasks/checklist-items/${itemId}/toggle`, { 
+        is_completed: !currentState 
+      });
       onRefresh();
     } catch (err) {
       console.error('Error toggling checklist item:', err);
@@ -246,12 +323,37 @@ const EnhancedTaskModal = ({
     return icons[role] || 'fas fa-user';
   };
 
+  // Fetch available statuses
+  const fetchStatuses = async () => {
+    try {
+      const response = await api.get('/statuses');
+      setAvailableStatuses(response.data.statuses || []);
+    } catch (err) {
+      console.error('Error fetching statuses:', err);
+    }
+  };
+
+  // Handle status update
+  const handleStatusUpdate = async (newStatus) => {
+    try {
+      await api.put(`/tasks/${selectedTask.id}`, { status: newStatus });
+      setShowStatusDropdown(false);
+      onRefresh();
+    } catch (err) {
+      console.error('Error updating task status:', err);
+      alert('Failed to update task status. Please try again.');
+    }
+  };
+
   useEffect(() => {
     if (showModal && selectedTask && showAddMember) {
       fetchAvailableUsers();
     }
     if (showModal && taskDetails) {
       setSelectedAssignee(taskDetails.assigned_to || '');
+    }
+    if (showModal) {
+      fetchStatuses();
     }
   }, [showModal, selectedTask, showAddMember, taskDetails]);
 
@@ -280,6 +382,10 @@ const EnhancedTaskModal = ({
     onClick={(e) => {
       if (e.target === e.currentTarget) {
         onClose();
+      }
+      // Close status dropdown when clicking outside
+      if (showStatusDropdown && !e.target.closest('[data-status-dropdown]')) {
+        setShowStatusDropdown(false);
       }
     }}
     >
@@ -323,16 +429,101 @@ const EnhancedTaskModal = ({
                 }}>
                   {taskDetails.priority}
                 </span>
-                <span style={{
-                  padding: '2px 6px',
-                  borderRadius: '3px',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  backgroundColor: '#dfe1e6',
-                  color: '#5e6c84'
-                }}>
-                  {taskDetails.status.replace('_', ' ')}
-                </span>
+                <div style={{ position: 'relative' }} data-status-dropdown>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowStatusDropdown(!showStatusDropdown);
+                    }}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '3px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      backgroundColor: '#dfe1e6',
+                      color: '#5e6c84',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#c1c7d0'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#dfe1e6'}
+                  >
+                    <span>{taskDetails.status.replace('_', ' ')}</span>
+                    <i className="fas fa-chevron-down" style={{ fontSize: '10px' }}></i>
+                  </button>
+                  
+                  {/* Status Dropdown */}
+                  {showStatusDropdown && availableStatuses.length > 0 && (
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        marginTop: '4px',
+                        backgroundColor: 'white',
+                        border: '1px solid #e1e5e9',
+                        borderRadius: '3px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        zIndex: 1001,
+                        minWidth: '150px',
+                        maxHeight: '250px',
+                        overflowY: 'auto'
+                      }}>
+                      {availableStatuses.map(status => (
+                        <div
+                          key={status.id}
+                          onClick={() => handleStatusUpdate(status.status_name)}
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #f3f4f6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            backgroundColor: taskDetails.status === status.status_name ? '#f0f7ff' : 'white',
+                            transition: 'background-color 0.15s'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (taskDetails.status !== status.status_name) {
+                              e.currentTarget.style.backgroundColor = '#f9fafb';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (taskDetails.status !== status.status_name) {
+                              e.currentTarget.style.backgroundColor = 'white';
+                            }
+                          }}
+                        >
+                          <div style={{
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '2px',
+                            backgroundColor: status.status_color || '#6b7280'
+                          }}></div>
+                          <span style={{
+                            fontSize: '13px',
+                            color: taskDetails.status === status.status_name ? '#0079bf' : '#172b4d',
+                            fontWeight: taskDetails.status === status.status_name ? '500' : '400'
+                          }}>
+                            {status.status_name}
+                          </span>
+                          {taskDetails.status === status.status_name && (
+                            <i className="fas fa-check" style={{ 
+                              fontSize: '10px', 
+                              color: '#0079bf',
+                              marginLeft: 'auto'
+                            }}></i>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <button
@@ -518,121 +709,487 @@ const EnhancedTaskModal = ({
 
             {/* Members Section */}
             <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ 
-                fontSize: '16px', 
-                fontWeight: '600', 
-                color: '#172b4d', 
-                margin: '0 0 8px 0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <i className="fas fa-users"></i>
-                Members ({taskMembers.length})
-              </h3>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                {taskMembers.map(member => (
-                  <div key={member.id} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    backgroundColor: '#f8f9fa',
-                    padding: '6px 8px',
-                    borderRadius: '3px',
-                    fontSize: '14px',
-                    color: '#172b4d'
-                  }}>
-                    <div style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      backgroundColor: getRoleColor(member.role),
+              {(() => {
+                // Combine taskMembers with assigned user if not already in the list
+                const allMembers = [...taskMembers];
+                
+                // Check if assigned user is already in taskMembers
+                const assignedUserId = taskDetails?.assigned_to;
+                const assignedUserName = taskDetails?.assigned_to_name;
+                const isAssignedUserInMembers = assignedUserId && taskMembers.some(m => m.user_id === assignedUserId);
+                
+                // Add assigned user if they exist and are not already in members
+                if (assignedUserId && assignedUserName && !isAssignedUserInMembers) {
+                  allMembers.unshift({
+                    id: `assigned-${assignedUserId}`, // Use a unique ID for the assigned user
+                    user_id: assignedUserId,
+                    user_name: assignedUserName,
+                    role: 'assignee',
+                    is_assigned_user: true // Flag to identify this is the assigned user
+                  });
+                }
+                
+                return (
+                  <>
+                    <h3 style={{ 
+                      fontSize: '16px', 
+                      fontWeight: '600', 
+                      color: '#172b4d', 
+                      margin: '0 0 8px 0',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '10px'
+                      gap: '8px'
                     }}>
-                      <i className={getRoleIcon(member.role)}></i>
+                      <i className="fas fa-users"></i>
+                      Members ({allMembers.length})
+                    </h3>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {allMembers.map(member => (
+                        <div key={member.id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: '#f8f9fa',
+                          padding: '6px 8px',
+                          borderRadius: '3px',
+                          fontSize: '14px',
+                          color: '#172b4d'
+                        }}>
+                          <div style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            backgroundColor: getRoleColor(member.role),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '10px'
+                          }}>
+                            <i className={getRoleIcon(member.role)}></i>
+                          </div>
+                          <span>{member.user_name}</span>
+                          <span style={{ fontSize: '12px', color: '#6b778c' }}>({member.role})</span>
+                        </div>
+                      ))}
+                      {hasPermission('task_members', 'create') && (
+                        <button
+                          onClick={() => setShowAddMember(!showAddMember)}
+                          style={{
+                            backgroundColor: '#f4f5f7',
+                            border: '1px dashed #c1c7d0',
+                            borderRadius: '3px',
+                            padding: '6px 8px',
+                            fontSize: '14px',
+                            color: '#6b778c',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <i className="fas fa-plus"></i>
+                          Add Member
+                        </button>
+                      )}
                     </div>
-                    <span>{member.user_name}</span>
-                    <span style={{ fontSize: '12px', color: '#6b778c' }}>({member.role})</span>
-                  </div>
-                ))}
-                {hasPermission('task_members', 'create') && (
-                  <button
-                    onClick={() => setShowAddMember(!showAddMember)}
-                    style={{
-                      backgroundColor: '#f4f5f7',
-                      border: '1px dashed #c1c7d0',
-                      borderRadius: '3px',
-                      padding: '6px 8px',
-                      fontSize: '14px',
-                      color: '#6b778c',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <i className="fas fa-plus"></i>
-                    Add Member
-                  </button>
-                )}
-              </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Checklists Section */}
             <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ 
-                fontSize: '16px', 
-                fontWeight: '600', 
-                color: '#172b4d', 
-                margin: '0 0 8px 0',
-                display: 'flex',
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
                 alignItems: 'center',
-                gap: '8px'
+                marginBottom: '8px'
               }}>
-                <i className="fas fa-tasks"></i>
-                Checklists
-              </h3>
+                <h3 style={{ 
+                  fontSize: '16px', 
+                  fontWeight: '600', 
+                  color: '#172b4d', 
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <i className="fas fa-tasks"></i>
+                  Checklists ({taskChecklists.length})
+                </h3>
+                <button
+                  onClick={() => setShowAddChecklist(!showAddChecklist)}
+                  style={{
+                    backgroundColor: showAddChecklist ? '#6b778c' : '#0079bf',
+                    border: 'none',
+                    borderRadius: '3px',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: 'white',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!showAddChecklist) {
+                      e.target.style.backgroundColor = '#005a8f';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!showAddChecklist) {
+                      e.target.style.backgroundColor = '#0079bf';
+                    }
+                  }}
+                >
+                  <i className="fas fa-plus"></i>
+                  {showAddChecklist ? 'Cancel' : 'Create Checklist'}
+                </button>
+              </div>
+
+              {/* Add Checklist Form */}
+              {showAddChecklist && (
+                <div style={{
+                  backgroundColor: '#f8f9fa',
+                  padding: '12px',
+                  borderRadius: '3px',
+                  marginBottom: '16px',
+                  border: '1px solid #e1e5e9'
+                }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <input
+                      type="text"
+                      value={newChecklistTitle}
+                      onChange={(e) => setNewChecklistTitle(e.target.value)}
+                      placeholder="Checklist title..."
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && newChecklistTitle.trim()) {
+                          handleAddChecklist();
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        border: '1px solid #e1e5e9',
+                        borderRadius: '3px',
+                        fontSize: '14px',
+                        color: '#172b4d',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      onClick={handleAddChecklist}
+                      disabled={!newChecklistTitle.trim()}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: newChecklistTitle.trim() ? '#0079bf' : '#c1c7d0',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '3px',
+                        fontSize: '14px',
+                        cursor: newChecklistTitle.trim() ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Checklists List */}
               {taskChecklists.map(checklist => (
-                <div key={checklist.id} style={{ marginBottom: '16px' }}>
+                <div key={checklist.id} style={{ 
+                  marginBottom: '16px',
+                  backgroundColor: '#f8f9fa',
+                  padding: '12px',
+                  borderRadius: '3px',
+                  border: '1px solid #e1e5e9'
+                }}>
                   <div style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '500', 
-                    color: '#172b4d', 
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                     marginBottom: '8px' 
                   }}>
-                    {checklist.title}
-                  </div>
-                  <div style={{ marginLeft: '16px' }}>
-                    {checklist.items && checklist.items.map(item => (
-                      <div key={item.id} style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '8px', 
-                        marginBottom: '4px',
-                        fontSize: '14px',
-                        color: '#172b4d'
-                      }}>
+                    {editingChecklistId === checklist.id ? (
+                      <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <input
-                          type="checkbox"
-                          checked={item.is_completed}
-                          onChange={() => handleToggleChecklistItem(item.id)}
-                          style={{ margin: 0 }}
+                          type="text"
+                          value={editingChecklistTitle}
+                          onChange={(e) => setEditingChecklistTitle(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && editingChecklistTitle.trim()) {
+                              handleUpdateChecklist(checklist.id);
+                            } else if (e.key === 'Escape') {
+                              cancelEditingChecklist();
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '6px 10px',
+                            border: '1px solid #0079bf',
+                            borderRadius: '3px',
+                            fontSize: '14px',
+                            color: '#172b4d',
+                            outline: 'none'
+                          }}
+                          autoFocus
                         />
-                        <span style={{ 
-                          textDecoration: item.is_completed ? 'line-through' : 'none',
-                          color: item.is_completed ? '#6b778c' : '#172b4d'
-                        }}>
-                          {item.item_text}
-                        </span>
+                        <button
+                          onClick={() => handleUpdateChecklist(checklist.id)}
+                          disabled={!editingChecklistTitle.trim()}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: editingChecklistTitle.trim() ? '#0079bf' : '#c1c7d0',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            fontSize: '12px',
+                            cursor: editingChecklistTitle.trim() ? 'pointer' : 'not-allowed'
+                          }}
+                        >
+                          <i className="fas fa-check"></i>
+                        </button>
+                        <button
+                          onClick={cancelEditingChecklist}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#6b778c',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
                       </div>
-                    ))}
+                    ) : (
+                      <>
+                        <div style={{ 
+                          fontSize: '14px', 
+                          fontWeight: '500', 
+                          color: '#172b4d',
+                          flex: 1
+                        }}>
+                          {checklist.title}
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          <button
+                            onClick={() => startEditingChecklist(checklist)}
+                            style={{
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              color: '#6b778c',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              padding: '4px 8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title="Edit checklist"
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteChecklist(checklist.id)}
+                            style={{
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              color: '#de350b',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              padding: '4px 8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title="Delete checklist"
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                          <button
+                            onClick={() => setShowAddItemForChecklist(
+                              showAddItemForChecklist === checklist.id ? null : checklist.id
+                            )}
+                            style={{
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              color: '#6b778c',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              padding: '4px 8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <i className="fas fa-plus"></i>
+                            {showAddItemForChecklist === checklist.id ? 'Cancel' : 'Add Item'}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Add Item Form */}
+                  {showAddItemForChecklist === checklist.id && (
+                    <div style={{
+                      marginBottom: '8px',
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'flex-start'
+                    }}>
+                      <input
+                        type="text"
+                        value={newChecklistItem}
+                        onChange={(e) => setNewChecklistItem(e.target.value)}
+                        placeholder="Add an item..."
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && newChecklistItem.trim()) {
+                            handleAddChecklistItem(checklist.id);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '6px 10px',
+                          border: '1px solid #e1e5e9',
+                          borderRadius: '3px',
+                          fontSize: '14px',
+                          color: '#172b4d',
+                          outline: 'none'
+                        }}
+                      />
+                      <button
+                        onClick={() => handleAddChecklistItem(checklist.id)}
+                        disabled={!newChecklistItem.trim()}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: newChecklistItem.trim() ? '#0079bf' : '#c1c7d0',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '3px',
+                          fontSize: '14px',
+                          cursor: newChecklistItem.trim() ? 'pointer' : 'not-allowed'
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Checklist Items */}
+                  <div style={{ marginLeft: '8px' }}>
+                    {checklist.items && checklist.items.length > 0 ? (
+                      checklist.items.map(item => (
+                        <div key={item.id} style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '8px', 
+                          marginBottom: '6px',
+                          fontSize: '14px',
+                          color: '#172b4d',
+                          padding: '4px 0'
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={item.is_completed || false}
+                            onChange={() => handleToggleChecklistItem(item.id)}
+                            style={{ 
+                              margin: 0,
+                              cursor: 'pointer',
+                              width: '16px',
+                              height: '16px'
+                            }}
+                          />
+                          <span style={{ 
+                            textDecoration: item.is_completed ? 'line-through' : 'none',
+                            color: item.is_completed ? '#6b778c' : '#172b4d',
+                            flex: 1
+                          }}>
+                            {item.item_text}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteChecklistItem(item.id)}
+                            style={{
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              color: '#de350b',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              padding: '2px 6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              opacity: 0.7
+                            }}
+                            onMouseEnter={(e) => e.target.style.opacity = '1'}
+                            onMouseLeave={(e) => e.target.style.opacity = '0.7'}
+                            title="Delete item"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#6b778c',
+                        fontStyle: 'italic',
+                        padding: '8px 0'
+                      }}>
+                        No items yet. Add an item to get started.
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
+
+              {taskChecklists.length === 0 && !showAddChecklist && (
+                <div style={{
+                  padding: '24px',
+                  textAlign: 'center',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '3px',
+                  border: '1px dashed #c1c7d0'
+                }}>
+                  <div style={{
+                    color: '#6b778c',
+                    fontSize: '14px',
+                    marginBottom: '16px'
+                  }}>
+                    No checklists yet. Create one to get started.
+                  </div>
+                  <button
+                    onClick={() => setShowAddChecklist(true)}
+                    style={{
+                      backgroundColor: '#0079bf',
+                      border: 'none',
+                      borderRadius: '3px',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#005a8f'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#0079bf'}
+                  >
+                    <i className="fas fa-plus"></i>
+                    Create Checklist
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Attachments Section */}
