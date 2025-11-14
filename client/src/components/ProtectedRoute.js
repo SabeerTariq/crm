@@ -9,6 +9,16 @@ const ProtectedRoute = ({ children, module, action = 'read' }) => {
     return <div>Loading...</div>;
   }
 
+  // Admin users have access to everything
+  if (isAdmin()) {
+    return children;
+  }
+
+  // If no module specified, deny access
+  if (!module) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   // Check for specified action permission (defaults to 'read')
   if (!hasPermission(module, action)) {
     // For main dashboard access, redirect to appropriate role-based dashboard

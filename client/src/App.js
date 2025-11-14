@@ -30,6 +30,7 @@ import TaskManagement from './pages/TaskManagement';
 import Calendar from './pages/Calendar';
 import ChargebackRefunds from './pages/ChargebackRefunds';
 import Chat from './pages/Chat';
+import Backup from './pages/Backup';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -162,6 +163,11 @@ function App() {
         <Route path="/chat" element={
           <ProtectedRoute module="chat" action="view">
             <Chat />
+          </ProtectedRoute>
+        } />
+        <Route path="/backup" element={
+          <ProtectedRoute module="backup" action="view">
+            <Backup />
           </ProtectedRoute>
         } />
       </Routes>

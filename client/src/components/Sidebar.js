@@ -484,6 +484,14 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
+        {isAdmin() && (
+          <li className={`menu-item ${isActive('/backup') ? 'active' : ''}`}>
+            <Link to="/backup" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-database menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Backup & Restore</span>}
+            </Link>
+          </li>
+        )}
         
         {/* Logout Button */}
         <li className="menu-item logout-item">

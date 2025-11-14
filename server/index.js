@@ -30,6 +30,7 @@ const todoRoutes = require('./routes/todos');
 const productionRoutes = require('./routes/production');
 const notificationRoutes = require('./routes/notifications');
 const chatRoutes = require('./routes/chat');
+const backupRoutes = require('./routes/backup');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -67,6 +68,7 @@ app.use('/api/todos', todoRoutes);
 app.use('/api/production', productionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/backup', backupRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

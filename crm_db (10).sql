@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 30, 2025 at 08:03 PM
+-- Generation Time: Nov 14, 2025 at 09:32 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -45,7 +45,55 @@ CREATE TABLE `boards` (
 INSERT INTO `boards` (`id`, `board_name`, `department_id`, `description`, `is_default`, `created_by`, `created_at`, `updated_at`) VALUES
 (7, 'Development', 13, '', 1, 1, '2025-10-06 21:38:42', '2025-10-06 22:34:52'),
 (9, 'Marketing', 12, '', 1, 1, '2025-10-06 21:46:24', '2025-10-06 22:34:58'),
-(10, 'Design', 15, '', 1, 1, '2025-10-06 21:46:48', '2025-10-06 22:35:02');
+(10, 'Design', 15, '', 1, 1, '2025-10-06 21:46:48', '2025-10-06 22:35:02'),
+(11, 'Custom Development', 16, '', 0, 32, '2025-11-12 18:00:58', '2025-11-12 18:00:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `channels`
+--
+
+CREATE TABLE `channels` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_private` tinyint(1) DEFAULT 0,
+  `is_archived` tinyint(1) DEFAULT 0,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `channels`
+--
+
+INSERT INTO `channels` (`id`, `name`, `description`, `is_private`, `is_archived`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 'Announcement', NULL, 0, 0, 32, '2025-11-12 16:57:23', '2025-11-12 16:57:23');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `channel_members`
+--
+
+CREATE TABLE `channel_members` (
+  `id` int(11) NOT NULL,
+  `channel_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `role` enum('owner','admin','member') DEFAULT 'member',
+  `joined_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `last_read_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `channel_members`
+--
+
+INSERT INTO `channel_members` (`id`, `channel_id`, `user_id`, `role`, `joined_at`, `last_read_at`) VALUES
+(1, 1, 32, 'owner', '2025-11-12 16:57:23', '2025-11-12 16:57:30'),
+(3, 1, 1, 'member', '2025-11-12 16:57:46', '2025-11-12 16:57:46');
 
 -- --------------------------------------------------------
 
@@ -146,7 +194,8 @@ INSERT INTO `customers` (`id`, `name`, `company_name`, `email`, `phone`, `city`,
 (97, 'Jane Smith', 'XYZ Industries', 'jane.smith@xyz.com', '+1-555-0456', 'Los Angeles', 'CA', 'Mobile App', 'Referral', 'Urgent project deadline', 29, 29, '2025-10-15 23:36:04', '2025-10-15 23:36:04', 1000.00, 500.00, 500.00, NULL, 'active'),
 (98, 'Camden Graves', 'Clemons and Mcneil Inc', 'lefi@mailinator.com', '+1 (822) 203-3275', 'Amet tempore ipsa', 'Magnam nobis magnam ', 'Amet sunt minim com', 'Et doloribus cupidit', 'Et sunt inventore n', 8, 8, '2025-10-21 23:59:44', '2025-10-22 22:18:18', 2000.00, 1000.00, 1000.00, NULL, 'active'),
 (99, 'Chastity Mack', 'Osborn and Tillman LLC', 'ranukuqine@mailinator.com', '+1 (243) 355-6826', 'Nisi similique omnis', 'Numquam ut alias bea', 'Animi explicabo Ve', 'Qui fugiat esse de', 'Quam laudantium err', 1, 1, '2025-10-22 22:01:08', '2025-10-22 22:26:58', 3000.00, 1000.00, 2000.00, NULL, 'refunded'),
-(100, 'Molly Marquez', 'Stevens and Berg Plc', 'fovokazaky@mailinator.com', '+1 (757) 208-3131', 'Aperiam officia ipsu', 'Consequuntur repudia', 'Voluptatem dolore pr', 'Libero ipsum dolores', 'Velit magna cumque ', 1, 1, '2025-10-22 22:15:44', '2025-10-22 22:47:46', 1000.00, 500.00, 500.00, NULL, 'chargeback');
+(100, 'Molly Marquez', 'Stevens and Berg Plc', 'fovokazaky@mailinator.com', '+1 (757) 208-3131', 'Aperiam officia ipsu', 'Consequuntur repudia', 'Voluptatem dolore pr', 'Libero ipsum dolores', 'Velit magna cumque ', 1, 1, '2025-10-22 22:15:44', '2025-10-22 22:47:46', 1000.00, 500.00, 500.00, NULL, 'chargeback'),
+(101, 'Clio Jensen', 'Powell Cox Plc', 'qinyfo@mailinator.com', '+1 (562) 433-2837', 'Nam modi ad autem es', 'Rerum a dolorem aute', 'In sit deserunt et ', 'Autem porro esse su', 'Similique velit tem', 8, 8, '2025-11-12 17:50:13', '2025-11-12 17:50:13', 1000.00, 500.00, 500.00, NULL, 'active');
 
 -- --------------------------------------------------------
 
@@ -172,7 +221,8 @@ CREATE TABLE `customer_assignments` (
 
 INSERT INTO `customer_assignments` (`id`, `customer_id`, `upseller_id`, `assigned_date`, `status`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
 (25, 94, 10, '2025-10-22 22:40:33', 'active', '', 1, '2025-10-22 22:40:33', '2025-10-22 22:40:33'),
-(26, 100, 10, '2025-10-22 22:40:46', 'active', '', 1, '2025-10-22 22:40:46', '2025-10-22 22:40:46');
+(26, 100, 10, '2025-10-22 22:40:46', 'active', '', 1, '2025-10-22 22:40:46', '2025-10-22 22:40:46'),
+(27, 98, 10, '2025-11-12 17:50:43', 'active', '', 13, '2025-11-12 17:50:43', '2025-11-12 17:50:43');
 
 -- --------------------------------------------------------
 
@@ -220,7 +270,8 @@ CREATE TABLE `departments` (
 INSERT INTO `departments` (`id`, `department_name`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
 (12, 'Marketing', 'Marketing team', 1, '2025-10-03 23:59:25', '2025-10-03 23:59:25'),
 (13, 'Development', 'Development team', 1, '2025-10-03 23:59:25', '2025-10-03 23:59:25'),
-(15, 'Design', '', 1, '2025-10-04 00:04:35', '2025-10-04 00:04:35');
+(15, 'Design', '', 1, '2025-10-04 00:04:35', '2025-10-04 00:04:35'),
+(16, 'Custom Development', 'Custom Projects Development', 1, '2025-11-12 16:47:41', '2025-11-12 16:47:41');
 
 -- --------------------------------------------------------
 
@@ -248,10 +299,86 @@ INSERT INTO `department_team_members` (`id`, `department_id`, `user_id`, `role`,
 (7, 13, 14, 'team_leader', 0, '2025-10-06 22:38:01', '2025-10-06 22:38:01', '2025-10-06 22:38:17', NULL),
 (8, 13, 15, 'team_member', 0, '2025-10-06 22:38:07', '2025-10-06 22:38:07', '2025-10-06 22:38:17', NULL),
 (9, 13, 16, 'team_leader', 1, '2025-10-06 22:38:22', '2025-10-06 22:38:22', '2025-10-06 22:38:22', NULL),
-(10, 13, 17, 'team_member', 1, '2025-10-06 22:38:24', '2025-10-06 22:38:24', '2025-10-27 20:04:52', NULL),
+(10, 13, 17, 'team_member', 1, '2025-10-06 22:38:24', '2025-10-06 22:38:24', '2025-11-12 16:32:58', NULL),
 (11, 15, 14, 'team_leader', 1, '2025-10-06 22:38:29', '2025-10-06 22:38:29', '2025-10-06 22:38:29', NULL),
 (12, 15, 17, 'team_member', 0, '2025-10-06 22:38:31', '2025-10-06 22:38:31', '2025-10-27 19:27:14', NULL),
 (13, 15, 15, 'team_member', 1, '2025-10-27 20:04:40', '2025-10-27 20:04:40', '2025-10-27 20:04:40', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `direct_messages`
+--
+
+CREATE TABLE `direct_messages` (
+  `id` int(11) NOT NULL,
+  `user1_id` int(11) NOT NULL,
+  `user2_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `direct_messages`
+--
+
+INSERT INTO `direct_messages` (`id`, `user1_id`, `user2_id`, `created_at`, `updated_at`) VALUES
+(1, 1, 7, '2025-11-05 21:09:46', '2025-11-05 22:03:43'),
+(2, 7, 21, '2025-11-05 22:03:26', '2025-11-05 22:03:26'),
+(3, 21, 32, '2025-11-12 16:54:26', '2025-11-12 16:54:26'),
+(4, 22, 32, '2025-11-12 16:54:29', '2025-11-12 16:54:29'),
+(5, 1, 32, '2025-11-12 16:54:30', '2025-11-12 21:36:54'),
+(6, 7, 32, '2025-11-12 21:34:15', '2025-11-12 21:34:15');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `direct_message_messages`
+--
+
+CREATE TABLE `direct_message_messages` (
+  `id` int(11) NOT NULL,
+  `direct_message_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `content` text NOT NULL,
+  `message_type` enum('text','file') DEFAULT 'text',
+  `is_read` tinyint(1) DEFAULT 0,
+  `read_at` timestamp NULL DEFAULT NULL,
+  `is_edited` tinyint(1) DEFAULT 0,
+  `is_deleted` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `direct_message_messages`
+--
+
+INSERT INTO `direct_message_messages` (`id`, `direct_message_id`, `user_id`, `content`, `message_type`, `is_read`, `read_at`, `is_edited`, `is_deleted`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 'hi', 'text', 1, '2025-11-05 21:10:15', 0, 0, '2025-11-05 21:09:49', '2025-11-05 21:10:15'),
+(2, 1, 7, 'hello', 'text', 1, '2025-11-05 21:10:20', 1, 0, '2025-11-05 21:10:19', '2025-11-05 21:21:12'),
+(3, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:21:49', '2025-11-05 21:59:42'),
+(4, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:21:50', '2025-11-05 21:59:42'),
+(5, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:21:50', '2025-11-05 21:59:42'),
+(6, 1, 7, 'jhi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:21:51', '2025-11-05 21:59:42'),
+(7, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:21:52', '2025-11-05 21:59:42'),
+(8, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:21:53', '2025-11-05 21:59:42'),
+(9, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:21:54', '2025-11-05 21:59:42'),
+(10, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:21:54', '2025-11-05 21:59:42'),
+(11, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:53:52', '2025-11-05 21:59:42'),
+(12, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:53:53', '2025-11-05 21:59:42'),
+(13, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:53:54', '2025-11-05 21:59:42'),
+(14, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:53:55', '2025-11-05 21:59:42'),
+(15, 1, 7, 'hi', 'text', 1, '2025-11-05 21:59:42', 0, 0, '2025-11-05 21:53:56', '2025-11-05 21:59:42'),
+(16, 1, 1, 'hi', 'text', 1, '2025-11-05 22:00:32', 0, 0, '2025-11-05 21:59:45', '2025-11-05 22:00:32'),
+(17, 1, 1, 'hellloooo', 'text', 1, '2025-11-05 22:00:32', 0, 0, '2025-11-05 22:00:15', '2025-11-05 22:00:32'),
+(18, 1, 7, 'Sample text message', 'text', 1, '2025-11-05 22:03:53', 0, 0, '2025-11-05 22:03:43', '2025-11-05 22:03:53'),
+(19, 5, 32, 'Hi how are you?', 'text', 1, '2025-11-12 16:54:53', 0, 0, '2025-11-12 16:54:35', '2025-11-12 16:54:53'),
+(20, 5, 1, 'I am good.', 'text', 1, '2025-11-12 16:55:42', 0, 0, '2025-11-12 16:55:41', '2025-11-12 16:55:42'),
+(21, 5, 32, 'hi', 'text', 1, '2025-11-12 21:36:17', 0, 0, '2025-11-12 21:36:13', '2025-11-12 21:36:17'),
+(22, 5, 32, 'hi', 'text', 1, '2025-11-12 21:36:54', 0, 0, '2025-11-12 21:36:52', '2025-11-12 21:36:54'),
+(23, 5, 32, 'hi', 'text', 1, '2025-11-12 21:36:54', 0, 0, '2025-11-12 21:36:53', '2025-11-12 21:36:54'),
+(24, 5, 32, 'hi', 'text', 1, '2025-11-12 21:36:56', 0, 0, '2025-11-12 21:36:54', '2025-11-12 21:36:56');
 
 -- --------------------------------------------------------
 
@@ -303,6 +430,16 @@ CREATE TABLE `leads` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `leads`
+--
+
+INSERT INTO `leads` (`id`, `name`, `company_name`, `email`, `phone`, `city`, `state`, `service_required`, `source`, `notes`, `assigned_to`, `created_by`, `converted_by`, `is_converted`, `converted_at`, `created_at`, `updated_at`) VALUES
+(117, 'Griffith Maldonado', 'Washington and Callahan LLC', 'lonewogil@mailinator.com', '+1 (223) 541-3869', 'Consequatur quo plac', 'Qui est culpa nequ', 'Ducimus odio est nu', 'Consequatur eveniet', 'Accusamus aut fuga ', 7, 7, NULL, 0, NULL, '2025-10-30 22:05:39', '2025-10-30 22:05:39'),
+(119, 'Edie Israel', 'www.ediesellshomes.com', 'edie@edieisraelteam.com', '714-623-3543', '4945 Yorba Ranch Rd. #C Yorba Linda CA 92887', 'California', 'Social Media Marketing', 'Bark', 'Advertise your business product or service, Build your business brand visibility, Gain followers for your business account, Gain followers for your personal account\n', 19, 19, NULL, 0, NULL, '2025-11-14 20:13:00', '2025-11-14 20:13:00'),
+(120, 'Lily', '', 'j892li@outlook.com', '2268084516', 'Burnaby, British Columbia, Canada', '', 'Web Design', 'LinkedIn', '\"I’m looking for a creative, motivated web / visual designer to collaborate on the full branding / website package — including logo design, color palette, typography, website layout and the launch of the website. * This is a paid contract work on a personal client project * Who I’m looking for • Proficient in Figma, Adobe XD, or similar design tools • Peoficient in front-end implementation (HTML/CSS) and using different web tools \"\n', 6, 6, NULL, 0, NULL, '2025-11-14 20:14:32', '2025-11-14 20:14:32'),
+(121, 'Nicholas', '', 'ntrolli@comcast.net', '(941) 423-9907', 'Georgetown, KY, 40324', '', 'Graphic Design', 'Bark Scrapped', 'Need a designer to help with a marketing piece. And someone to continue to create the advertisements on that our advertising venue. Less than $500\n', 18, 18, NULL, 0, NULL, '2025-11-14 20:15:50', '2025-11-14 20:15:50');
+
 -- --------------------------------------------------------
 
 --
@@ -335,6 +472,13 @@ CREATE TABLE `lead_schedules` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `lead_schedules`
+--
+
+INSERT INTO `lead_schedules` (`id`, `lead_id`, `scheduled_by`, `schedule_date`, `schedule_time`, `scheduled_at`, `created_at`, `updated_at`) VALUES
+(7, 117, 7, '2025-11-01', '05:05:00', '2025-10-30 22:05:54', '2025-10-30 22:05:54', '2025-10-30 22:05:54');
+
 -- --------------------------------------------------------
 
 --
@@ -359,7 +503,149 @@ INSERT INTO `lead_tracking` (`id`, `user_id`, `lead_id`, `action`, `created_at`)
 (219, 1, 115, 'created', '2025-10-22 22:00:34'),
 (220, 1, 115, 'converted', '2025-10-22 22:01:08'),
 (221, 1, 116, 'created', '2025-10-22 22:15:25'),
-(222, 1, 116, 'converted', '2025-10-22 22:15:44');
+(222, 1, 116, 'converted', '2025-10-22 22:15:44'),
+(223, 7, 117, 'created', '2025-10-30 22:05:39'),
+(224, 7, 118, 'created', '2025-10-31 00:03:15'),
+(225, 7, 118, 'converted', '2025-11-12 17:50:13'),
+(226, 8, 118, 'converted', '2025-11-12 17:50:13'),
+(227, 19, 119, 'created', '2025-11-14 20:13:00'),
+(228, 6, 120, 'created', '2025-11-14 20:14:32'),
+(229, 18, 121, 'created', '2025-11-14 20:15:50');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `messages`
+--
+
+CREATE TABLE `messages` (
+  `id` int(11) NOT NULL,
+  `channel_id` int(11) DEFAULT NULL,
+  `user_id` int(11) NOT NULL,
+  `content` text NOT NULL,
+  `message_type` enum('text','file','system') DEFAULT 'text',
+  `parent_message_id` int(11) DEFAULT NULL,
+  `is_edited` tinyint(1) DEFAULT 0,
+  `is_deleted` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `messages`
+--
+
+INSERT INTO `messages` (`id`, `channel_id`, `user_id`, `content`, `message_type`, `parent_message_id`, `is_edited`, `is_deleted`, `created_at`, `updated_at`) VALUES
+(1, 1, 32, 'Check in', 'text', NULL, 0, 0, '2025-11-12 16:57:30', '2025-11-12 16:57:30'),
+(2, 1, 1, 'Check in', 'text', NULL, 0, 0, '2025-11-12 16:57:46', '2025-11-12 16:57:46');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `message_attachments`
+--
+
+CREATE TABLE `message_attachments` (
+  `id` int(11) NOT NULL,
+  `message_id` int(11) DEFAULT NULL,
+  `direct_message_id` int(11) DEFAULT NULL,
+  `file_name` varchar(255) NOT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `file_type` varchar(100) DEFAULT NULL,
+  `file_size` bigint(20) DEFAULT NULL,
+  `uploaded_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `message_reactions`
+--
+
+CREATE TABLE `message_reactions` (
+  `id` int(11) NOT NULL,
+  `message_id` int(11) DEFAULT NULL,
+  `direct_message_id` int(11) DEFAULT NULL,
+  `user_id` int(11) NOT NULL,
+  `emoji` varchar(50) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `message_reactions`
+--
+
+INSERT INTO `message_reactions` (`id`, `message_id`, `direct_message_id`, `user_id`, `emoji`, `created_at`) VALUES
+(4, NULL, 2, 7, '😂', '2025-11-05 21:21:15'),
+(5, NULL, 10, 7, '👍', '2025-11-05 21:49:14'),
+(6, NULL, 18, 1, '🔥', '2025-11-05 22:04:01');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `message_status`
+--
+
+CREATE TABLE `message_status` (
+  `id` int(11) NOT NULL,
+  `message_id` int(11) DEFAULT NULL,
+  `direct_message_id` int(11) DEFAULT NULL,
+  `user_id` int(11) NOT NULL,
+  `status` enum('sent','delivered','read') DEFAULT 'sent',
+  `delivered_at` timestamp NULL DEFAULT NULL,
+  `read_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `message_status`
+--
+
+INSERT INTO `message_status` (`id`, `message_id`, `direct_message_id`, `user_id`, `status`, `delivered_at`, `read_at`, `created_at`, `updated_at`) VALUES
+(1, NULL, 20, 32, 'read', '2025-11-12 21:33:38', '2025-11-12 21:33:40', '2025-11-12 21:33:38', '2025-11-12 21:33:40'),
+(2, NULL, 18, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:08', '2025-11-12 21:34:06', '2025-11-12 21:34:08'),
+(3, NULL, 15, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:10', '2025-11-12 21:34:06', '2025-11-12 21:34:10'),
+(4, NULL, 13, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:10', '2025-11-12 21:34:06', '2025-11-12 21:34:10'),
+(5, NULL, 14, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:12', '2025-11-12 21:34:06', '2025-11-12 21:34:12'),
+(6, NULL, 12, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:08', '2025-11-12 21:34:06', '2025-11-12 21:34:08'),
+(7, NULL, 11, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:12', '2025-11-12 21:34:06', '2025-11-12 21:34:12'),
+(8, NULL, 9, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:10', '2025-11-12 21:34:06', '2025-11-12 21:34:10'),
+(9, NULL, 10, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:10', '2025-11-12 21:34:06', '2025-11-12 21:34:10'),
+(10, NULL, 8, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:08', '2025-11-12 21:34:06', '2025-11-12 21:34:08'),
+(11, NULL, 7, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:06', '2025-11-12 21:34:06', '2025-11-12 21:34:06'),
+(12, NULL, 6, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:08', '2025-11-12 21:34:06', '2025-11-12 21:34:08'),
+(13, NULL, 4, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:08', '2025-11-12 21:34:06', '2025-11-12 21:34:08'),
+(14, NULL, 5, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:08', '2025-11-12 21:34:06', '2025-11-12 21:34:08'),
+(15, NULL, 3, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:06', '2025-11-12 21:34:06', '2025-11-12 21:34:06'),
+(16, NULL, 2, 1, 'read', '2025-11-12 21:34:06', '2025-11-12 21:34:08', '2025-11-12 21:34:06', '2025-11-12 21:34:08'),
+(29, NULL, 21, 1, 'read', '2025-11-12 21:36:17', '2025-11-12 21:36:17', '2025-11-12 21:36:13', '2025-11-12 21:36:17'),
+(30, NULL, 21, 32, 'delivered', '2025-11-12 21:36:13', NULL, '2025-11-12 21:36:13', '2025-11-12 21:36:13'),
+(33, NULL, 19, 1, 'read', '2025-11-12 21:36:17', '2025-11-12 21:36:17', '2025-11-12 21:36:17', '2025-11-12 21:36:17'),
+(88, NULL, 22, 1, 'read', '2025-11-12 21:36:54', '2025-11-12 21:36:54', '2025-11-12 21:36:52', '2025-11-12 21:36:54'),
+(89, NULL, 22, 32, 'delivered', '2025-11-12 21:36:52', NULL, '2025-11-12 21:36:52', '2025-11-12 21:36:52'),
+(92, NULL, 23, 32, 'delivered', '2025-11-12 21:36:53', NULL, '2025-11-12 21:36:53', '2025-11-12 21:36:53'),
+(93, NULL, 23, 1, 'read', '2025-11-12 21:36:54', '2025-11-12 21:36:54', '2025-11-12 21:36:53', '2025-11-12 21:36:54'),
+(99, NULL, 24, 1, 'read', '2025-11-12 21:36:56', '2025-11-12 21:36:56', '2025-11-12 21:36:54', '2025-11-12 21:36:56'),
+(100, NULL, 24, 32, 'delivered', '2025-11-12 21:36:54', NULL, '2025-11-12 21:36:54', '2025-11-12 21:36:54');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `message_threads`
+--
+
+CREATE TABLE `message_threads` (
+  `id` int(11) NOT NULL,
+  `message_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `content` text NOT NULL,
+  `is_edited` tinyint(1) DEFAULT 0,
+  `is_deleted` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -384,7 +670,47 @@ CREATE TABLE `monthly_lead_stats` (
 
 INSERT INTO `monthly_lead_stats` (`id`, `user_id`, `year`, `month`, `leads_added`, `leads_converted`, `created_at`, `updated_at`) VALUES
 (48, 8, 2025, 10, 1, 1, '2025-10-21 23:59:08', '2025-10-21 23:59:44'),
-(49, 1, 2025, 10, 2, 2, '2025-10-22 22:00:34', '2025-10-22 22:15:44');
+(49, 1, 2025, 10, 2, 2, '2025-10-22 22:00:34', '2025-10-22 22:15:44'),
+(50, 7, 2025, 10, 2, 0, '2025-10-30 22:05:39', '2025-10-31 00:03:15'),
+(51, 8, 2025, 11, 0, 1, '2025-11-12 17:50:13', '2025-11-12 17:50:13'),
+(52, 7, 2025, 11, 0, 1, '2025-11-12 17:50:13', '2025-11-12 17:50:13'),
+(53, 19, 2025, 11, 1, 0, '2025-11-14 20:13:00', '2025-11-14 20:13:00'),
+(54, 6, 2025, 11, 1, 0, '2025-11-14 20:14:32', '2025-11-14 20:14:32'),
+(55, 18, 2025, 11, 1, 0, '2025-11-14 20:15:50', '2025-11-14 20:15:50');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `message` text DEFAULT NULL,
+  `entity_type` varchar(50) DEFAULT NULL,
+  `entity_id` int(11) DEFAULT NULL,
+  `related_user_id` int(11) DEFAULT NULL,
+  `priority` enum('low','medium','high','urgent') DEFAULT 'medium',
+  `is_read` tinyint(1) DEFAULT 0,
+  `read_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `expires_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `entity_type`, `entity_id`, `related_user_id`, `priority`, `is_read`, `read_at`, `created_at`, `expires_at`) VALUES
+(7, 17, 'task_completed', 'Task completed: Greenhouse', 'Someone marked this task as completed', 'task', 30, 32, 'high', 0, NULL, '2025-11-12 21:32:52', NULL),
+(8, 17, 'task_status_change', 'Task status changed: Greenhouse', 'Someone changed the status from \"Completed\" to \"New Task\"', 'task', 30, 32, 'medium', 0, NULL, '2025-11-12 21:33:14', NULL),
+(9, 1, 'chat_message', 'New message from Production Head', 'hi', 'direct_messages', 5, 32, 'medium', 0, NULL, '2025-11-12 21:36:13', NULL),
+(10, 1, 'chat_message', 'New message from Production Head', 'hi', 'direct_messages', 5, 32, 'medium', 0, NULL, '2025-11-12 21:36:52', NULL),
+(11, 1, 'chat_message', 'New message from Production Head', 'hi', 'direct_messages', 5, 32, 'medium', 0, NULL, '2025-11-12 21:36:53', NULL),
+(12, 1, 'chat_message', 'New message from Production Head', 'hi', 'direct_messages', 5, 32, 'medium', 0, NULL, '2025-11-12 21:36:54', NULL);
 
 -- --------------------------------------------------------
 
@@ -456,7 +782,8 @@ CREATE TABLE `payment_transactions` (
 INSERT INTO `payment_transactions` (`id`, `sale_id`, `installment_id`, `recurring_id`, `amount`, `payment_source`, `transaction_reference`, `notes`, `created_by`, `received_by`, `created_at`, `chargeback_refund_id`) VALUES
 (120, 98, NULL, NULL, 1000.00, 'zelle', 'Initial payment for sale 98', 'Initial payment received at sale creation', 8, 8, '2025-10-21 23:59:44', NULL),
 (121, 99, NULL, NULL, 1000.00, 'wire', 'Initial payment for sale 99', 'Initial payment received at sale creation', 1, 1, '2025-10-22 22:01:08', NULL),
-(122, 100, NULL, NULL, 500.00, 'wire', 'Initial payment for sale 100', 'Initial payment received at sale creation', 1, 1, '2025-10-22 22:15:44', NULL);
+(122, 100, NULL, NULL, 500.00, 'wire', 'Initial payment for sale 100', 'Initial payment received at sale creation', 1, 1, '2025-10-22 22:15:44', NULL),
+(123, 101, NULL, NULL, 500.00, 'wire', 'Initial payment for sale 101', 'Initial payment received at sale creation', 8, 8, '2025-11-12 17:50:13', NULL);
 
 -- --------------------------------------------------------
 
@@ -480,11 +807,21 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (76, 'assignments', 'read'),
 (77, 'assignments', 'update'),
 (79, 'assignments', 'view'),
+(167, 'backup', 'create'),
+(169, 'backup', 'delete'),
+(168, 'backup', 'read'),
+(170, 'backup', 'restore'),
+(166, 'backup', 'view'),
 (136, 'chargeback_refunds', 'create'),
 (138, 'chargeback_refunds', 'delete'),
 (139, 'chargeback_refunds', 'read'),
 (137, 'chargeback_refunds', 'update'),
 (135, 'chargeback_refunds', 'view'),
+(161, 'chat', 'create'),
+(163, 'chat', 'delete'),
+(160, 'chat', 'read'),
+(162, 'chat', 'update'),
+(164, 'chat', 'view'),
 (5, 'customers', 'create'),
 (8, 'customers', 'delete'),
 (6, 'customers', 'read'),
@@ -505,6 +842,10 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (131, 'lead_notes', 'read'),
 (132, 'lead_notes', 'update'),
 (134, 'lead_notes', 'view'),
+(158, 'notifications', 'delete'),
+(156, 'notifications', 'read'),
+(157, 'notifications', 'update'),
+(159, 'notifications', 'view'),
 (65, 'payments', 'create'),
 (68, 'payments', 'delete'),
 (66, 'payments', 'read'),
@@ -545,6 +886,8 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (30, 'sales', 'read'),
 (31, 'sales', 'update'),
 (33, 'sales', 'view'),
+(154, 'schedule-list', 'read'),
+(155, 'schedule-list', 'view'),
 (55, 'targets', 'create'),
 (58, 'targets', 'delete'),
 (56, 'targets', 'read'),
@@ -599,6 +942,22 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `pinned_messages`
+--
+
+CREATE TABLE `pinned_messages` (
+  `id` int(11) NOT NULL,
+  `channel_id` int(11) DEFAULT NULL,
+  `direct_message_id` int(11) DEFAULT NULL,
+  `message_id` int(11) DEFAULT NULL,
+  `direct_message_id_ref` int(11) DEFAULT NULL,
+  `pinned_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `production_performance`
 --
 
@@ -645,7 +1004,8 @@ CREATE TABLE `projects` (
 --
 
 INSERT INTO `projects` (`id`, `customer_id`, `project_name`, `description`, `status`, `priority`, `start_date`, `end_date`, `budget`, `created_by`, `project_manager_id`, `assigned_upseller_id`, `created_at`, `updated_at`) VALUES
-(17, 100, 'Storie Valut', 'New Design for landing page', 'active', 'medium', '2025-10-28', '2025-12-28', NULL, 10, 1, 1, '2025-10-27 19:13:55', '2025-10-27 19:13:55');
+(17, 100, 'Storie Valut', 'New Design for landing page', 'active', 'medium', '2025-10-28', '2025-12-28', NULL, 10, 1, 1, '2025-10-27 19:13:55', '2025-10-27 19:13:55'),
+(18, 101, 'Greenhouse', 'Wordpress ecommerce website', 'active', 'medium', '2025-11-12', '2025-12-12', NULL, 32, 8, 8, '2025-11-12 17:59:51', '2025-11-12 17:59:51');
 
 -- --------------------------------------------------------
 
@@ -663,6 +1023,13 @@ CREATE TABLE `project_attachments` (
   `uploaded_by` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_attachments`
+--
+
+INSERT INTO `project_attachments` (`id`, `project_id`, `file_name`, `file_path`, `file_size`, `file_type`, `uploaded_by`, `created_at`) VALUES
+(8, 17, 'medical-concierge-program_agreement.pdf', 'C:\\Users\\MT\\Desktop\\crm\\server\\uploads\\projects\\29\\medical-concierge-program_agreement-1762965447680-673862752.pdf', 213179, 'application/pdf', 16, '2025-11-12 16:37:27');
 
 -- --------------------------------------------------------
 
@@ -687,7 +1054,11 @@ CREATE TABLE `project_departments` (
 --
 
 INSERT INTO `project_departments` (`id`, `project_id`, `department_id`, `team_leader_id`, `status`, `start_date`, `end_date`, `created_at`, `updated_at`) VALUES
-(32, 17, 15, NULL, 'not_started', NULL, NULL, '2025-10-27 19:14:57', '2025-10-27 19:14:57');
+(32, 17, 15, NULL, 'not_started', NULL, NULL, '2025-10-27 19:14:57', '2025-10-27 19:14:57'),
+(33, 18, 16, NULL, 'not_started', NULL, NULL, '2025-11-12 17:59:51', '2025-11-12 17:59:51'),
+(34, 18, 15, NULL, 'not_started', NULL, NULL, '2025-11-12 17:59:51', '2025-11-12 17:59:51'),
+(35, 18, 12, NULL, 'not_started', NULL, NULL, '2025-11-12 17:59:51', '2025-11-12 17:59:51'),
+(36, 18, 13, NULL, 'not_started', NULL, NULL, '2025-11-12 17:59:51', '2025-11-12 17:59:51');
 
 -- --------------------------------------------------------
 
@@ -720,7 +1091,9 @@ CREATE TABLE `project_tasks` (
 
 INSERT INTO `project_tasks` (`id`, `project_id`, `department_id`, `task_name`, `description`, `status`, `priority`, `assigned_to`, `created_by`, `due_date`, `completed_date`, `estimated_hours`, `actual_hours`, `created_at`, `updated_at`, `board_id`) VALUES
 (27, 17, 15, 'New Website Design', 'Design a landing page for ecommerce site', 'Completed', 'medium', 15, 10, '2025-10-29', NULL, NULL, 0.00, '2025-10-27 19:15:47', '2025-10-27 22:51:42', 10),
-(28, 17, 15, 'Logo', 'Create a logo for this website', 'In Progress', 'medium', 15, 10, '2025-10-30', NULL, NULL, 0.00, '2025-10-29 18:12:55', '2025-10-29 20:10:15', 10);
+(28, 17, 15, 'Logo', 'Create a logo for this website', 'Completed', 'medium', 15, 10, '2025-10-30', NULL, NULL, 0.00, '2025-10-29 18:12:55', '2025-11-03 18:53:05', 10),
+(29, 17, 13, 'Testing Raja', 'Test by Raja', 'In Progress', 'medium', 17, 32, '2025-11-27', NULL, NULL, 0.00, '2025-11-12 16:35:05', '2025-11-12 16:39:49', 7),
+(30, 18, 13, 'Greenhouse', 'Create a website with ecommerce functionality', 'New Task', 'medium', 17, 32, '2025-11-12', NULL, NULL, 0.00, '2025-11-12 18:00:31', '2025-11-12 21:33:14', 7);
 
 -- --------------------------------------------------------
 
@@ -741,6 +1114,14 @@ CREATE TABLE `reminders` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `reminders`
+--
+
+INSERT INTO `reminders` (`id`, `user_id`, `title`, `description`, `reminder_date`, `reminder_time`, `is_all_day`, `priority`, `status`, `created_at`, `updated_at`) VALUES
+(15, 7, 'Call with Griffith Maldonado (Washington and Callahan LLC)', 'Scheduled call with lead: Griffith Maldonado\nCompany: Washington and Callahan LLC\nPhone: +1 (223) 541-3869\nEmail: lonewogil@mailinator.com', '2025-11-01', '05:05:00', 0, 'medium', 'pending', '2025-10-30 22:05:54', '2025-10-30 22:05:54'),
+(16, 7, 'Call with Clio Jensen (Powell Cox Plc)', 'Scheduled call with lead: Clio Jensen\nCompany: Powell Cox Plc\nPhone: +1 (562) 433-2837\nEmail: qinyfo@mailinator.com', '2025-10-31', '05:03:00', 0, 'medium', 'pending', '2025-10-31 00:03:43', '2025-10-31 00:03:43');
 
 -- --------------------------------------------------------
 
@@ -910,6 +1291,26 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (1, 146),
 (1, 147),
 (1, 148),
+(1, 149),
+(1, 150),
+(1, 151),
+(1, 152),
+(1, 154),
+(1, 155),
+(1, 156),
+(1, 157),
+(1, 158),
+(1, 159),
+(1, 160),
+(1, 161),
+(1, 162),
+(1, 163),
+(1, 164),
+(1, 166),
+(1, 167),
+(1, 168),
+(1, 169),
+(1, 170),
 (2, 1),
 (2, 2),
 (2, 3),
@@ -924,6 +1325,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (2, 146),
 (2, 147),
 (2, 148),
+(2, 156),
+(2, 157),
+(2, 159),
+(2, 160),
+(2, 161),
+(2, 162),
+(2, 164),
 (3, 1),
 (3, 2),
 (3, 3),
@@ -973,6 +1381,15 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (3, 146),
 (3, 147),
 (3, 148),
+(3, 154),
+(3, 155),
+(3, 156),
+(3, 157),
+(3, 159),
+(3, 160),
+(3, 161),
+(3, 162),
+(3, 164),
 (4, 1),
 (4, 2),
 (4, 3),
@@ -1031,6 +1448,15 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (4, 146),
 (4, 147),
 (4, 148),
+(4, 154),
+(4, 155),
+(4, 156),
+(4, 157),
+(4, 159),
+(4, 160),
+(4, 161),
+(4, 162),
+(4, 164),
 (5, 5),
 (5, 6),
 (5, 7),
@@ -1100,6 +1526,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (5, 146),
 (5, 147),
 (5, 148),
+(5, 156),
+(5, 157),
+(5, 159),
+(5, 160),
+(5, 161),
+(5, 162),
+(5, 164),
 (6, 5),
 (6, 6),
 (6, 7),
@@ -1137,6 +1570,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (6, 127),
 (6, 128),
 (6, 129),
+(6, 156),
+(6, 157),
+(6, 159),
+(6, 160),
+(6, 161),
+(6, 162),
+(6, 164),
 (7, 96),
 (7, 97),
 (7, 105),
@@ -1156,6 +1596,14 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (7, 127),
 (7, 128),
 (7, 129),
+(7, 156),
+(7, 157),
+(7, 159),
+(7, 160),
+(7, 161),
+(7, 162),
+(7, 164),
+(8, 6),
 (8, 95),
 (8, 96),
 (8, 97),
@@ -1171,11 +1619,32 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (8, 107),
 (8, 108),
 (8, 109),
+(8, 115),
+(8, 116),
+(8, 117),
+(8, 118),
+(8, 120),
+(8, 121),
+(8, 122),
+(8, 123),
+(8, 124),
+(8, 125),
+(8, 126),
+(8, 127),
+(8, 128),
+(8, 129),
 (8, 149),
 (8, 150),
 (8, 151),
 (8, 152),
 (8, 153),
+(8, 156),
+(8, 157),
+(8, 159),
+(8, 160),
+(8, 161),
+(8, 162),
+(8, 164),
 (9, 96),
 (9, 105),
 (9, 106),
@@ -1189,19 +1658,43 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (9, 121),
 (9, 122),
 (9, 124),
+(9, 125),
+(9, 126),
+(9, 127),
+(9, 128),
+(9, 129),
 (9, 149),
 (9, 150),
 (9, 151),
 (9, 152),
 (9, 153),
+(9, 156),
+(9, 157),
+(9, 159),
+(9, 160),
+(9, 161),
+(9, 162),
+(9, 164),
 (10, 106),
 (10, 107),
 (10, 109),
+(10, 125),
+(10, 126),
+(10, 127),
+(10, 128),
+(10, 129),
 (10, 149),
 (10, 150),
 (10, 151),
 (10, 152),
 (10, 153),
+(10, 156),
+(10, 157),
+(10, 159),
+(10, 160),
+(10, 161),
+(10, 162),
+(10, 164),
 (11, 105),
 (11, 106),
 (11, 107),
@@ -1222,6 +1715,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (11, 151),
 (11, 152),
 (11, 153),
+(11, 156),
+(11, 157),
+(11, 159),
+(11, 160),
+(11, 161),
+(11, 162),
+(11, 164),
 (12, 106),
 (12, 107),
 (12, 109),
@@ -1231,6 +1731,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (12, 151),
 (12, 152),
 (12, 153),
+(12, 156),
+(12, 157),
+(12, 159),
+(12, 160),
+(12, 161),
+(12, 162),
+(12, 164),
 (13, 105),
 (13, 106),
 (13, 107),
@@ -1251,6 +1758,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (13, 151),
 (13, 152),
 (13, 153),
+(13, 156),
+(13, 157),
+(13, 159),
+(13, 160),
+(13, 161),
+(13, 162),
+(13, 164),
 (14, 106),
 (14, 107),
 (14, 109),
@@ -1260,6 +1774,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (14, 151),
 (14, 152),
 (14, 153),
+(14, 156),
+(14, 157),
+(14, 159),
+(14, 160),
+(14, 161),
+(14, 162),
+(14, 164),
 (15, 105),
 (15, 106),
 (15, 107),
@@ -1280,6 +1801,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (15, 151),
 (15, 152),
 (15, 153),
+(15, 156),
+(15, 157),
+(15, 159),
+(15, 160),
+(15, 161),
+(15, 162),
+(15, 164),
 (16, 106),
 (16, 107),
 (16, 109),
@@ -1289,6 +1817,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (16, 151),
 (16, 152),
 (16, 153),
+(16, 156),
+(16, 157),
+(16, 159),
+(16, 160),
+(16, 161),
+(16, 162),
+(16, 164),
 (17, 105),
 (17, 106),
 (17, 107),
@@ -1309,6 +1844,13 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (17, 151),
 (17, 152),
 (17, 153),
+(17, 156),
+(17, 157),
+(17, 159),
+(17, 160),
+(17, 161),
+(17, 162),
+(17, 164),
 (18, 106),
 (18, 107),
 (18, 109),
@@ -1317,7 +1859,14 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (18, 150),
 (18, 151),
 (18, 152),
-(18, 153);
+(18, 153),
+(18, 156),
+(18, 157),
+(18, 159),
+(18, 160),
+(18, 161),
+(18, 162),
+(18, 164);
 
 -- --------------------------------------------------------
 
@@ -1366,7 +1915,8 @@ INSERT INTO `sales` (`id`, `customer_id`, `customer_name`, `customer_email`, `cu
 (97, 93, 'Ruby Booth', 'bavidil@mailinator.com', '555-0103', 2000.00, 2000.00, 1800.00, 4000.00, 0.00, 'recurring', 'stripe', 'oscs', 'liberty_web_studio', NULL, 'Maintenance', NULL, NULL, NULL, NULL, NULL, NULL, 1, '2025-10-21 22:34:01', '2025-10-21 23:31:03', NULL, NULL, 'pending'),
 (98, 98, 'Camden Graves', 'lefi@mailinator.com', '+1 (822) 203-3275', 2000.00, 2000.00, 2000.00, 3000.00, 1000.00, 'one_time', 'zelle', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Clemons and Mcneil Inc - Amet sunt minim com - Et sunt inventore n', '[{\"id\":1761091184597,\"name\":\"Webdesign\",\"details\":\"Design\"}]', 'Design', 'agreement-65.pdf', 'C:\\Users\\MT\\Desktop\\crm\\server\\uploads\\sales\\agreement-65-1761091184626-843143283.pdf', 9030, 'application/pdf', '2025-10-21 23:59:44', 8, '2025-10-21 23:59:44', '2025-10-22 22:18:18', NULL, NULL, 'partial'),
 (99, 99, 'Chastity Mack', 'ranukuqine@mailinator.com', '+1 (243) 355-6826', 3000.00, 3000.00, 3000.00, 500.00, 2000.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Osborn and Tillman LLC - Animi explicabo Ve - Quam laudantium err', '[{\"id\":1761170468089,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Fresh website', NULL, NULL, NULL, NULL, NULL, 1, '2025-10-22 22:01:08', '2025-10-22 22:26:58', NULL, NULL, 'partial'),
-(100, 100, 'Molly Marquez', 'fovokazaky@mailinator.com', '+1 (757) 208-3131', 1000.00, 1000.00, 1000.00, 1000.00, 500.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Stevens and Berg Plc - Voluptatem dolore pr - Velit magna cumque', '[{\"id\":1761171344201,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Fresh website', NULL, NULL, NULL, NULL, NULL, 1, '2025-10-22 22:15:44', '2025-10-22 22:47:46', NULL, NULL, 'partial');
+(100, 100, 'Molly Marquez', 'fovokazaky@mailinator.com', '+1 (757) 208-3131', 1000.00, 1000.00, 1000.00, 1000.00, 500.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Stevens and Berg Plc - Voluptatem dolore pr - Velit magna cumque', '[{\"id\":1761171344201,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Fresh website', NULL, NULL, NULL, NULL, NULL, 1, '2025-10-22 22:15:44', '2025-10-22 22:47:46', NULL, NULL, 'partial'),
+(101, 101, 'Clio Jensen', 'qinyfo@mailinator.com', '+1 (562) 433-2837', 1000.00, 1000.00, 1000.00, 500.00, 500.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Powell Cox Plc - In sit deserunt et  - Similique velit tem', '[{\"id\":1762969813707,\"name\":\"Webdesign\",\"details\":\"Design\"}]', 'Design', NULL, NULL, NULL, NULL, NULL, 8, '2025-11-12 17:50:13', '2025-11-12 17:50:13', NULL, NULL, 'partial');
 
 -- --------------------------------------------------------
 
@@ -1416,7 +1966,14 @@ CREATE TABLE `task_activity_logs` (
 
 INSERT INTO `task_activity_logs` (`id`, `task_id`, `user_id`, `action`, `description`, `old_value`, `new_value`, `created_at`) VALUES
 (5, 27, 14, 'member_added', 'Added member with role: assignee', NULL, NULL, '2025-10-27 22:43:27'),
-(6, 28, 14, 'member_added', 'Added member with role: assignee', NULL, NULL, '2025-10-29 18:13:46');
+(6, 28, 14, 'member_added', 'Added member with role: assignee', NULL, NULL, '2025-10-29 18:13:46'),
+(7, 29, 16, 'member_added', 'Added member with role: reviewer', NULL, NULL, '2025-11-12 16:37:12'),
+(8, 29, 16, 'attachment_added', 'Added 1 attachment(s)', NULL, NULL, '2025-11-12 16:37:27'),
+(9, 29, 16, 'member_added', 'Added member with role: collaborator', NULL, NULL, '2025-11-12 16:37:43'),
+(10, 30, 32, 'checklist_created', 'Created checklist: checklist 1', NULL, NULL, '2025-11-12 19:51:41'),
+(11, 30, 32, 'checklist_created', 'Created checklist: checklst 2', NULL, NULL, '2025-11-12 19:52:00'),
+(12, 30, 32, 'checklist_deleted', 'Deleted checklist: checklst 2', NULL, NULL, '2025-11-12 19:55:36'),
+(13, 30, 32, 'checklist_deleted', 'Deleted checklist: checklist 1', NULL, NULL, '2025-11-12 19:55:39');
 
 -- --------------------------------------------------------
 
@@ -1465,6 +2022,13 @@ CREATE TABLE `task_comments` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `task_comments`
+--
+
+INSERT INTO `task_comments` (`id`, `task_id`, `user_id`, `comment`, `created_at`, `updated_at`) VALUES
+(4, 29, 16, 'hi\n', '2025-11-12 16:37:59', '2025-11-12 16:37:59');
+
 -- --------------------------------------------------------
 
 --
@@ -1493,7 +2057,13 @@ INSERT INTO `task_members` (`id`, `task_id`, `user_id`, `role`, `assigned_by`, `
 (25, 27, 15, 'assignee', 14, '2025-10-27 22:43:27', 1, '2025-10-27 22:43:27', '2025-10-27 22:43:27'),
 (26, 28, 10, 'collaborator', 10, '2025-10-29 18:12:55', 1, '2025-10-29 18:12:55', '2025-10-29 18:12:55'),
 (27, 28, 14, 'reviewer', 10, '2025-10-29 18:12:55', 1, '2025-10-29 18:12:55', '2025-10-29 18:12:55'),
-(28, 28, 15, 'assignee', 14, '2025-10-29 18:13:46', 1, '2025-10-29 18:13:46', '2025-10-29 18:13:46');
+(28, 28, 15, 'assignee', 14, '2025-10-29 18:13:46', 1, '2025-10-29 18:13:46', '2025-10-29 18:13:46'),
+(29, 29, 32, 'collaborator', 32, '2025-11-12 16:35:05', 1, '2025-11-12 16:35:05', '2025-11-12 16:35:05'),
+(30, 29, 16, 'reviewer', 32, '2025-11-12 16:35:05', 1, '2025-11-12 16:35:05', '2025-11-12 16:35:05'),
+(31, 29, 9, 'reviewer', 16, '2025-11-12 16:37:12', 1, '2025-11-12 16:37:12', '2025-11-12 16:37:12'),
+(32, 29, 10, 'collaborator', 16, '2025-11-12 16:37:43', 1, '2025-11-12 16:37:43', '2025-11-12 16:37:43'),
+(33, 30, 32, 'collaborator', 32, '2025-11-12 18:00:31', 1, '2025-11-12 18:00:31', '2025-11-12 18:00:31'),
+(34, 30, 16, 'reviewer', 32, '2025-11-12 18:00:31', 1, '2025-11-12 18:00:31', '2025-11-12 18:00:31');
 
 -- --------------------------------------------------------
 
@@ -1575,7 +2145,7 @@ CREATE TABLE `todos` (
 --
 
 INSERT INTO `todos` (`id`, `user_id`, `title`, `description`, `status`, `priority`, `due_date`, `completed_at`, `created_at`, `updated_at`) VALUES
-(1, 1, 'New task', 'Todo Task', 'pending', 'high', '2025-10-28', NULL, '2025-10-27 16:42:43', '2025-10-27 16:45:34'),
+(1, 1, 'New task', 'Todo Task', 'completed', 'high', '2025-10-28', '2025-11-03 18:27:03', '2025-10-27 16:42:43', '2025-11-03 18:27:03'),
 (2, 1, 'NEw Task', 'New Task', 'completed', 'low', '2025-10-29', '2025-10-27 16:45:25', '2025-10-27 16:45:21', '2025-10-27 16:45:25'),
 (3, 10, 'My New Task', 'Working on it', 'pending', 'medium', '2025-10-29', NULL, '2025-10-27 16:46:47', '2025-10-27 16:46:47');
 
@@ -1735,6 +2305,28 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`, `role_id`)
 (31, 'Ghazali Khan', 'ghazalikhan@crm.com', '$2b$10$oGEVvQzLBsYmV4U0M.V3eekdNyif9ZVFt220TqkU6lgadj7GfAPim', '2025-10-27 19:07:08', 2),
 (32, 'Production Head', 'productionhead@example.com', '$2b$10$Swk0ArqZ/TkrwQCLWdIYW.0SzLiOc.pRCeQxQBfw.miLst6KPynem', '2025-10-27 19:09:41', 8);
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_presence`
+--
+
+CREATE TABLE `user_presence` (
+  `user_id` int(11) NOT NULL,
+  `status` enum('online','away','busy','offline') DEFAULT 'offline',
+  `last_seen_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `user_presence`
+--
+
+INSERT INTO `user_presence` (`user_id`, `status`, `last_seen_at`) VALUES
+(1, 'online', '2025-11-12 23:56:38'),
+(7, 'online', '2025-11-06 00:51:55'),
+(13, 'online', '2025-11-12 23:56:38'),
+(32, 'online', '2025-11-12 22:01:27');
+
 --
 -- Indexes for dumped tables
 --
@@ -1746,6 +2338,24 @@ ALTER TABLE `boards`
   ADD PRIMARY KEY (`id`),
   ADD KEY `department_id` (`department_id`),
   ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `channels`
+--
+ALTER TABLE `channels`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_channel_name` (`name`),
+  ADD KEY `idx_created_by` (`created_by`),
+  ADD KEY `idx_is_archived` (`is_archived`);
+
+--
+-- Indexes for table `channel_members`
+--
+ALTER TABLE `channel_members`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_channel_member` (`channel_id`,`user_id`),
+  ADD KEY `idx_channel_id` (`channel_id`),
+  ADD KEY `idx_user_id` (`user_id`);
 
 --
 -- Indexes for table `chargeback_refunds`
@@ -1820,6 +2430,25 @@ ALTER TABLE `department_team_members`
   ADD KEY `fk_production_role` (`production_role_id`);
 
 --
+-- Indexes for table `direct_messages`
+--
+ALTER TABLE `direct_messages`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_dm_pair` (`user1_id`,`user2_id`),
+  ADD KEY `idx_user1_id` (`user1_id`),
+  ADD KEY `idx_user2_id` (`user2_id`);
+
+--
+-- Indexes for table `direct_message_messages`
+--
+ALTER TABLE `direct_message_messages`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_direct_message_id` (`direct_message_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_is_read` (`is_read`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
 -- Indexes for table `invoices`
 --
 ALTER TABLE `invoices`
@@ -1863,12 +2492,76 @@ ALTER TABLE `lead_tracking`
   ADD KEY `idx_lead_tracking_user_date` (`user_id`,`created_at`);
 
 --
+-- Indexes for table `messages`
+--
+ALTER TABLE `messages`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_channel_id` (`channel_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_parent_message_id` (`parent_message_id`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
+-- Indexes for table `message_attachments`
+--
+ALTER TABLE `message_attachments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `uploaded_by` (`uploaded_by`),
+  ADD KEY `idx_message_id` (`message_id`),
+  ADD KEY `idx_direct_message_id` (`direct_message_id`);
+
+--
+-- Indexes for table `message_reactions`
+--
+ALTER TABLE `message_reactions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_message_reaction` (`message_id`,`user_id`,`emoji`),
+  ADD UNIQUE KEY `unique_dm_message_reaction` (`direct_message_id`,`user_id`,`emoji`),
+  ADD KEY `idx_message_id` (`message_id`),
+  ADD KEY `idx_direct_message_id` (`direct_message_id`),
+  ADD KEY `idx_user_id` (`user_id`);
+
+--
+-- Indexes for table `message_status`
+--
+ALTER TABLE `message_status`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_message_status` (`message_id`,`user_id`),
+  ADD UNIQUE KEY `unique_dm_message_status` (`direct_message_id`,`user_id`),
+  ADD KEY `idx_message_id` (`message_id`),
+  ADD KEY `idx_direct_message_id` (`direct_message_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_status` (`status`);
+
+--
+-- Indexes for table `message_threads`
+--
+ALTER TABLE `message_threads`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_message_id` (`message_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
 -- Indexes for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_user_month` (`user_id`,`year`,`month`),
   ADD KEY `idx_monthly_stats_user_date` (`user_id`,`year`,`month`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `related_user_id` (`related_user_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_type` (`type`),
+  ADD KEY `idx_is_read` (`is_read`),
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_entity` (`entity_type`,`entity_id`),
+  ADD KEY `idx_expires_at` (`expires_at`);
 
 --
 -- Indexes for table `payment_installments`
@@ -1908,6 +2601,19 @@ ALTER TABLE `payment_transactions`
 ALTER TABLE `permissions`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `module` (`module`,`action`);
+
+--
+-- Indexes for table `pinned_messages`
+--
+ALTER TABLE `pinned_messages`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_channel_pin` (`channel_id`,`message_id`),
+  ADD UNIQUE KEY `unique_dm_pin` (`direct_message_id`,`direct_message_id_ref`),
+  ADD KEY `direct_message_id_ref` (`direct_message_id_ref`),
+  ADD KEY `pinned_by` (`pinned_by`),
+  ADD KEY `idx_channel_id` (`channel_id`),
+  ADD KEY `idx_direct_message_id` (`direct_message_id`),
+  ADD KEY `idx_message_id` (`message_id`);
 
 --
 -- Indexes for table `production_performance`
@@ -2127,6 +2833,14 @@ ALTER TABLE `users`
   ADD KEY `fk_users_role_id` (`role_id`);
 
 --
+-- Indexes for table `user_presence`
+--
+ALTER TABLE `user_presence`
+  ADD PRIMARY KEY (`user_id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_last_seen_at` (`last_seen_at`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -2134,7 +2848,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `boards`
 --
 ALTER TABLE `boards`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `channels`
+--
+ALTER TABLE `channels`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `channel_members`
+--
+ALTER TABLE `channel_members`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `chargeback_refunds`
@@ -2152,13 +2878,13 @@ ALTER TABLE `chargeback_refund_audit`
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
 
 --
 -- AUTO_INCREMENT for table `customer_assignments`
 --
 ALTER TABLE `customer_assignments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `customer_subscriptions`
@@ -2170,13 +2896,25 @@ ALTER TABLE `customer_subscriptions`
 -- AUTO_INCREMENT for table `departments`
 --
 ALTER TABLE `departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `department_team_members`
 --
 ALTER TABLE `department_team_members`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT for table `direct_messages`
+--
+ALTER TABLE `direct_messages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `direct_message_messages`
+--
+ALTER TABLE `direct_message_messages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `invoices`
@@ -2188,7 +2926,7 @@ ALTER TABLE `invoices`
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=117;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=122;
 
 --
 -- AUTO_INCREMENT for table `lead_notes`
@@ -2200,19 +2938,55 @@ ALTER TABLE `lead_notes`
 -- AUTO_INCREMENT for table `lead_schedules`
 --
 ALTER TABLE `lead_schedules`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `lead_tracking`
 --
 ALTER TABLE `lead_tracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=223;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=230;
+
+--
+-- AUTO_INCREMENT for table `messages`
+--
+ALTER TABLE `messages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `message_attachments`
+--
+ALTER TABLE `message_attachments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `message_reactions`
+--
+ALTER TABLE `message_reactions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `message_status`
+--
+ALTER TABLE `message_status`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1781;
+
+--
+-- AUTO_INCREMENT for table `message_threads`
+--
+ALTER TABLE `message_threads`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+
+--
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `payment_installments`
@@ -2230,13 +3004,19 @@ ALTER TABLE `payment_recurring`
 -- AUTO_INCREMENT for table `payment_transactions`
 --
 ALTER TABLE `payment_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=123;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=124;
 
 --
 -- AUTO_INCREMENT for table `permissions`
 --
 ALTER TABLE `permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=154;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=171;
+
+--
+-- AUTO_INCREMENT for table `pinned_messages`
+--
+ALTER TABLE `pinned_messages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `production_performance`
@@ -2248,31 +3028,31 @@ ALTER TABLE `production_performance`
 -- AUTO_INCREMENT for table `projects`
 --
 ALTER TABLE `projects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `project_attachments`
 --
 ALTER TABLE `project_attachments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `project_departments`
 --
 ALTER TABLE `project_departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `project_tasks`
 --
 ALTER TABLE `project_tasks`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT for table `reminders`
 --
 ALTER TABLE `reminders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -2284,7 +3064,7 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
 
 --
 -- AUTO_INCREMENT for table `targets`
@@ -2296,31 +3076,31 @@ ALTER TABLE `targets`
 -- AUTO_INCREMENT for table `task_activity_logs`
 --
 ALTER TABLE `task_activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `task_checklists`
 --
 ALTER TABLE `task_checklists`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `task_checklist_items`
 --
 ALTER TABLE `task_checklist_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `task_comments`
 --
 ALTER TABLE `task_comments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `task_members`
 --
 ALTER TABLE `task_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `task_statuses`
@@ -2394,6 +3174,19 @@ ALTER TABLE `boards`
   ADD CONSTRAINT `boards_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `channels`
+--
+ALTER TABLE `channels`
+  ADD CONSTRAINT `channels_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `channel_members`
+--
+ALTER TABLE `channel_members`
+  ADD CONSTRAINT `channel_members_ibfk_1` FOREIGN KEY (`channel_id`) REFERENCES `channels` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `channel_members_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `chargeback_refunds`
 --
 ALTER TABLE `chargeback_refunds`
@@ -2440,6 +3233,20 @@ ALTER TABLE `department_team_members`
   ADD CONSTRAINT `fk_production_role` FOREIGN KEY (`production_role_id`) REFERENCES `roles` (`id`) ON DELETE SET NULL;
 
 --
+-- Constraints for table `direct_messages`
+--
+ALTER TABLE `direct_messages`
+  ADD CONSTRAINT `direct_messages_ibfk_1` FOREIGN KEY (`user1_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `direct_messages_ibfk_2` FOREIGN KEY (`user2_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `direct_message_messages`
+--
+ALTER TABLE `direct_message_messages`
+  ADD CONSTRAINT `direct_message_messages_ibfk_1` FOREIGN KEY (`direct_message_id`) REFERENCES `direct_messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `direct_message_messages_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `leads`
 --
 ALTER TABLE `leads`
@@ -2468,10 +3275,56 @@ ALTER TABLE `lead_tracking`
   ADD CONSTRAINT `lead_tracking_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `messages`
+--
+ALTER TABLE `messages`
+  ADD CONSTRAINT `messages_ibfk_1` FOREIGN KEY (`channel_id`) REFERENCES `channels` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `messages_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `messages_ibfk_3` FOREIGN KEY (`parent_message_id`) REFERENCES `messages` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `message_attachments`
+--
+ALTER TABLE `message_attachments`
+  ADD CONSTRAINT `message_attachments_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `message_attachments_ibfk_2` FOREIGN KEY (`direct_message_id`) REFERENCES `direct_message_messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `message_attachments_ibfk_3` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `message_reactions`
+--
+ALTER TABLE `message_reactions`
+  ADD CONSTRAINT `message_reactions_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `message_reactions_ibfk_2` FOREIGN KEY (`direct_message_id`) REFERENCES `direct_message_messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `message_reactions_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `message_status`
+--
+ALTER TABLE `message_status`
+  ADD CONSTRAINT `message_status_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `message_status_ibfk_2` FOREIGN KEY (`direct_message_id`) REFERENCES `direct_message_messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `message_status_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `message_threads`
+--
+ALTER TABLE `message_threads`
+  ADD CONSTRAINT `message_threads_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `message_threads_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
   ADD CONSTRAINT `monthly_lead_stats_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `notifications_ibfk_2` FOREIGN KEY (`related_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `payment_installments`
@@ -2496,6 +3349,16 @@ ALTER TABLE `payment_transactions`
   ADD CONSTRAINT `payment_transactions_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `payment_transactions_ibfk_5` FOREIGN KEY (`received_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `payment_transactions_ibfk_6` FOREIGN KEY (`chargeback_refund_id`) REFERENCES `chargeback_refunds` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `pinned_messages`
+--
+ALTER TABLE `pinned_messages`
+  ADD CONSTRAINT `pinned_messages_ibfk_1` FOREIGN KEY (`channel_id`) REFERENCES `channels` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `pinned_messages_ibfk_2` FOREIGN KEY (`direct_message_id`) REFERENCES `direct_messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `pinned_messages_ibfk_3` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `pinned_messages_ibfk_4` FOREIGN KEY (`direct_message_id_ref`) REFERENCES `direct_message_messages` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `pinned_messages_ibfk_5` FOREIGN KEY (`pinned_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `production_performance`
@@ -2660,6 +3523,12 @@ ALTER TABLE `upseller_team_members`
 --
 ALTER TABLE `users`
   ADD CONSTRAINT `fk_users_role_id` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `user_presence`
+--
+ALTER TABLE `user_presence`
+  ADD CONSTRAINT `user_presence_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
