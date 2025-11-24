@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 14, 2025 at 09:32 PM
+-- Generation Time: Nov 24, 2025 at 09:56 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -421,6 +421,10 @@ CREATE TABLE `leads` (
   `service_required` text DEFAULT NULL,
   `source` varchar(100) DEFAULT NULL,
   `notes` text DEFAULT NULL,
+  `budget` decimal(10,2) DEFAULT NULL,
+  `hours_type` enum('Rush hours','Normal hours') DEFAULT NULL,
+  `lead_picked_time` time DEFAULT NULL,
+  `day_type` enum('Weekend','Weekdays') DEFAULT NULL,
   `assigned_to` int(11) DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   `converted_by` int(11) DEFAULT NULL,
@@ -434,11 +438,11 @@ CREATE TABLE `leads` (
 -- Dumping data for table `leads`
 --
 
-INSERT INTO `leads` (`id`, `name`, `company_name`, `email`, `phone`, `city`, `state`, `service_required`, `source`, `notes`, `assigned_to`, `created_by`, `converted_by`, `is_converted`, `converted_at`, `created_at`, `updated_at`) VALUES
-(117, 'Griffith Maldonado', 'Washington and Callahan LLC', 'lonewogil@mailinator.com', '+1 (223) 541-3869', 'Consequatur quo plac', 'Qui est culpa nequ', 'Ducimus odio est nu', 'Consequatur eveniet', 'Accusamus aut fuga ', 7, 7, NULL, 0, NULL, '2025-10-30 22:05:39', '2025-10-30 22:05:39'),
-(119, 'Edie Israel', 'www.ediesellshomes.com', 'edie@edieisraelteam.com', '714-623-3543', '4945 Yorba Ranch Rd. #C Yorba Linda CA 92887', 'California', 'Social Media Marketing', 'Bark', 'Advertise your business product or service, Build your business brand visibility, Gain followers for your business account, Gain followers for your personal account\n', 19, 19, NULL, 0, NULL, '2025-11-14 20:13:00', '2025-11-14 20:13:00'),
-(120, 'Lily', '', 'j892li@outlook.com', '2268084516', 'Burnaby, British Columbia, Canada', '', 'Web Design', 'LinkedIn', '\"I’m looking for a creative, motivated web / visual designer to collaborate on the full branding / website package — including logo design, color palette, typography, website layout and the launch of the website. * This is a paid contract work on a personal client project * Who I’m looking for • Proficient in Figma, Adobe XD, or similar design tools • Peoficient in front-end implementation (HTML/CSS) and using different web tools \"\n', 6, 6, NULL, 0, NULL, '2025-11-14 20:14:32', '2025-11-14 20:14:32'),
-(121, 'Nicholas', '', 'ntrolli@comcast.net', '(941) 423-9907', 'Georgetown, KY, 40324', '', 'Graphic Design', 'Bark Scrapped', 'Need a designer to help with a marketing piece. And someone to continue to create the advertisements on that our advertising venue. Less than $500\n', 18, 18, NULL, 0, NULL, '2025-11-14 20:15:50', '2025-11-14 20:15:50');
+INSERT INTO `leads` (`id`, `name`, `company_name`, `email`, `phone`, `city`, `state`, `service_required`, `source`, `notes`, `budget`, `hours_type`, `lead_picked_time`, `day_type`, `assigned_to`, `created_by`, `converted_by`, `is_converted`, `converted_at`, `created_at`, `updated_at`) VALUES
+(117, 'Griffith Maldonado', 'Washington and Callahan LLC', 'lonewogil@mailinator.com', '+1 (223) 541-3869', 'Consequatur quo plac', 'Qui est culpa nequ', 'Ducimus odio est nu', 'Consequatur eveniet', 'Accusamus aut fuga ', NULL, NULL, NULL, NULL, 7, 7, NULL, 0, NULL, '2025-10-30 22:05:39', '2025-10-30 22:05:39'),
+(119, 'Edie Israel', 'www.ediesellshomes.com', 'edie@edieisraelteam.com', '714-623-3543', '4945 Yorba Ranch Rd. #C Yorba Linda CA 92887', 'California', 'Social Media Marketing', 'Bark', 'Advertise your business product or service, Build your business brand visibility, Gain followers for your business account, Gain followers for your personal account\n', NULL, NULL, NULL, NULL, 19, 19, NULL, 0, NULL, '2025-11-14 20:13:00', '2025-11-14 20:13:00'),
+(120, 'Lily', '', 'j892li@outlook.com', '2268084516', 'Burnaby, British Columbia, Canada', '', 'Web Design', 'LinkedIn', '\"I’m looking for a creative, motivated web / visual designer to collaborate on the full branding / website package — including logo design, color palette, typography, website layout and the launch of the website. * This is a paid contract work on a personal client project * Who I’m looking for • Proficient in Figma, Adobe XD, or similar design tools • Peoficient in front-end implementation (HTML/CSS) and using different web tools \"\n', NULL, NULL, NULL, NULL, 6, 6, NULL, 0, NULL, '2025-11-14 20:14:32', '2025-11-14 20:14:32'),
+(121, 'Nicholas', '', 'ntrolli@comcast.net', '(941) 423-9907', 'Georgetown, KY, 40324', '', 'Graphic Design', 'Bark Scrapped', 'Need a designer to help with a marketing piece. And someone to continue to create the advertisements on that our advertising venue. Less than $500\n', NULL, NULL, NULL, NULL, 18, 18, NULL, 0, NULL, '2025-11-14 20:15:50', '2025-11-14 20:15:50');
 
 -- --------------------------------------------------------
 
@@ -510,7 +514,8 @@ INSERT INTO `lead_tracking` (`id`, `user_id`, `lead_id`, `action`, `created_at`)
 (226, 8, 118, 'converted', '2025-11-12 17:50:13'),
 (227, 19, 119, 'created', '2025-11-14 20:13:00'),
 (228, 6, 120, 'created', '2025-11-14 20:14:32'),
-(229, 18, 121, 'created', '2025-11-14 20:15:50');
+(229, 18, 121, 'created', '2025-11-14 20:15:50'),
+(230, 1, 122, 'created', '2025-11-24 20:52:54');
 
 -- --------------------------------------------------------
 
@@ -676,7 +681,8 @@ INSERT INTO `monthly_lead_stats` (`id`, `user_id`, `year`, `month`, `leads_added
 (52, 7, 2025, 11, 0, 1, '2025-11-12 17:50:13', '2025-11-12 17:50:13'),
 (53, 19, 2025, 11, 1, 0, '2025-11-14 20:13:00', '2025-11-14 20:13:00'),
 (54, 6, 2025, 11, 1, 0, '2025-11-14 20:14:32', '2025-11-14 20:14:32'),
-(55, 18, 2025, 11, 1, 0, '2025-11-14 20:15:50', '2025-11-14 20:15:50');
+(55, 18, 2025, 11, 1, 0, '2025-11-14 20:15:50', '2025-11-14 20:15:50'),
+(56, 1, 2025, 11, 1, 0, '2025-11-24 20:52:54', '2025-11-24 20:52:54');
 
 -- --------------------------------------------------------
 
@@ -2926,7 +2932,7 @@ ALTER TABLE `invoices`
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=122;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=123;
 
 --
 -- AUTO_INCREMENT for table `lead_notes`
@@ -2944,7 +2950,7 @@ ALTER TABLE `lead_schedules`
 -- AUTO_INCREMENT for table `lead_tracking`
 --
 ALTER TABLE `lead_tracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=230;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=231;
 
 --
 -- AUTO_INCREMENT for table `messages`
@@ -2980,7 +2986,7 @@ ALTER TABLE `message_threads`
 -- AUTO_INCREMENT for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `notifications`

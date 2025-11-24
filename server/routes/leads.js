@@ -257,11 +257,11 @@ router.get('/filter-options', auth, authorize('leads','read'), (req, res) => {
 
 // Add Lead
 router.post('/', auth, authorize('leads','create'), async (req, res) => {
-  const { name, company_name, email, phone, city, state, source, service_required, notes } = req.body;
+  const { name, company_name, email, phone, city, state, source, service_required, notes, budget, hours_type, lead_picked_time, day_type } = req.body;
   
   db.query(
-    'INSERT INTO leads (name, company_name, email, phone, city, state, source, service_required, notes, assigned_to, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-    [name, company_name, email, phone, city, state, source, service_required, notes, req.user.id, req.user.id],
+    'INSERT INTO leads (name, company_name, email, phone, city, state, source, service_required, notes, budget, hours_type, lead_picked_time, day_type, assigned_to, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+    [name, company_name, email, phone, city, state, source, service_required, notes, budget || null, hours_type || null, lead_picked_time || null, day_type || null, req.user.id, req.user.id],
     async (err, result) => {
       if (err) return res.status(500).json(err);
       
@@ -279,7 +279,7 @@ router.post('/', auth, authorize('leads','create'), async (req, res) => {
 
 // Update Lead
 router.put('/:id', auth, authorize('leads','update'), async (req, res) => {
-  const { name, company_name, email, phone, city, state, source, service_required, notes } = req.body;
+  const { name, company_name, email, phone, city, state, source, service_required, notes, budget, hours_type, lead_picked_time, day_type } = req.body;
   const leadId = req.params.id;
   
   // Check if lead exists and user has permission to edit
@@ -296,8 +296,8 @@ router.put('/:id', auth, authorize('leads','update'), async (req, res) => {
     
     // Update the lead
     db.query(
-      'UPDATE leads SET name = ?, company_name = ?, email = ?, phone = ?, city = ?, state = ?, source = ?, service_required = ?, notes = ?, updated_at = NOW() WHERE id = ?',
-      [name, company_name, email, phone, city, state, source, service_required, notes, leadId],
+      'UPDATE leads SET name = ?, company_name = ?, email = ?, phone = ?, city = ?, state = ?, source = ?, service_required = ?, notes = ?, budget = ?, hours_type = ?, lead_picked_time = ?, day_type = ?, updated_at = NOW() WHERE id = ?',
+      [name, company_name, email, phone, city, state, source, service_required, notes, budget || null, hours_type || null, lead_picked_time || null, day_type || null, leadId],
       (err2, result) => {
         if (err2) return res.status(500).json(err2);
         res.json({ message: 'Lead updated successfully' });

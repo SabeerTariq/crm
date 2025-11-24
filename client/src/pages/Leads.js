@@ -53,6 +53,10 @@ export default function Leads() {
     source: '',
     service_required: '',
     notes: '',
+    budget: '',
+    hours_type: '',
+    lead_picked_time: '',
+    day_type: '',
   });
   const [scheduleData, setScheduleData] = useState({
     schedule_date: '',
@@ -163,7 +167,11 @@ export default function Leads() {
         state: '', 
         source: '', 
         service_required: '', 
-        notes: ''
+        notes: '',
+        budget: '',
+        hours_type: '',
+        lead_picked_time: '',
+        day_type: ''
       });
       setShowAddForm(false);
       // Refresh leads list
@@ -186,6 +194,10 @@ export default function Leads() {
       source: lead.source || '',
       service_required: lead.service_required || '',
       notes: lead.notes || '',
+      budget: lead.budget || '',
+      hours_type: lead.hours_type || '',
+      lead_picked_time: lead.lead_picked_time || '',
+      day_type: lead.day_type || '',
     });
     setShowEditForm(true);
   };
@@ -482,7 +494,11 @@ export default function Leads() {
         state: '', 
         source: '', 
         service_required: '', 
-        notes: ''
+        notes: '',
+        budget: '',
+        hours_type: '',
+        lead_picked_time: '',
+        day_type: ''
       });
       // Refresh leads list
       loadLeads();
@@ -1104,14 +1120,57 @@ export default function Leads() {
                 onChange={handleFormChange} 
                 style={inputStyle}
               />
-              <input 
-                type="text" 
+              <select 
                 name="source" 
-                placeholder="Source (e.g. Facebook, Web)" 
                 value={formData.source} 
                 onChange={handleFormChange} 
                 style={inputStyle}
+              >
+                <option value="">Select Source</option>
+                <option value="Bark Picked">Bark Picked</option>
+                <option value="Bark Scrapped">Bark Scrapped</option>
+                <option value="Linkedin">Linkedin</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Others">Others</option>
+              </select>
+              <input 
+                type="number" 
+                name="budget" 
+                placeholder="Budget" 
+                value={formData.budget} 
+                onChange={handleFormChange} 
+                style={inputStyle}
+                min="0"
+                step="0.01"
               />
+              <select 
+                name="hours_type" 
+                value={formData.hours_type} 
+                onChange={handleFormChange} 
+                style={inputStyle}
+              >
+                <option value="">Select Hours Type</option>
+                <option value="Rush hours">Rush hours</option>
+                <option value="Normal hours">Normal hours</option>
+              </select>
+              <input 
+                type="time" 
+                name="lead_picked_time" 
+                placeholder="Lead Picked Time" 
+                value={formData.lead_picked_time} 
+                onChange={handleFormChange} 
+                style={inputStyle}
+              />
+              <select 
+                name="day_type" 
+                value={formData.day_type} 
+                onChange={handleFormChange} 
+                style={inputStyle}
+              >
+                <option value="">Select Day Type</option>
+                <option value="Weekend">Weekend</option>
+                <option value="Weekdays">Weekdays</option>
+              </select>
                 <input 
                   type="text" 
                   name="service_required" 
@@ -1298,9 +1357,49 @@ export default function Leads() {
                   style={inputStyle}
                 >
                   <option value="">Select Source</option>
-                  {filterOptions.sources.map(source => (
-                    <option key={source} value={source}>{source}</option>
-                  ))}
+                  <option value="Bark Picked">Bark Picked</option>
+                  <option value="Bark Scrapped">Bark Scrapped</option>
+                  <option value="Linkedin">Linkedin</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="Others">Others</option>
+                </select>
+                <input 
+                  type="number" 
+                  name="budget" 
+                  placeholder="Budget" 
+                  value={formData.budget} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                  min="0"
+                  step="0.01"
+                />
+                <select 
+                  name="hours_type" 
+                  value={formData.hours_type} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                >
+                  <option value="">Select Hours Type</option>
+                  <option value="Rush hours">Rush hours</option>
+                  <option value="Normal hours">Normal hours</option>
+                </select>
+                <input 
+                  type="time" 
+                  name="lead_picked_time" 
+                  placeholder="Lead Picked Time" 
+                  value={formData.lead_picked_time} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                />
+                <select 
+                  name="day_type" 
+                  value={formData.day_type} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                >
+                  <option value="">Select Day Type</option>
+                  <option value="Weekend">Weekend</option>
+                  <option value="Weekdays">Weekdays</option>
                 </select>
                 <input 
                   type="text" 
