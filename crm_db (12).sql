@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 24, 2025 at 09:56 PM
+-- Generation Time: Nov 27, 2025 at 01:04 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -138,11 +138,11 @@ CREATE TABLE `chargeback_refund_audit` (
   `id` int(11) NOT NULL,
   `chargeback_refund_id` int(11) NOT NULL,
   `action` enum('created','updated','status_changed','processed') NOT NULL,
-  `old_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`old_values`)),
-  `new_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`new_values`)),
+  `old_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `new_values` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `performed_by` int(11) NOT NULL,
   `performed_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ;
 
 --
 -- Dumping data for table `chargeback_refund_audit`
@@ -414,14 +414,20 @@ CREATE TABLE `leads` (
   `id` int(11) NOT NULL,
   `name` varchar(100) DEFAULT NULL,
   `company_name` varchar(255) DEFAULT NULL,
+  `nature_of_business` varchar(255) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
+  `business_email` varchar(100) DEFAULT NULL,
+  `business_description` text DEFAULT NULL,
   `phone` varchar(20) DEFAULT NULL,
+  `business_number` varchar(20) DEFAULT NULL,
   `city` varchar(100) DEFAULT NULL,
   `state` varchar(100) DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `zip_code` varchar(20) DEFAULT NULL,
   `service_required` text DEFAULT NULL,
   `source` varchar(100) DEFAULT NULL,
   `notes` text DEFAULT NULL,
-  `budget` decimal(10,2) DEFAULT NULL,
+  `budget` varchar(255) DEFAULT NULL,
   `hours_type` enum('Rush hours','Normal hours') DEFAULT NULL,
   `lead_picked_time` time DEFAULT NULL,
   `day_type` enum('Weekend','Weekdays') DEFAULT NULL,
@@ -438,11 +444,87 @@ CREATE TABLE `leads` (
 -- Dumping data for table `leads`
 --
 
-INSERT INTO `leads` (`id`, `name`, `company_name`, `email`, `phone`, `city`, `state`, `service_required`, `source`, `notes`, `budget`, `hours_type`, `lead_picked_time`, `day_type`, `assigned_to`, `created_by`, `converted_by`, `is_converted`, `converted_at`, `created_at`, `updated_at`) VALUES
-(117, 'Griffith Maldonado', 'Washington and Callahan LLC', 'lonewogil@mailinator.com', '+1 (223) 541-3869', 'Consequatur quo plac', 'Qui est culpa nequ', 'Ducimus odio est nu', 'Consequatur eveniet', 'Accusamus aut fuga ', NULL, NULL, NULL, NULL, 7, 7, NULL, 0, NULL, '2025-10-30 22:05:39', '2025-10-30 22:05:39'),
-(119, 'Edie Israel', 'www.ediesellshomes.com', 'edie@edieisraelteam.com', '714-623-3543', '4945 Yorba Ranch Rd. #C Yorba Linda CA 92887', 'California', 'Social Media Marketing', 'Bark', 'Advertise your business product or service, Build your business brand visibility, Gain followers for your business account, Gain followers for your personal account\n', NULL, NULL, NULL, NULL, 19, 19, NULL, 0, NULL, '2025-11-14 20:13:00', '2025-11-14 20:13:00'),
-(120, 'Lily', '', 'j892li@outlook.com', '2268084516', 'Burnaby, British Columbia, Canada', '', 'Web Design', 'LinkedIn', '\"I’m looking for a creative, motivated web / visual designer to collaborate on the full branding / website package — including logo design, color palette, typography, website layout and the launch of the website. * This is a paid contract work on a personal client project * Who I’m looking for • Proficient in Figma, Adobe XD, or similar design tools • Peoficient in front-end implementation (HTML/CSS) and using different web tools \"\n', NULL, NULL, NULL, NULL, 6, 6, NULL, 0, NULL, '2025-11-14 20:14:32', '2025-11-14 20:14:32'),
-(121, 'Nicholas', '', 'ntrolli@comcast.net', '(941) 423-9907', 'Georgetown, KY, 40324', '', 'Graphic Design', 'Bark Scrapped', 'Need a designer to help with a marketing piece. And someone to continue to create the advertisements on that our advertising venue. Less than $500\n', NULL, NULL, NULL, NULL, 18, 18, NULL, 0, NULL, '2025-11-14 20:15:50', '2025-11-14 20:15:50');
+INSERT INTO `leads` (`id`, `name`, `company_name`, `nature_of_business`, `email`, `business_email`, `business_description`, `phone`, `business_number`, `city`, `state`, `country`, `zip_code`, `service_required`, `source`, `notes`, `budget`, `hours_type`, `lead_picked_time`, `day_type`, `assigned_to`, `created_by`, `converted_by`, `is_converted`, `converted_at`, `created_at`, `updated_at`) VALUES
+(117, 'Griffith Maldonado', 'Washington and Callahan LLC', NULL, 'lonewogil@mailinator.com', NULL, NULL, '+1 (223) 541-3869', NULL, 'Consequatur quo plac', 'Qui est culpa nequ', NULL, NULL, 'Ducimus odio est nu', 'Consequatur eveniet', 'Accusamus aut fuga ', NULL, NULL, NULL, NULL, 7, 7, NULL, 0, NULL, '2025-10-30 22:05:39', '2025-10-30 22:05:39'),
+(119, 'Edie Israel', 'www.ediesellshomes.com', NULL, 'edie@edieisraelteam.com', NULL, NULL, '714-623-3543', NULL, '4945 Yorba Ranch Rd. #C Yorba Linda CA 92887', 'California', NULL, NULL, 'Social Media Marketing', 'Bark', 'Advertise your business product or service, Build your business brand visibility, Gain followers for your business account, Gain followers for your personal account\n', NULL, NULL, NULL, NULL, 19, 19, NULL, 0, NULL, '2025-11-14 20:13:00', '2025-11-14 20:13:00'),
+(120, 'Lily', '', NULL, 'j892li@outlook.com', NULL, NULL, '2268084516', NULL, 'Burnaby, British Columbia, Canada', '', NULL, NULL, 'Web Design', 'LinkedIn', '\"I’m looking for a creative, motivated web / visual designer to collaborate on the full branding / website package — including logo design, color palette, typography, website layout and the launch of the website. * This is a paid contract work on a personal client project * Who I’m looking for • Proficient in Figma, Adobe XD, or similar design tools • Peoficient in front-end implementation (HTML/CSS) and using different web tools \"\n', NULL, NULL, NULL, NULL, 6, 6, NULL, 0, NULL, '2025-11-14 20:14:32', '2025-11-14 20:14:32'),
+(121, 'Nicholas', '', NULL, 'ntrolli@comcast.net', NULL, NULL, '(941) 423-9907', NULL, 'Georgetown, KY, 40324', '', NULL, NULL, 'Graphic Design', 'Bark Scrapped', 'Need a designer to help with a marketing piece. And someone to continue to create the advertisements on that our advertising venue. Less than $500\n', NULL, NULL, NULL, NULL, 18, 18, NULL, 0, NULL, '2025-11-14 20:15:50', '2025-11-14 20:15:50'),
+(123, 'Monique Bailey ', '', NULL, 'moniquebailey@baileybillingandnotary.com', NULL, NULL, '(216) 714-2844', NULL, 'Dayton', 'Ohio', NULL, NULL, 'Web Design', 'Facebook', 'Looking for website designers put you information in the comments', NULL, NULL, NULL, NULL, 6, 6, NULL, 0, NULL, '2025-11-24 23:28:56', '2025-11-24 23:29:26'),
+(124, 'Nancy Cloutier', 'SVP, Data & Analytics @G2O', NULL, 'ncloutier46@gmail.com', NULL, NULL, '', NULL, 'Columbus', ' Ohio', NULL, NULL, 'Shopify', 'Linkedin', 'https://www.linkedin.com/in/nancy-cloutier-6a7ab87/	Currently looking for a Shopify Headless Commerce lead for a great client. If you know anyone please send my way. ', NULL, 'Rush hours', '22:24:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 17:24:55', '2025-11-25 17:24:55'),
+(125, 'Matt Behrnes', '', NULL, 'mattbehrnes@gmail.com', NULL, NULL, '(559) 824-4215', NULL, 'Virginia Beach', 'Virginia', NULL, NULL, 'Website', 'Linkedin', 'https://www.linkedin.com/in/matt-behrnes/	Hi everyone, I’m currently looking for a web designer (freelance preferably) with experience in building professional service websites. Ideally, someone who understands how to create a site that is:Clean, modern, and mobile-friendlyOptimized for lead generation (forms, calls-to-action, booking tools)Tailored for a local service business (electrical contracting in Hampton Roads, VA.)If you or someone in your network has the skills and availability, I’d love to connect. This is to help a friend out with his local business and updating his current situation. Please drop a comment below or send me a direct message. Thanks in advance for any referrals or introductions!', NULL, 'Rush hours', '22:42:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 17:42:38', '2025-11-25 17:42:38'),
+(126, 'Kevin', 'spirantoscucina.com', NULL, 'kevin@spirantoscucina.com', NULL, NULL, '(210) 254-9326', NULL, 'San Antonio', 'Texas', NULL, NULL, 'SMM', 'Bark Scrapped', 'We would like to set up a facebook, instagram and tiktok page for our new italian restaurant. We would like to increase visibility, exposure and online presence.\n', '500.00', NULL, '23:15:00', 'Weekdays', 6, 6, NULL, 0, NULL, '2025-11-25 18:26:08', '2025-11-25 18:26:08'),
+(127, 'Cyndi Phan Lock', 'https://www.iambrace.com/', NULL, 'Beautybycyn@iambrace.com', NULL, NULL, '(501)909-2119', NULL, 'Little Rock', 'AR', NULL, NULL, 'Web Design', 'Facebook', 'Do yall have recommendations on Web designers 🙏 I’m tired of doing it on my own\n', NULL, NULL, '22:20:00', 'Weekdays', 6, 6, NULL, 0, NULL, '2025-11-25 18:27:31', '2025-11-25 18:27:31'),
+(128, 'Courtenay Lewis', '', NULL, 'courtenay@saladproject.co.uk', NULL, NULL, '(559) 824-4215', NULL, 'London,', ' England,', NULL, NULL, 'Website', 'Linkedin', 'https://www.saladproject.co.uk/	https://www.linkedin.com/in/courtenay-lewis-014349163/	Calling all creative agencies & web dev studiosThe Salad Project is gearing up for a full website revamp - a complete redesign that feels more expressive, more premium, and more distinctly us. We’re looking to connect with teams who genuinely live and breathe elevated digital experiences and can help bring that vision to life.We’re imagining a site built around: 🥗 Strong, coherent brand storytelling 🥗 Elevated visual and motion design 🥗 A distinct, premium feel that’s unmistakably ours 🥗 A truly collaborative partnership - one that brings as many ideas to the table as we do. There’s huge potential for this project, and we want to run with it.If this sounds up your street, or if you know a studio we should have on our radar, drop a recommendation or get in touch. Always keen to meet people doing exciting work.', NULL, 'Rush hours', '23:29:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 18:28:50', '2025-11-25 18:29:55'),
+(129, 'Mehak Sachdeva', '', NULL, 'themagency8@gmail.com', NULL, NULL, '', NULL, 'Dubai, ', 'United Arab Emirates', NULL, NULL, 'App', 'Linkedin', 'https://www.linkedin.com/in/mehak-sachdeva-53537017/	Looking for app developers urgently. Please share your profiles at', NULL, 'Rush hours', '00:32:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 19:32:35', '2025-11-25 19:32:35'),
+(130, 'kelby baker', 'thecoldsyrup.com', NULL, 'info@thecoldsyrup.com', NULL, NULL, '14327702694', NULL, 'Norman', 'Oklahoma', NULL, NULL, 'Website ', 'Facebook', 'https://thecoldsyrup.com/	https://www.facebook.com/kelby.baker.14	I’m looking for someone who is skilled at WebFlow or JS to develop this website for me. I have the design finished in Figma, just looking for a front end developer with a few integrations like mail service. Money is good.', NULL, 'Rush hours', '00:55:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 19:55:39', '2025-11-25 19:55:39'),
+(131, 'Marissa Vogelsang', '', NULL, 'marissa@alignedgrowthmanagement.com', NULL, NULL, '12173693771', NULL, 'San Diego', 'California', NULL, NULL, 'Video Edit', 'Linkedin', 'https://www.linkedin.com/in/marissavogelsang/	ISO: video editor referrals 📽️ We\'re looking for a contract / freelance video editor with a track record of making high-performance ads for DTC brands (Meta and TikTok) Grateful for your recommendations! If this is you, please shoot me a DM with a sample', NULL, 'Rush hours', '01:31:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 20:31:34', '2025-11-25 20:31:34'),
+(132, 'Aylar Macky', '', NULL, 'aylar.macky@huma.com', NULL, NULL, '', NULL, 'Orange County', 'California', NULL, NULL, 'SEO', 'Linkedin', 'https://www.linkedin.com/in/aylarmacky/	Im looking for someone to help me with SEO for small business. Preferably someone who has experience in health industry or has worked with physicians. DM ME. ', NULL, 'Rush hours', '01:32:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 20:32:16', '2025-11-25 20:32:16'),
+(133, 'David Oldham', '', NULL, 'dave@lumics.io', NULL, NULL, '18019384849', NULL, 'South Jordan, ', 'Utah', NULL, NULL, 'App', 'Linkedin', 'https://www.linkedin.com/in/daveoldham/	Who are the best mobile app developers and mobile UI/UX designers you know?Looking for individuals, not agencies or companies.', NULL, 'Normal hours', '01:39:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 20:40:26', '2025-11-25 20:40:26'),
+(134, 'Tiffanie', 'txreco.com', NULL, 'tiffanie@txreco.com', NULL, NULL, '(718) 303-3738', NULL, 'Houston', 'Texas', NULL, NULL, 'SMM', 'Bark Scrapped', 'Want to hire someone to create social media posts about the event venue that we have that allows, our guest to sleep on the property and also host an event.\n\n', NULL, NULL, NULL, NULL, 6, 6, NULL, 0, NULL, '2025-11-25 21:21:37', '2025-11-25 23:51:23'),
+(135, 'Sam Thiara MA', '', NULL, 'asthiara@shaw.ca', NULL, NULL, '', NULL, 'North Vancouver, British Columbia', 'Canada', NULL, NULL, '2D animation ', 'Linkedin', 'https://www.linkedin.com/redir/redirect/?url=http%3A%2F%2Fsam-thiara.com&urlhash=vnor&isSdui=true&lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BXKEOQIogQSe6vrR%2BeBY0tw%3D%3D	https://www.linkedin.com/in/sthiara/	Request for help (please note that I will only respond to people in my network already): I’m reaching out to my community because I’m currently developing a short 2D animated film titled Lonely-Less, which explores the growing issue of loneliness and isolation among seniors in care facilities. The project aims to raise awareness, spark conversation, and bring empathy to a topic that affects so many families and communities.The screenplay is done so if you are connected to, or can introduce me to any animation studios, freelance animators, or production companies that specialize in 2D animation, I would truly appreciate it. I’m looking for partners who resonate with the message and can help bring this meaningful story to life.Thank you in advance for any connections, leads, or suggestions you can share.', NULL, 'Rush hours', '02:27:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 21:27:49', '2025-11-25 21:27:49'),
+(136, 'Damien Stone ', 'stonehardboxing.com', NULL, 'dstone30now@yahoo.com', NULL, NULL, '(602) 751-0030', NULL, 'Tempe, ', 'Arizona', NULL, NULL, 'Website', 'Facebook', 'https://www.facebook.com/damien.stone.167	Looking for a good web designer. Not a web design company. See if you can hit me up before the holidays', NULL, 'Rush hours', '02:28:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 21:28:50', '2025-11-25 21:28:50'),
+(137, 'Kyle ', 'ussantelectric.net ', NULL, 'Kyle@ussantelectric.net', NULL, NULL, '(401) 636-2101', NULL, 'Cumberland', 'RI, 02864', NULL, NULL, 'General Software Development', 'Bark Scrapped', 'To create a custom project management software. It\'s for Construction business.\n', NULL, 'Normal hours', '18:02:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:33:00', '2025-11-26 18:33:00'),
+(138, 'Monica', 'sunstonemontessori.org', NULL, 'mwright@sunstonemontessori.org', NULL, NULL, '(503) 768-3847', NULL, 'Portland', 'OR, 97206', NULL, NULL, 'Web Design', 'Bark Scrapped', 'Make changes to my current WordPress website. \nCurrent website needs renovation to make it more current, particularly the home page. Want to drive enrollment to our middle school. We serve ages 16 months -15 years. SEO as well.', '0.00', 'Rush hours', '20:26:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:38:33', '2025-11-26 18:38:48'),
+(139, 'Lauren Stinson ', 'shopcozy101', NULL, 'Lms@shopcozy101.com', NULL, NULL, '(313) 330-8842', NULL, 'Detroit', 'Michigan', NULL, NULL, 'Web Design', 'Facebook', 'Good morning. In need of a web designer as soon as possible! Please send recommendations.\n\nwww.getcozy101.com\n', NULL, 'Rush hours', '20:57:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:40:38', '2025-11-26 18:40:38'),
+(140, 'Sharon Franks', '', NULL, 'symonesflc@yahoo.com', NULL, NULL, '(816) 812-2914 ', NULL, 'Grandview', 'Missouri', NULL, NULL, 'Publishing ', 'Facebook', 'Hey everyone I\'m actually looking for someone to help me publish my book I also need a cover.\n', NULL, 'Rush hours', '01:00:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:42:34', '2025-11-26 18:47:31'),
+(141, 'Tyrance', '', NULL, 'tyrancelewis@yahoo.com', NULL, NULL, '(225) 450-5260', NULL, 'Gonzales', 'LA, 70737', NULL, NULL, ' Web Design ', 'Facebook', 'Make changes to my current Wix website. \n', NULL, 'Normal hours', '16:59:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:42:34', '2025-11-26 18:42:34'),
+(142, 'Dmytro Uzundai', '', NULL, 'dmytro@blazesoft.ca', NULL, NULL, '', NULL, 'Toronto, Ontario', 'Canada', NULL, NULL, 'UX/UI designer', 'Linkedin', 'https://www.linkedin.com/in/duzundai/	We\'re looking for an experienced UX/UI designer to create an outstanding casino/sportsbook website. Past iGaming experience is a must.You will work remotely and have freedom to create something special, a product to be proud of.Please, share/tag anyone you\'d recommend, DM to review portfolio and discuss the opportunity.Activate to view larger image,', '0.00', 'Rush hours', '23:45:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 18:45:25', '2025-11-26 18:45:25'),
+(143, 'Xenia S', '', NULL, 'xeniasapanidi@gmail.com', NULL, NULL, '442074904332', NULL, 'London Area', 'United Kingdom', NULL, NULL, 'Web Flow', 'Linkedin', 'https://www.linkedin.com/in/xeniasapanidi/	Good morning people! 🌄 Who recommends a good Webflow freelance web developer? Essentially, JavaScript, CSS and HTML?', NULL, 'Rush hours', '23:46:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 18:46:39', '2025-11-26 18:46:39'),
+(144, 'Akaash Nazir', '', NULL, 'akaashbusiness@outlook.com', NULL, NULL, '', NULL, '', 'United Kingdom', NULL, NULL, 'App', 'Linkedin', 'https://www.linkedin.com/in/akaash-nazir-899a8020a/	I am looking to hire a software developer who has experience building apps using AI tools, please DM me.Experience in UI & UXExperience in SaaS preferably Experience in Marketplaces preferably Experience using AI toolsThank you!', NULL, 'Rush hours', '23:47:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 18:47:25', '2025-11-26 18:47:25'),
+(145, 'Lilian S', 'https://www.alilbitofbiz.com/', NULL, 'lilian@alilbitofbiz.com', NULL, NULL, ' (812) 216-5570', NULL, 'Carmel', 'Indiana', NULL, NULL, 'SMM', 'Linkedin', 'https://www.linkedin.com/in/lilian-s-177973161/	Hi friends,I’m currently looking for experienced contract/freelance social media professionals to support content creation and digital strategy. They should be flexible, collaborative, and highly detail-oriented, with strong hands-on experience in content creation — particularly video (beyond basic Canva use).Bonus points if they’ve worked in a salon or beauty-adjacent environment!If you know someone who might be a great fit, please send them my way. I’d love to connect.', NULL, 'Rush hours', '23:48:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 18:48:27', '2025-11-26 18:48:27'),
+(146, 'Damien Stone ', '', NULL, 'dantestone6699@yahoo.com', NULL, NULL, '(602) 751-0030 ', NULL, 'Tempe', 'AZ 85282', NULL, NULL, 'Web Design', 'Facebook', 'Looking for a good web designer. Not a web design company. See if you can hit me up before the holidays.\n', '0.00', 'Rush hours', '00:31:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:49:06', '2025-11-26 18:49:06'),
+(147, 'Tatiana Rodriguez', '', NULL, 'tatirodriguez717@yahoo.com', NULL, NULL, '(717) 454-1338', NULL, 'Lebanon', 'PA 17042', NULL, NULL, 'Illustration', 'Facebook', 'I’m looking for a talented illustrator to bring a 10-page children’s book to life, including a front and back cover, with a turnaround time of about one month.\nThis project covers a sensitive but gentle topic — a metaphorical story about grooming awareness. I already have the full storyline written, along with examples of the style I’m looking for, including character concepts and scenery references.\nAs a public survivor of child exploitation, my mission is to create safe, age-appropriate tools for children and families. I also participate in pageants to raise awareness about human trafficking and to showcase healing through the arts.\nMy goal is to publish this book and begin a statewide tour in January 2026. If you or someone you know specializes in warm, expressive, child-friendly illustration, I’d love to connect.\n', NULL, 'Rush hours', '23:55:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:50:49', '2025-11-26 18:56:49'),
+(148, 'Maria Ponsoda', 'https://seoriginalsweb.com/', NULL, 'info@seoriginalsweb.com', NULL, NULL, '34669083170', NULL, ' Valencian Community', 'Spain', NULL, NULL, 'Website', 'Linkedin', 'https://www.linkedin.com/in/maria-ponsoda-seoriginalsweb/	I\'m looking for a WordPress website builder (Divi) — Continuous collaborationHello, I\'m María Ponsoda. I\'ve been creating websites with a soul for years and now I\'m looking for someone to help me shape everything I have in my hands.I\'m looking for a website builder with experience in WordPress + Divi. Someone careful, tidy and with an eye for detail, who enjoys leaving a beautiful, balanced and well-finished website.You don\'t need to design in Figma; I am in charge of the creative direction. I just want someone who can transform my structures, ideas, and references into clean, coherent, and visually pleasing pages.👉 What I\'d like to find:- Experience in layout with Divi- Aesthetic sensitivity- Good responsive control- Clear communication and willingness to work well👉 What would we do together?- Layout of pages and internal sections- Visual adjustments- Content upload- Small technical improvements within DiviIf you think we can fit in and would like to collaborate with me, write to me by message or at:📧 info@seoriginalsweb.comI\'d love to read you ✨', NULL, 'Rush hours', '23:55:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 18:55:14', '2025-11-26 18:55:14'),
+(149, 'Art Barnes', 'Golf Gifts 4 U', NULL, 'betheball27@gmail.com', NULL, NULL, '(678) 773-4251', NULL, 'Canton', 'GA, 30115 ', NULL, NULL, 'Web Design', 'Bark Picked', 'we work in wordpress with elementor pro, need help on some of our custom pages\n\nNovember 4, 7:50 PM', NULL, 'Normal hours', '19:50:00', 'Weekdays', 21, 21, NULL, 0, NULL, '2025-11-26 18:55:34', '2025-11-26 18:55:34'),
+(150, 'Eric MacDougall', 'https://ericmacdougall.com/', NULL, 'ericmacdougall@nitrograph.com', NULL, NULL, '', NULL, 'British Columbia, ', 'Canada', NULL, NULL, 'react native dev', 'Linkedin', 'https://www.linkedin.com/in/ericmacdougall/	Looking for a react native dev that is extremely efficient at shipping with ai tools, excellent with design and ui, and can create engaging / animated and game interfaces.', NULL, 'Rush hours', '01:34:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 20:34:26', '2025-11-26 20:34:26'),
+(151, 'Kate Justet Triplett ', '', NULL, 'kate_triplett@yahoo.com', NULL, NULL, '(425 ) 308-8967', NULL, 'Snohomish-Monroe ', 'Washington area', NULL, NULL, 'Website', 'Facebook', 'https://www.facebook.com/kate.triplett.1	Looking for a GOOD, LOCAL (ie Snohomish-Monroe Washington area) web designer. Need a new site for our business, already have the domain and hosting. Fresh site for a new product line, I’m not conversant enough with Wordpress to do this myself.', NULL, 'Rush hours', '01:35:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 20:35:31', '2025-11-26 20:35:31'),
+(152, 'Herman Whitney', 'Russo Gentry Associates', 'Soluta nobis dolor r', 'dawigom@mailinator.com', 'suvuto@mailinator.com', 'Cumque magni nostrum', '+1 (121) 564-1828', '535', 'Veniam aliquip quam', 'Iusto aut accusantiu', 'Voluptatem At sunt', '68401', 'Sed labore occaecat ', 'Bark Scrapped', 'Nemo cupiditate iure', '$100-500', 'Rush hours', NULL, 'Weekend', 1, 1, NULL, 0, NULL, '1983-05-04 04:41:00', '2025-11-27 00:03:29'),
+(153, 'Lila Padilla', 'West Roth Co', 'Quo sit aute qui qui', 'homydasuqo@mailinator.com', 'vucine@mailinator.com', 'Ratione est dolorib', '+1 (843) 477-1951', '664', 'Eius cumque aut omni', 'Qui deleniti qui ips', 'Sint nulla est saepe', '54013', 'Repudiandae laborios', 'Facebook', 'Dolor iusto facilis ', '0.00', 'Rush hours', NULL, 'Weekend', 1, 1, NULL, 0, NULL, '1972-01-28 03:22:00', '2025-11-26 23:58:59');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lead_clicks`
+--
+
+CREATE TABLE `lead_clicks` (
+  `id` int(11) NOT NULL,
+  `lead_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `click_type` enum('email','phone','business_email','business_phone') NOT NULL,
+  `clicked_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lead_clicks`
+--
+
+INSERT INTO `lead_clicks` (`id`, `lead_id`, `user_id`, `click_type`, `clicked_at`) VALUES
+(19, 151, 1, 'email', '2025-11-26 23:54:48'),
+(20, 151, 1, 'phone', '2025-11-26 23:54:50'),
+(21, 152, 1, 'email', '2025-11-26 23:56:05'),
+(23, 152, 1, 'email', '2025-11-27 00:00:38'),
+(22, 152, 1, 'phone', '2025-11-26 23:56:07'),
+(24, 152, 1, 'phone', '2025-11-27 00:00:39'),
+(25, 152, 1, 'business_email', '2025-11-27 00:00:41'),
+(26, 152, 1, 'business_phone', '2025-11-27 00:00:44');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lead_documents`
+--
+
+CREATE TABLE `lead_documents` (
+  `id` int(11) NOT NULL,
+  `lead_id` int(11) NOT NULL,
+  `file_name` varchar(255) NOT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `file_size` int(11) DEFAULT NULL,
+  `file_type` varchar(100) DEFAULT NULL,
+  `uploaded_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -458,6 +540,13 @@ CREATE TABLE `lead_notes` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lead_notes`
+--
+
+INSERT INTO `lead_notes` (`id`, `lead_id`, `user_id`, `note`, `created_at`, `updated_at`) VALUES
+(7, 149, 21, 'Call scheduled for Wednesday 11:30 am EST', '2025-11-26 18:56:14', '2025-11-26 18:56:14');
 
 -- --------------------------------------------------------
 
@@ -481,7 +570,8 @@ CREATE TABLE `lead_schedules` (
 --
 
 INSERT INTO `lead_schedules` (`id`, `lead_id`, `scheduled_by`, `schedule_date`, `schedule_time`, `scheduled_at`, `created_at`, `updated_at`) VALUES
-(7, 117, 7, '2025-11-01', '05:05:00', '2025-10-30 22:05:54', '2025-10-30 22:05:54', '2025-10-30 22:05:54');
+(7, 117, 7, '2025-11-01', '05:05:00', '2025-10-30 22:05:54', '2025-10-30 22:05:54', '2025-10-30 22:05:54'),
+(9, 149, 21, '2025-12-03', '11:30:00', '2025-11-26 18:58:37', '2025-11-26 18:58:37', '2025-11-26 18:58:37');
 
 -- --------------------------------------------------------
 
@@ -515,7 +605,38 @@ INSERT INTO `lead_tracking` (`id`, `user_id`, `lead_id`, `action`, `created_at`)
 (227, 19, 119, 'created', '2025-11-14 20:13:00'),
 (228, 6, 120, 'created', '2025-11-14 20:14:32'),
 (229, 18, 121, 'created', '2025-11-14 20:15:50'),
-(230, 1, 122, 'created', '2025-11-24 20:52:54');
+(230, 1, 122, 'created', '2025-11-24 20:52:54'),
+(231, 6, 123, 'created', '2025-11-24 23:28:56'),
+(232, 31, 124, 'created', '2025-11-25 17:24:55'),
+(233, 31, 125, 'created', '2025-11-25 17:42:38'),
+(234, 6, 126, 'created', '2025-11-25 18:26:08'),
+(235, 6, 127, 'created', '2025-11-25 18:27:31'),
+(236, 31, 128, 'created', '2025-11-25 18:28:50'),
+(237, 31, 129, 'created', '2025-11-25 19:32:35'),
+(238, 31, 130, 'created', '2025-11-25 19:55:39'),
+(239, 31, 131, 'created', '2025-11-25 20:31:34'),
+(240, 31, 132, 'created', '2025-11-25 20:32:16'),
+(241, 31, 133, 'created', '2025-11-25 20:40:26'),
+(242, 6, 134, 'created', '2025-11-25 21:21:37'),
+(243, 31, 135, 'created', '2025-11-25 21:27:49'),
+(244, 31, 136, 'created', '2025-11-25 21:28:50'),
+(245, 18, 137, 'created', '2025-11-26 18:33:00'),
+(246, 18, 138, 'created', '2025-11-26 18:38:33'),
+(247, 18, 139, 'created', '2025-11-26 18:40:38'),
+(248, 18, 140, 'created', '2025-11-26 18:42:34'),
+(249, 18, 141, 'created', '2025-11-26 18:42:34'),
+(250, 31, 142, 'created', '2025-11-26 18:45:25'),
+(251, 31, 143, 'created', '2025-11-26 18:46:39'),
+(252, 31, 144, 'created', '2025-11-26 18:47:25'),
+(253, 31, 145, 'created', '2025-11-26 18:48:27'),
+(254, 18, 146, 'created', '2025-11-26 18:49:06'),
+(255, 18, 147, 'created', '2025-11-26 18:50:49'),
+(256, 31, 148, 'created', '2025-11-26 18:55:14'),
+(257, 21, 149, 'created', '2025-11-26 18:55:34'),
+(258, 31, 150, 'created', '2025-11-26 20:34:26'),
+(259, 31, 151, 'created', '2025-11-26 20:35:31'),
+(260, 1, 152, 'created', '2025-11-26 23:54:42'),
+(261, 1, 153, 'created', '2025-11-26 23:58:59');
 
 -- --------------------------------------------------------
 
@@ -680,9 +801,11 @@ INSERT INTO `monthly_lead_stats` (`id`, `user_id`, `year`, `month`, `leads_added
 (51, 8, 2025, 11, 0, 1, '2025-11-12 17:50:13', '2025-11-12 17:50:13'),
 (52, 7, 2025, 11, 0, 1, '2025-11-12 17:50:13', '2025-11-12 17:50:13'),
 (53, 19, 2025, 11, 1, 0, '2025-11-14 20:13:00', '2025-11-14 20:13:00'),
-(54, 6, 2025, 11, 1, 0, '2025-11-14 20:14:32', '2025-11-14 20:14:32'),
-(55, 18, 2025, 11, 1, 0, '2025-11-14 20:15:50', '2025-11-14 20:15:50'),
-(56, 1, 2025, 11, 1, 0, '2025-11-24 20:52:54', '2025-11-24 20:52:54');
+(54, 6, 2025, 11, 5, 0, '2025-11-14 20:14:32', '2025-11-25 21:21:37'),
+(55, 18, 2025, 11, 8, 0, '2025-11-14 20:15:50', '2025-11-26 18:50:49'),
+(56, 1, 2025, 11, 3, 0, '2025-11-24 20:52:54', '2025-11-26 23:58:59'),
+(57, 31, 2025, 11, 17, 0, '2025-11-25 17:24:55', '2025-11-26 20:35:31'),
+(58, 21, 2025, 11, 1, 0, '2025-11-26 18:55:34', '2025-11-26 18:55:34');
 
 -- --------------------------------------------------------
 
@@ -1127,7 +1250,8 @@ CREATE TABLE `reminders` (
 
 INSERT INTO `reminders` (`id`, `user_id`, `title`, `description`, `reminder_date`, `reminder_time`, `is_all_day`, `priority`, `status`, `created_at`, `updated_at`) VALUES
 (15, 7, 'Call with Griffith Maldonado (Washington and Callahan LLC)', 'Scheduled call with lead: Griffith Maldonado\nCompany: Washington and Callahan LLC\nPhone: +1 (223) 541-3869\nEmail: lonewogil@mailinator.com', '2025-11-01', '05:05:00', 0, 'medium', 'pending', '2025-10-30 22:05:54', '2025-10-30 22:05:54'),
-(16, 7, 'Call with Clio Jensen (Powell Cox Plc)', 'Scheduled call with lead: Clio Jensen\nCompany: Powell Cox Plc\nPhone: +1 (562) 433-2837\nEmail: qinyfo@mailinator.com', '2025-10-31', '05:03:00', 0, 'medium', 'pending', '2025-10-31 00:03:43', '2025-10-31 00:03:43');
+(16, 7, 'Call with Clio Jensen (Powell Cox Plc)', 'Scheduled call with lead: Clio Jensen\nCompany: Powell Cox Plc\nPhone: +1 (562) 433-2837\nEmail: qinyfo@mailinator.com', '2025-10-31', '05:03:00', 0, 'medium', 'pending', '2025-10-31 00:03:43', '2025-10-31 00:03:43'),
+(17, 21, 'Call with Art Barnes (Golf Gifts 4 U)', 'Scheduled call with lead: Art Barnes\nCompany: Golf Gifts 4 U\nPhone: (678) 773-4251\nEmail: betheball27@gmail.com', '2025-12-03', '11:30:00', 0, 'medium', 'pending', '2025-11-26 18:58:37', '2025-11-26 18:58:37');
 
 -- --------------------------------------------------------
 
@@ -2329,8 +2453,11 @@ CREATE TABLE `user_presence` (
 
 INSERT INTO `user_presence` (`user_id`, `status`, `last_seen_at`) VALUES
 (1, 'online', '2025-11-12 23:56:38'),
+(6, 'offline', '2025-11-25 00:40:25'),
 (7, 'online', '2025-11-06 00:51:55'),
 (13, 'online', '2025-11-12 23:56:38'),
+(21, 'offline', '2025-11-26 19:00:32'),
+(31, 'offline', '2025-11-24 23:33:55'),
 (32, 'online', '2025-11-12 22:01:27');
 
 --
@@ -2472,6 +2599,23 @@ ALTER TABLE `leads`
   ADD KEY `assigned_to` (`assigned_to`),
   ADD KEY `fk_leads_created_by` (`created_by`),
   ADD KEY `fk_leads_converted_by` (`converted_by`);
+
+--
+-- Indexes for table `lead_clicks`
+--
+ALTER TABLE `lead_clicks`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_click` (`lead_id`,`user_id`,`click_type`,`clicked_at`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `idx_lead_user_type` (`lead_id`,`user_id`,`click_type`);
+
+--
+-- Indexes for table `lead_documents`
+--
+ALTER TABLE `lead_documents`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_lead_documents_lead` (`lead_id`),
+  ADD KEY `fk_lead_documents_user` (`uploaded_by`);
 
 --
 -- Indexes for table `lead_notes`
@@ -2878,7 +3022,7 @@ ALTER TABLE `chargeback_refunds`
 -- AUTO_INCREMENT for table `chargeback_refund_audit`
 --
 ALTER TABLE `chargeback_refund_audit`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `customers`
@@ -2932,25 +3076,37 @@ ALTER TABLE `invoices`
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=123;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=154;
+
+--
+-- AUTO_INCREMENT for table `lead_clicks`
+--
+ALTER TABLE `lead_clicks`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+
+--
+-- AUTO_INCREMENT for table `lead_documents`
+--
+ALTER TABLE `lead_documents`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `lead_notes`
 --
 ALTER TABLE `lead_notes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `lead_schedules`
 --
 ALTER TABLE `lead_schedules`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `lead_tracking`
 --
 ALTER TABLE `lead_tracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=231;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=262;
 
 --
 -- AUTO_INCREMENT for table `messages`
@@ -2986,7 +3142,7 @@ ALTER TABLE `message_threads`
 -- AUTO_INCREMENT for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
 
 --
 -- AUTO_INCREMENT for table `notifications`
@@ -3058,7 +3214,7 @@ ALTER TABLE `project_tasks`
 -- AUTO_INCREMENT for table `reminders`
 --
 ALTER TABLE `reminders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -3259,6 +3415,20 @@ ALTER TABLE `leads`
   ADD CONSTRAINT `fk_leads_converted_by` FOREIGN KEY (`converted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_leads_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `leads_ibfk_1` FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `lead_clicks`
+--
+ALTER TABLE `lead_clicks`
+  ADD CONSTRAINT `lead_clicks_ibfk_1` FOREIGN KEY (`lead_id`) REFERENCES `leads` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `lead_clicks_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `lead_documents`
+--
+ALTER TABLE `lead_documents`
+  ADD CONSTRAINT `fk_lead_documents_lead` FOREIGN KEY (`lead_id`) REFERENCES `leads` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_lead_documents_user` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `lead_notes`

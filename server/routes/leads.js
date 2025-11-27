@@ -6,6 +6,9 @@ const authorize = require('../middleware/authorize');
 const StatsService = require('../services/statsService');
 const CustomerSalesService = require('../services/customerSalesService');
 const ReminderService = require('../services/reminderService');
+const { uploadMultiple, handleUploadError } = require('../middleware/leadUpload');
+const path = require('path');
+const fs = require('fs');
 
 
 // Get Leads with search and filtering
@@ -84,7 +87,11 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
                u1.name as created_by_name,
                GROUP_CONCAT(DISTINCT u2.name ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as scheduled_by_names,
                GROUP_CONCAT(DISTINCT ls.schedule_date ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_dates,
-               GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times
+               GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times,
+               (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'email') as email_clicks,
+               (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'phone') as phone_clicks,
+               (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'business_email') as business_email_clicks,
+               (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'business_phone') as business_phone_clicks
         FROM leads l
         LEFT JOIN users u1 ON l.created_by = u1.id
         LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
@@ -104,8 +111,8 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
         ${whereClause}
       `;
       
-      // Add userId parameter for schedule filtering and pagination parameters
-      queryParams.push(userId, parseInt(limit), offset);
+      // Add userId parameters for schedule filtering, click counts (4 times for each click type), and pagination
+      queryParams.push(userId, userId, userId, userId, userId, parseInt(limit), offset);
       
       // Execute both queries
       Promise.all([
@@ -147,7 +154,11 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
              u1.name as created_by_name,
              GROUP_CONCAT(DISTINCT u2.name ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as scheduled_by_names,
              GROUP_CONCAT(DISTINCT ls.schedule_date ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_dates,
-             GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times
+             GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times,
+             (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'email') as email_clicks,
+             (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'phone') as phone_clicks,
+             (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'business_email') as business_email_clicks,
+             (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'business_phone') as business_phone_clicks
       FROM leads l
       LEFT JOIN users u1 ON l.created_by = u1.id
       LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
@@ -167,8 +178,8 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
       ${whereClause}
     `;
     
-    // Add userId parameter for schedule filtering and pagination parameters
-    queryParams.push(req.user.id, parseInt(limit), offset);
+    // Add userId parameters for schedule filtering, click counts (4 times for each click type), and pagination
+    queryParams.push(req.user.id, req.user.id, req.user.id, req.user.id, req.user.id, parseInt(limit), offset);
     
     // Execute both queries
     Promise.all([
@@ -257,21 +268,37 @@ router.get('/filter-options', auth, authorize('leads','read'), (req, res) => {
 
 // Add Lead
 router.post('/', auth, authorize('leads','create'), async (req, res) => {
-  const { name, company_name, email, phone, city, state, source, service_required, notes, budget, hours_type, lead_picked_time, day_type } = req.body;
+  const { name, company_name, nature_of_business, email, business_email, phone, business_number, business_description, city, state, country, zip_code, source, service_required, notes, budget, hours_type, day_type, created_at } = req.body;
+  
+  // Use provided created_at or current timestamp
+  let createdAtValue;
+  let createdAtPlaceholder;
+  const queryParams = [name, company_name, nature_of_business || null, email, business_email || null, phone, business_number || null, business_description || null, city, state, country || null, zip_code || null, source, service_required, notes, budget || null, hours_type || null, day_type || null, req.user.id, req.user.id];
+  
+  if (created_at) {
+    createdAtValue = new Date(created_at).toISOString().slice(0, 19).replace('T', ' ');
+    createdAtPlaceholder = '?';
+    queryParams.push(createdAtValue);
+  } else {
+    createdAtPlaceholder = 'NOW()';
+  }
   
   db.query(
-    'INSERT INTO leads (name, company_name, email, phone, city, state, source, service_required, notes, budget, hours_type, lead_picked_time, day_type, assigned_to, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-    [name, company_name, email, phone, city, state, source, service_required, notes, budget || null, hours_type || null, lead_picked_time || null, day_type || null, req.user.id, req.user.id],
+    `INSERT INTO leads (name, company_name, nature_of_business, email, business_email, phone, business_number, business_description, city, state, country, zip_code, source, service_required, notes, budget, hours_type, day_type, assigned_to, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${createdAtPlaceholder})`,
+    queryParams,
     async (err, result) => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error('Error inserting lead:', err);
+        return res.status(500).json({ message: 'Error creating lead', error: err.message, sql: err.sql });
+      }
       
       try {
         // Track lead creation for statistics
         await StatsService.trackLeadCreated(req.user.id, result.insertId);
-        res.json({ message: 'Lead Added' });
+        res.json({ message: 'Lead Added', lead_id: result.insertId, id: result.insertId });
       } catch (statsErr) {
         console.error('Error tracking lead creation:', statsErr);
-        res.json({ message: 'Lead Added (stats tracking failed)' });
+        res.json({ message: 'Lead Added (stats tracking failed)', lead_id: result.insertId, id: result.insertId });
       }
     }
   );
@@ -279,7 +306,7 @@ router.post('/', auth, authorize('leads','create'), async (req, res) => {
 
 // Update Lead
 router.put('/:id', auth, authorize('leads','update'), async (req, res) => {
-  const { name, company_name, email, phone, city, state, source, service_required, notes, budget, hours_type, lead_picked_time, day_type } = req.body;
+  const { name, company_name, nature_of_business, email, business_email, phone, business_number, business_description, city, state, country, zip_code, source, service_required, notes, budget, hours_type, day_type, created_at } = req.body;
   const leadId = req.params.id;
   
   // Check if lead exists and user has permission to edit
@@ -294,10 +321,22 @@ router.put('/:id', auth, authorize('leads','update'), async (req, res) => {
       return res.status(403).json({ message: 'You can only edit leads you created' });
     }
     
+    // Format created_at if provided
+    let createdAtClause = '';
+    let queryParams = [name, company_name, nature_of_business || null, email, business_email || null, phone, business_number || null, business_description || null, city, state, country || null, zip_code || null, source, service_required, notes, budget || null, hours_type || null, day_type || null];
+    
+    if (created_at) {
+      const createdAt = new Date(created_at).toISOString().slice(0, 19).replace('T', ' ');
+      createdAtClause = ', created_at = ?';
+      queryParams.push(createdAt);
+    }
+    
+    queryParams.push(leadId);
+    
     // Update the lead
     db.query(
-      'UPDATE leads SET name = ?, company_name = ?, email = ?, phone = ?, city = ?, state = ?, source = ?, service_required = ?, notes = ?, budget = ?, hours_type = ?, lead_picked_time = ?, day_type = ?, updated_at = NOW() WHERE id = ?',
-      [name, company_name, email, phone, city, state, source, service_required, notes, budget || null, hours_type || null, lead_picked_time || null, day_type || null, leadId],
+      `UPDATE leads SET name = ?, company_name = ?, nature_of_business = ?, email = ?, business_email = ?, phone = ?, business_number = ?, business_description = ?, city = ?, state = ?, country = ?, zip_code = ?, source = ?, service_required = ?, notes = ?, budget = ?, hours_type = ?, day_type = ?, updated_at = NOW()${createdAtClause} WHERE id = ?`,
+      queryParams,
       (err2, result) => {
         if (err2) return res.status(500).json(err2);
         res.json({ message: 'Lead updated successfully' });
@@ -910,6 +949,291 @@ router.delete('/notes/:noteId', auth, authorize('lead_notes', 'delete'), async (
     console.error('Error deleting lead note:', error);
     res.status(500).json({ message: 'Error deleting lead note' });
   }
+});
+
+// Download lead document (MUST come before /:id/documents route)
+router.get('/:id/documents/:documentId/download', auth, authorize('leads', 'read'), (req, res) => {
+  const leadId = req.params.id;
+  const documentId = req.params.documentId;
+  
+  db.query(
+    'SELECT * FROM lead_documents WHERE id = ? AND lead_id = ?',
+    [documentId, leadId],
+    (err, results) => {
+      if (err) {
+        console.error('Error fetching document:', err);
+        return res.status(500).json({ message: 'Error fetching document' });
+      }
+      
+      if (results.length === 0) {
+        return res.status(404).json({ message: 'Document not found' });
+      }
+      
+      const document = results[0];
+      // Handle both relative and absolute paths (for backward compatibility)
+      let filePath;
+      if (path.isAbsolute(document.file_path)) {
+        // If it's an absolute path, use it directly (for existing records)
+        filePath = document.file_path;
+      } else {
+        // If it's a relative path, join with server root
+        filePath = path.join(__dirname, '..', document.file_path);
+      }
+      
+      if (!fs.existsSync(filePath)) {
+        console.error('File not found:', filePath);
+        console.error('Document file_path from DB:', document.file_path);
+        return res.status(404).json({ message: 'File not found on server' });
+      }
+      
+      res.download(filePath, document.file_name, (err) => {
+        if (err) {
+          console.error('Error downloading file:', err);
+          if (!res.headersSent) {
+            res.status(500).json({ message: 'Error downloading file' });
+          }
+        }
+      });
+    }
+  );
+});
+
+// Get lead documents
+router.get('/:id/documents', auth, authorize('leads', 'read'), (req, res) => {
+  const leadId = req.params.id;
+  
+  db.query(
+    'SELECT ld.*, u.name as uploaded_by_name FROM lead_documents ld LEFT JOIN users u ON ld.uploaded_by = u.id WHERE ld.lead_id = ? ORDER BY ld.created_at DESC',
+    [leadId],
+    (err, results) => {
+      if (err) {
+        console.error('Error fetching lead documents:', err);
+        return res.status(500).json({ message: 'Error fetching documents' });
+      }
+      res.json({ documents: results });
+    }
+  );
+});
+
+// Upload lead documents
+router.post('/:id/documents', auth, authorize('leads', 'update'), uploadMultiple, handleUploadError, (req, res) => {
+  const leadId = req.params.id;
+  const files = req.files;
+  
+  if (!files || files.length === 0) {
+    return res.status(400).json({ message: 'No files uploaded' });
+  }
+  
+  // Check if lead exists
+  db.query('SELECT * FROM leads WHERE id = ?', [leadId], (err, results) => {
+    if (err) return res.status(500).json({ message: 'Error checking lead' });
+    if (results.length === 0) return res.status(404).json({ message: 'Lead not found' });
+    
+    const lead = results[0];
+    
+    // Check if user can edit this lead (admin or lead creator)
+    if (req.user.role_id !== 1 && lead.created_by !== req.user.id) {
+      // Delete uploaded files if user doesn't have permission
+      files.forEach(file => {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+      });
+      return res.status(403).json({ message: 'You can only upload documents to leads you created' });
+    }
+    
+    // Move files to lead-specific directory if not already there
+    const leadUploadPath = path.join(__dirname, '..', 'uploads', 'leads', leadId.toString());
+    if (!fs.existsSync(leadUploadPath)) {
+      fs.mkdirSync(leadUploadPath, { recursive: true });
+    }
+    
+    const documentIds = [];
+    let processedCount = 0;
+    const totalFiles = files.length;
+    
+    files.forEach((file) => {
+      // Move file to lead-specific directory if needed
+      const targetPath = path.join(leadUploadPath, path.basename(file.filename));
+      if (file.path !== targetPath && fs.existsSync(file.path)) {
+        fs.renameSync(file.path, targetPath);
+        file.path = targetPath;
+      }
+      
+      // Store relative path instead of absolute path
+      const relativePath = path.relative(path.join(__dirname, '..'), file.path);
+      // Normalize path separators for cross-platform compatibility
+      const normalizedPath = relativePath.replace(/\\/g, '/');
+      
+      const documentData = {
+        lead_id: leadId,
+        file_name: file.originalname,
+        file_path: normalizedPath,
+        file_size: file.size,
+        file_type: file.mimetype,
+        uploaded_by: req.user.id
+      };
+      
+      db.query(
+        'INSERT INTO lead_documents (lead_id, file_name, file_path, file_size, file_type, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)',
+        [documentData.lead_id, documentData.file_name, documentData.file_path, documentData.file_size, documentData.file_type, documentData.uploaded_by],
+        (err, result) => {
+          if (err) {
+            console.error('Error saving document:', err);
+            // Delete file if database insert fails
+            if (fs.existsSync(file.path)) {
+              fs.unlinkSync(file.path);
+            }
+          } else {
+            documentIds.push(result.insertId);
+          }
+          
+          processedCount++;
+          if (processedCount === totalFiles) {
+            if (documentIds.length === 0) {
+              return res.status(500).json({ message: 'Error uploading documents' });
+            }
+            res.json({
+              message: `${documentIds.length} document(s) uploaded successfully`,
+              document_ids: documentIds
+            });
+          }
+        }
+      );
+    });
+  });
+});
+
+// Delete lead document
+router.delete('/:id/documents/:documentId', auth, authorize('leads', 'update'), (req, res) => {
+  const leadId = req.params.id;
+  const documentId = req.params.documentId;
+  
+  // Check if lead exists and user has permission
+  db.query('SELECT * FROM leads WHERE id = ?', [leadId], (err, leadResults) => {
+    if (err) return res.status(500).json({ message: 'Error checking lead' });
+    if (leadResults.length === 0) return res.status(404).json({ message: 'Lead not found' });
+    
+    const lead = leadResults[0];
+    
+    // Check if user can edit this lead (admin or lead creator)
+    if (req.user.role_id !== 1 && lead.created_by !== req.user.id) {
+      return res.status(403).json({ message: 'You can only delete documents from leads you created' });
+    }
+    
+    // Get document info
+    db.query(
+      'SELECT * FROM lead_documents WHERE id = ? AND lead_id = ?',
+      [documentId, leadId],
+      (err, docResults) => {
+        if (err) return res.status(500).json({ message: 'Error fetching document' });
+        if (docResults.length === 0) return res.status(404).json({ message: 'Document not found' });
+        
+        const document = docResults[0];
+        // Handle both relative and absolute paths (for backward compatibility)
+        let filePath;
+        if (path.isAbsolute(document.file_path)) {
+          filePath = document.file_path;
+        } else {
+          filePath = path.join(__dirname, '..', document.file_path);
+        }
+        
+        // Delete file from filesystem
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        
+        // Delete from database
+        db.query(
+          'DELETE FROM lead_documents WHERE id = ?',
+          [documentId],
+          (err) => {
+            if (err) {
+              console.error('Error deleting document:', err);
+              return res.status(500).json({ message: 'Error deleting document' });
+            }
+            res.json({ message: 'Document deleted successfully' });
+          }
+        );
+      }
+    );
+  });
+});
+
+// Track phone click
+router.post('/:id/track-phone-click', auth, authorize('leads', 'read'), (req, res) => {
+  const leadId = req.params.id;
+  const userId = req.user.id;
+  
+  // Record click in lead_clicks table
+  db.query(
+    'INSERT INTO lead_clicks (lead_id, user_id, click_type) VALUES (?, ?, ?)',
+    [leadId, userId, 'phone'],
+    (err, result) => {
+      if (err) {
+        console.error('Error tracking phone click:', err);
+        return res.status(500).json({ message: 'Error tracking phone click' });
+      }
+      res.json({ message: 'Phone click tracked' });
+    }
+  );
+});
+
+// Track email click
+router.post('/:id/track-email-click', auth, authorize('leads', 'read'), (req, res) => {
+  const leadId = req.params.id;
+  const userId = req.user.id;
+  
+  // Record click in lead_clicks table
+  db.query(
+    'INSERT INTO lead_clicks (lead_id, user_id, click_type) VALUES (?, ?, ?)',
+    [leadId, userId, 'email'],
+    (err, result) => {
+      if (err) {
+        console.error('Error tracking email click:', err);
+        return res.status(500).json({ message: 'Error tracking email click' });
+      }
+      res.json({ message: 'Email click tracked' });
+    }
+  );
+});
+
+// Track business email click
+router.post('/:id/track-business-email-click', auth, authorize('leads', 'read'), (req, res) => {
+  const leadId = req.params.id;
+  const userId = req.user.id;
+  
+  // Record click in lead_clicks table
+  db.query(
+    'INSERT INTO lead_clicks (lead_id, user_id, click_type) VALUES (?, ?, ?)',
+    [leadId, userId, 'business_email'],
+    (err, result) => {
+      if (err) {
+        console.error('Error tracking business email click:', err);
+        return res.status(500).json({ message: 'Error tracking business email click' });
+      }
+      res.json({ message: 'Business email click tracked' });
+    }
+  );
+});
+
+// Track business phone click
+router.post('/:id/track-business-phone-click', auth, authorize('leads', 'read'), (req, res) => {
+  const leadId = req.params.id;
+  const userId = req.user.id;
+  
+  // Record click in lead_clicks table
+  db.query(
+    'INSERT INTO lead_clicks (lead_id, user_id, click_type) VALUES (?, ?, ?)',
+    [leadId, userId, 'business_phone'],
+    (err, result) => {
+      if (err) {
+        console.error('Error tracking business phone click:', err);
+        return res.status(500).json({ message: 'Error tracking business phone click' });
+      }
+      res.json({ message: 'Business phone click tracked' });
+    }
+  );
 });
 
 module.exports = router;

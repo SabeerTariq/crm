@@ -43,25 +43,34 @@ export default function Leads() {
   const [newNote, setNewNote] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     company_name: '',
+    nature_of_business: '',
     email: '',
+    business_email: '',
     phone: '',
+    business_number: '',
+    business_description: '',
     city: '',
     state: '',
+    country: '',
+    zip_code: '',
     source: '',
     service_required: '',
     notes: '',
     budget: '',
     hours_type: '',
-    lead_picked_time: '',
     day_type: '',
+    created_at: '',
   });
   const [scheduleData, setScheduleData] = useState({
     schedule_date: '',
     schedule_time: ''
   });
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [leadDocuments, setLeadDocuments] = useState({});
   const { hasPermission, loading: permissionsLoading } = usePermissions();
 
   // Helper function to check if current user has scheduled this lead
@@ -154,15 +163,39 @@ export default function Leads() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await api.post('/leads', formData, {
+      const response = await api.post('/leads', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      // Get the lead ID from the response or fetch the latest lead
+      let leadId = null;
+      if (response.data.lead_id) {
+        leadId = response.data.lead_id;
+      } else if (response.data.id) {
+        leadId = response.data.id;
+      } else {
+        // If no ID in response, reload leads and get the first one (most recent)
+        await loadLeads();
+        if (leads.length > 0) {
+          leadId = leads[0].id;
+        }
+      }
+      
+      // Upload documents if any files are selected
+      if (selectedFiles.length > 0 && leadId) {
+        await uploadDocuments(leadId);
+      }
+      
       alert('Lead added successfully!');
       setFormData({ 
         name: '', 
         company_name: '', 
+        nature_of_business: '',
         email: '', 
+        business_email: '',
         phone: '', 
+        business_number: '',
+        business_description: '',
         city: '', 
         state: '', 
         source: '', 
@@ -170,9 +203,10 @@ export default function Leads() {
         notes: '',
         budget: '',
         hours_type: '',
-        lead_picked_time: '',
-        day_type: ''
+        day_type: '',
+        created_at: ''
       });
+      setSelectedFiles([]);
       setShowAddForm(false);
       // Refresh leads list
       loadLeads();
@@ -182,23 +216,258 @@ export default function Leads() {
     }
   };
 
-  const handleEditLead = (lead) => {
+  const handleFileChange = (e) => {
+    setSelectedFiles(Array.from(e.target.files));
+  };
+
+  const uploadDocuments = async (leadId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      
+      selectedFiles.forEach((file) => {
+        formData.append('documents', file);
+      });
+      
+      await api.post(`/leads/${leadId}/documents`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Fetch documents after upload
+      await fetchLeadDocuments(leadId);
+      setSelectedFiles([]);
+    } catch (error) {
+      console.error('Error uploading documents:', error);
+      alert('Error uploading documents');
+    }
+  };
+
+  const fetchLeadDocuments = async (leadId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get(`/leads/${leadId}/documents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLeadDocuments(prev => ({
+        ...prev,
+        [leadId]: response.data.documents || []
+      }));
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    }
+  };
+
+  const downloadDocument = async (leadId, documentId, fileName) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get(`/leads/${leadId}/documents/${documentId}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Error downloading document');
+    }
+  };
+
+  const deleteDocument = async (leadId, documentId) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await api.delete(`/leads/${leadId}/documents/${documentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Document deleted successfully');
+      await fetchLeadDocuments(leadId);
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Error deleting document');
+    }
+  };
+
+  const handlePhoneClick = async (e, lead) => {
+    e.preventDefault();
+    if (!lead.phone) return;
+    
+    // Open phone app immediately (don't wait for tracking)
+    window.location.href = `tel:${lead.phone}`;
+    
+    // Track click in background (non-blocking)
+    try {
+      const token = localStorage.getItem('token');
+      api.post(`/leads/${lead.id}/track-phone-click`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(() => {
+        // Update local state - fetch fresh data to get employee-specific counts
+        api.get('/leads', {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(response => {
+          if (response.data && response.data.leads) {
+            setLeads(response.data.leads);
+            // Update viewingLead if it's the same lead
+            if (viewingLead && viewingLead.id === lead.id) {
+              const updatedLead = response.data.leads.find(l => l.id === lead.id);
+              if (updatedLead) {
+                setViewingLead(updatedLead);
+              }
+            }
+          }
+        }).catch(err => console.error('Error fetching updated leads:', err));
+      }).catch(error => {
+        console.error('Error tracking phone click:', error);
+      });
+    } catch (error) {
+      console.error('Error tracking phone click:', error);
+    }
+  };
+
+  const handleEmailClick = async (e, lead) => {
+    e.preventDefault();
+    if (!lead.email) return;
+    
+    // Open email app immediately (don't wait for tracking)
+    window.location.href = `mailto:${lead.email}`;
+    
+    // Track click in background (non-blocking)
+    try {
+      const token = localStorage.getItem('token');
+      api.post(`/leads/${lead.id}/track-email-click`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(() => {
+        // Update local state - fetch fresh data to get employee-specific counts
+        api.get('/leads', {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(response => {
+          if (response.data && response.data.leads) {
+            setLeads(response.data.leads);
+            // Update viewingLead if it's the same lead
+            if (viewingLead && viewingLead.id === lead.id) {
+              const updatedLead = response.data.leads.find(l => l.id === lead.id);
+              if (updatedLead) {
+                setViewingLead(updatedLead);
+              }
+            }
+          }
+        }).catch(err => console.error('Error fetching updated leads:', err));
+      }).catch(error => {
+        console.error('Error tracking email click:', error);
+      });
+    } catch (error) {
+      console.error('Error tracking email click:', error);
+    }
+  };
+
+  const handleBusinessEmailClick = async (e, lead) => {
+    e.preventDefault();
+    if (!lead.business_email) return;
+    
+    // Open email app immediately (don't wait for tracking)
+    window.location.href = `mailto:${lead.business_email}`;
+    
+    // Track click in background (non-blocking)
+    try {
+      const token = localStorage.getItem('token');
+      api.post(`/leads/${lead.id}/track-business-email-click`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(() => {
+        // Update local state - fetch fresh data to get employee-specific counts
+        api.get('/leads', {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(response => {
+          if (response.data && response.data.leads) {
+            setLeads(response.data.leads);
+            // Update viewingLead if it's the same lead
+            if (viewingLead && viewingLead.id === lead.id) {
+              const updatedLead = response.data.leads.find(l => l.id === lead.id);
+              if (updatedLead) {
+                setViewingLead(updatedLead);
+              }
+            }
+          }
+        }).catch(err => console.error('Error fetching updated leads:', err));
+      }).catch(error => {
+        console.error('Error tracking business email click:', error);
+      });
+    } catch (error) {
+      console.error('Error tracking business email click:', error);
+    }
+  };
+
+  const handleBusinessPhoneClick = async (e, lead) => {
+    e.preventDefault();
+    if (!lead.business_number) return;
+    
+    // Open phone app immediately (don't wait for tracking)
+    window.location.href = `tel:${lead.business_number}`;
+    
+    // Track click in background (non-blocking)
+    try {
+      const token = localStorage.getItem('token');
+      api.post(`/leads/${lead.id}/track-business-phone-click`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(() => {
+        // Update local state - fetch fresh data to get employee-specific counts
+        api.get('/leads', {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(response => {
+          if (response.data && response.data.leads) {
+            setLeads(response.data.leads);
+            // Update viewingLead if it's the same lead
+            if (viewingLead && viewingLead.id === lead.id) {
+              const updatedLead = response.data.leads.find(l => l.id === lead.id);
+              if (updatedLead) {
+                setViewingLead(updatedLead);
+              }
+            }
+          }
+        }).catch(err => console.error('Error fetching updated leads:', err));
+      }).catch(error => {
+        console.error('Error tracking business phone click:', error);
+      });
+    } catch (error) {
+      console.error('Error tracking business phone click:', error);
+    }
+  };
+
+  const handleEditLead = async (lead) => {
     setEditingLead(lead);
     setFormData({
       name: lead.name || '',
       company_name: lead.company_name || '',
+      nature_of_business: lead.nature_of_business || '',
       email: lead.email || '',
+      business_email: lead.business_email || '',
       phone: lead.phone || '',
+      business_number: lead.business_number || '',
+      business_description: lead.business_description || '',
       city: lead.city || '',
       state: lead.state || '',
+      country: lead.country || '',
+      zip_code: lead.zip_code || '',
       source: lead.source || '',
       service_required: lead.service_required || '',
       notes: lead.notes || '',
       budget: lead.budget || '',
       hours_type: lead.hours_type || '',
-      lead_picked_time: lead.lead_picked_time || '',
       day_type: lead.day_type || '',
+      created_at: lead.created_at ? new Date(lead.created_at).toISOString().slice(0, 16) : '',
     });
+    setSelectedFiles([]);
+    await fetchLeadDocuments(lead.id);
     setShowEditForm(true);
   };
 
@@ -206,6 +475,7 @@ export default function Leads() {
     setViewingLead(lead);
     setShowViewModal(true);
     await fetchLeadNotes(lead.id);
+    await fetchLeadDocuments(lead.id);
   };
 
   const handleAddNote = async (lead) => {
@@ -482,14 +752,24 @@ export default function Leads() {
       await api.put(`/leads/${editingLead.id}`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      // Upload documents if any files are selected
+      if (selectedFiles.length > 0) {
+        await uploadDocuments(editingLead.id);
+      }
+      
       alert('Lead updated successfully!');
       setShowEditForm(false);
       setEditingLead(null);
       setFormData({ 
         name: '', 
         company_name: '', 
+        nature_of_business: '',
         email: '', 
+        business_email: '',
         phone: '', 
+        business_number: '',
+        business_description: '',
         city: '', 
         state: '', 
         source: '', 
@@ -497,9 +777,10 @@ export default function Leads() {
         notes: '',
         budget: '',
         hours_type: '',
-        lead_picked_time: '',
-        day_type: ''
+        day_type: '',
+        created_at: ''
       });
+      setSelectedFiles([]);
       // Refresh leads list
       loadLeads();
     } catch (err) {
@@ -625,6 +906,8 @@ export default function Leads() {
           setShowAddForm(false);
         } else if (showEditForm) {
           setShowEditForm(false);
+        } else if (openDropdownId) {
+          setOpenDropdownId(null);
         }
       }
     };
@@ -633,13 +916,34 @@ export default function Leads() {
       document.addEventListener('keydown', handleEscapeKey);
       // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
+    } else {
+      document.addEventListener('keydown', handleEscapeKey);
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscapeKey);
-      document.body.style.overflow = 'unset';
+      if (showAddForm || showEditForm) {
+        document.body.style.overflow = 'unset';
+      }
     };
-  }, [showAddForm, showEditForm]);
+  }, [showAddForm, showEditForm, openDropdownId]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openDropdownId && !event.target.closest('[data-dropdown-container]')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    if (openDropdownId) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [openDropdownId]);
 
   // Show loading while permissions are being fetched
   if (permissionsLoading) {
@@ -1088,6 +1392,14 @@ export default function Leads() {
                 style={inputStyle}
               />
               <input 
+                type="text" 
+                name="nature_of_business" 
+                placeholder="Nature of Business" 
+                value={formData.nature_of_business} 
+                onChange={handleFormChange} 
+                style={inputStyle}
+              />
+              <input 
                 type="email" 
                 name="email" 
                 placeholder="Email *" 
@@ -1097,12 +1409,35 @@ export default function Leads() {
                 style={inputStyle}
               />
               <input 
+                type="email" 
+                name="business_email" 
+                placeholder="Business Email" 
+                value={formData.business_email} 
+                onChange={handleFormChange} 
+                style={inputStyle}
+              />
+              <input 
                 type="text" 
                 name="phone" 
                 placeholder="Phone" 
                 value={formData.phone} 
                 onChange={handleFormChange} 
                 style={inputStyle}
+              />
+              <input 
+                type="text" 
+                name="business_number" 
+                placeholder="Business Number" 
+                value={formData.business_number} 
+                onChange={handleFormChange} 
+                style={inputStyle}
+              />
+              <textarea 
+                name="business_description" 
+                placeholder="Business Description" 
+                value={formData.business_description} 
+                onChange={handleFormChange} 
+                style={{...inputStyle, gridColumn: '1 / -1', minHeight: '80px', resize: 'vertical'}}
               />
                 <input 
                   type="text" 
@@ -1117,9 +1452,25 @@ export default function Leads() {
                   name="state" 
                   placeholder="State" 
                   value={formData.state} 
-                onChange={handleFormChange} 
-                style={inputStyle}
-              />
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                />
+                <input 
+                  type="text" 
+                  name="country" 
+                  placeholder="Country" 
+                  value={formData.country} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                />
+                <input 
+                  type="text" 
+                  name="zip_code" 
+                  placeholder="Zip Code" 
+                  value={formData.zip_code} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                />
               <select 
                 name="source" 
                 value={formData.source} 
@@ -1134,14 +1485,20 @@ export default function Leads() {
                 <option value="Others">Others</option>
               </select>
               <input 
-                type="number" 
+                type="text" 
                 name="budget" 
                 placeholder="Budget" 
                 value={formData.budget} 
                 onChange={handleFormChange} 
                 style={inputStyle}
-                min="0"
-                step="0.01"
+              />
+              <input 
+                type="datetime-local" 
+                name="created_at" 
+                placeholder="Created Date & Time" 
+                value={formData.created_at} 
+                onChange={handleFormChange} 
+                style={inputStyle}
               />
               <select 
                 name="hours_type" 
@@ -1153,14 +1510,6 @@ export default function Leads() {
                 <option value="Rush hours">Rush hours</option>
                 <option value="Normal hours">Normal hours</option>
               </select>
-              <input 
-                type="time" 
-                name="lead_picked_time" 
-                placeholder="Lead Picked Time" 
-                value={formData.lead_picked_time} 
-                onChange={handleFormChange} 
-                style={inputStyle}
-              />
               <select 
                 name="day_type" 
                 value={formData.day_type} 
@@ -1186,6 +1535,33 @@ export default function Leads() {
                 onChange={handleFormChange} 
                   style={{...inputStyle, gridColumn: '1 / -1', minHeight: '100px', resize: 'vertical'}}
               />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  color: '#374151' 
+                }}>
+                  Upload Documents/Media
+                </label>
+                <input 
+                  type="file" 
+                  multiple
+                  onChange={handleFileChange}
+                  style={{
+                    ...inputStyle,
+                    padding: '8px',
+                    cursor: 'pointer'
+                  }}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.txt,.zip,.rar,.mp4,.mpeg,.mp3,.wav"
+                />
+                {selectedFiles.length > 0 && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#6b7280' }}>
+                    {selectedFiles.length} file(s) selected
+                  </div>
+                )}
+              </div>
                 <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <button 
                   type="button" 
@@ -1318,6 +1694,14 @@ export default function Leads() {
                   style={inputStyle}
                 />
                 <input 
+                  type="text" 
+                  name="nature_of_business" 
+                  placeholder="Nature of Business" 
+                  value={formData.nature_of_business} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                />
+                <input 
                   type="email" 
                   name="email" 
                   placeholder="Email *" 
@@ -1327,12 +1711,35 @@ export default function Leads() {
                   style={inputStyle}
                 />
                 <input 
+                  type="email" 
+                  name="business_email" 
+                  placeholder="Business Email" 
+                  value={formData.business_email} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                />
+                <input 
                   type="tel" 
                   name="phone" 
                   placeholder="Phone" 
                   value={formData.phone} 
                   onChange={handleFormChange} 
                   style={inputStyle}
+                />
+                <input 
+                  type="text" 
+                  name="business_number" 
+                  placeholder="Business Number" 
+                  value={formData.business_number} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                />
+                <textarea 
+                  name="business_description" 
+                  placeholder="Business Description" 
+                  value={formData.business_description} 
+                  onChange={handleFormChange} 
+                  style={{...inputStyle, gridColumn: '1 / -1', minHeight: '80px', resize: 'vertical'}}
                 />
                 <input 
                   type="text" 
@@ -1350,6 +1757,22 @@ export default function Leads() {
                   onChange={handleFormChange} 
                   style={inputStyle}
                 />
+                <input 
+                  type="text" 
+                  name="country" 
+                  placeholder="Country" 
+                  value={formData.country} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                />
+                <input 
+                  type="text" 
+                  name="zip_code" 
+                  placeholder="Zip Code" 
+                  value={formData.zip_code} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
+                />
                 <select 
                   name="source" 
                   value={formData.source} 
@@ -1364,14 +1787,20 @@ export default function Leads() {
                   <option value="Others">Others</option>
                 </select>
                 <input 
-                  type="number" 
+                  type="text" 
                   name="budget" 
                   placeholder="Budget" 
                   value={formData.budget} 
                   onChange={handleFormChange} 
                   style={inputStyle}
-                  min="0"
-                  step="0.01"
+                />
+                <input 
+                  type="datetime-local" 
+                  name="created_at" 
+                  placeholder="Created Date & Time" 
+                  value={formData.created_at} 
+                  onChange={handleFormChange} 
+                  style={inputStyle}
                 />
                 <select 
                   name="hours_type" 
@@ -1383,14 +1812,6 @@ export default function Leads() {
                   <option value="Rush hours">Rush hours</option>
                   <option value="Normal hours">Normal hours</option>
                 </select>
-                <input 
-                  type="time" 
-                  name="lead_picked_time" 
-                  placeholder="Lead Picked Time" 
-                  value={formData.lead_picked_time} 
-                  onChange={handleFormChange} 
-                  style={inputStyle}
-                />
                 <select 
                   name="day_type" 
                   value={formData.day_type} 
@@ -1416,6 +1837,107 @@ export default function Leads() {
                   onChange={handleFormChange} 
                   style={{...inputStyle, gridColumn: '1 / -1', minHeight: '100px', resize: 'vertical'}}
                 />
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    color: '#374151' 
+                  }}>
+                    Upload Documents/Media
+                  </label>
+                  <input 
+                    type="file" 
+                    multiple
+                    onChange={handleFileChange}
+                    style={{
+                      ...inputStyle,
+                      padding: '8px',
+                      cursor: 'pointer'
+                    }}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.txt,.zip,.rar,.mp4,.mpeg,.mp3,.wav"
+                  />
+                  {selectedFiles.length > 0 && (
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#6b7280' }}>
+                      {selectedFiles.length} new file(s) selected
+                    </div>
+                  )}
+                  
+                  {/* Display existing documents */}
+                  {editingLead && leadDocuments[editingLead.id] && leadDocuments[editingLead.id].length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <label style={{ 
+                        display: 'block', 
+                        marginBottom: '8px', 
+                        fontSize: '14px', 
+                        fontWeight: '600', 
+                        color: '#374151' 
+                      }}>
+                        Existing Documents
+                      </label>
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '8px',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        padding: '8px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        {leadDocuments[editingLead.id].map((doc) => (
+                          <div key={doc.id} style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            padding: '8px',
+                            backgroundColor: '#ffffff',
+                            borderRadius: '6px',
+                            border: '1px solid #e5e7eb'
+                          }}>
+                            <span style={{ fontSize: '13px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {doc.file_name}
+                            </span>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={() => downloadDocument(editingLead.id, doc.id, doc.file_name)}
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '12px',
+                                  backgroundColor: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Download
+                              </button>
+                              {hasPermission('leads', 'update') && (
+                                <button
+                                  onClick={() => deleteDocument(editingLead.id, doc.id)}
+                                  style={{
+                                    padding: '4px 8px',
+                                    fontSize: '12px',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <button 
                   type="button" 
@@ -1723,13 +2245,146 @@ export default function Leads() {
                       <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.company_name || 'N/A'}</div>
                     </div>
                     <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Nature of Business</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.nature_of_business || 'N/A'}</div>
+                    </div>
+                    <div>
                       <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Email</label>
-                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.email || 'N/A'}</div>
+                      {viewingLead.email ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <a
+                            href={`mailto:${viewingLead.email}`}
+                            onClick={(e) => handleEmailClick(e, viewingLead)}
+                            style={{
+                              fontSize: '16px',
+                              color: '#3b82f6',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                            onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                            onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                          >
+                            {viewingLead.email}
+                          </a>
+                          <span style={{
+                            fontSize: '12px',
+                            color: '#9ca3af',
+                            fontWeight: '500'
+                          }}>
+                            {viewingLead.email_clicks || 0} clicks
+                          </span>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '16px', color: '#9ca3af' }}>N/A</div>
+                      )}
                     </div>
                     <div>
                       <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Phone</label>
-                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.phone || 'N/A'}</div>
+                      {viewingLead.phone ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <a
+                            href={`tel:${viewingLead.phone}`}
+                            onClick={(e) => handlePhoneClick(e, viewingLead)}
+                            style={{
+                              fontSize: '16px',
+                              color: '#3b82f6',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                            onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                            onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                          >
+                            {viewingLead.phone}
+                          </a>
+                          <span style={{
+                            fontSize: '12px',
+                            color: '#9ca3af',
+                            fontWeight: '500'
+                          }}>
+                            {viewingLead.phone_clicks || 0} clicks
+                          </span>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '16px', color: '#9ca3af' }}>N/A</div>
+                      )}
                     </div>
+                    {viewingLead.business_email && (
+                      <div>
+                        <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Business Email</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <a
+                            href={`mailto:${viewingLead.business_email}`}
+                            onClick={(e) => handleBusinessEmailClick(e, viewingLead)}
+                            style={{
+                              fontSize: '16px',
+                              color: '#3b82f6',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                            onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                            onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                          >
+                            {viewingLead.business_email}
+                          </a>
+                          <span style={{
+                            fontSize: '12px',
+                            color: '#9ca3af',
+                            fontWeight: '500'
+                          }}>
+                            {viewingLead.business_email_clicks || 0} clicks
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {viewingLead.business_number && (
+                      <div>
+                        <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Business Phone</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <a
+                            href={`tel:${viewingLead.business_number}`}
+                            onClick={(e) => handleBusinessPhoneClick(e, viewingLead)}
+                            style={{
+                              fontSize: '16px',
+                              color: '#3b82f6',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                            onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                            onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                          >
+                            {viewingLead.business_number}
+                          </a>
+                          <span style={{
+                            fontSize: '12px',
+                            color: '#9ca3af',
+                            fontWeight: '500'
+                          }}>
+                            {viewingLead.business_number_clicks || 0} clicks
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {viewingLead.business_description && (
+                      <div>
+                        <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Business Description</label>
+                        <div style={{
+                          fontSize: '16px',
+                          color: '#1f2937',
+                          lineHeight: '1.5',
+                          padding: '12px',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '6px',
+                          whiteSpace: 'pre-wrap',
+                          wordWrap: 'break-word'
+                        }}>
+                          {viewingLead.business_description}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1755,8 +2410,38 @@ export default function Leads() {
                       <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.state || 'N/A'}</div>
                     </div>
                     <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Country</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.country || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Zip Code</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.zip_code || 'N/A'}</div>
+                    </div>
+                    <div>
                       <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Source</label>
                       <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.source || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Budget</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>
+                        {viewingLead.budget !== null && viewingLead.budget !== undefined && viewingLead.budget !== '' 
+                          ? String(viewingLead.budget) 
+                          : 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Hours Type</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.hours_type || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Day Type</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>{viewingLead.day_type || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Created Date & Time</label>
+                      <div style={{ fontSize: '16px', color: '#1f2937' }}>
+                        {viewingLead.created_at ? new Date(viewingLead.created_at).toLocaleString() : 'N/A'}
+                      </div>
                     </div>
                     <div>
                       <label style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Created By</label>
@@ -1814,6 +2499,103 @@ export default function Leads() {
                 }}>
                   {viewingLead.notes || 'No notes available'}
                 </div>
+              </div>
+
+              {/* Documents Section */}
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '16px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  Documents/Media
+                </h3>
+                {viewingLead && leadDocuments[viewingLead.id] && leadDocuments[viewingLead.id].length > 0 ? (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    {leadDocuments[viewingLead.id].map((doc) => (
+                      <div key={doc.id} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#1f2937',
+                            marginBottom: '4px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {doc.file_name}
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#6b7280',
+                            display: 'flex',
+                            gap: '12px',
+                            alignItems: 'center'
+                          }}>
+                            <span>{(doc.file_size / 1024).toFixed(2)} KB</span>
+                            {doc.uploaded_by_name && (
+                              <span>Uploaded by: {doc.uploaded_by_name}</span>
+                            )}
+                            {doc.created_at && (
+                              <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => downloadDocument(viewingLead.id, doc.id, doc.file_name)}
+                          style={{
+                            padding: '8px 16px',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s ease',
+                            whiteSpace: 'nowrap',
+                            marginLeft: '12px'
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                        >
+                          Download
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{
+                    backgroundColor: '#f9fafb',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    color: '#6b7280',
+                    textAlign: 'center'
+                  }}>
+                    No documents uploaded
+                  </div>
+                )}
               </div>
 
               {/* Schedule Information */}
@@ -2267,7 +3049,7 @@ export default function Leads() {
               {/* Table Header */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1fr 1fr 1fr 1fr' : '1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr',
+                gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr' : '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr 1fr',
                 gap: '12px',
                 padding: '20px',
                 backgroundColor: '#f8fafc',
@@ -2276,22 +3058,23 @@ export default function Leads() {
                 fontSize: '12px',
                 color: '#374151',
                 textTransform: 'uppercase',
-                letterSpacing: '0.5px'
+                letterSpacing: '0.5px',
+                alignItems: 'center'
               }}>
-                <div>Name</div>
-                <div>Company</div>
-                <div>Email</div>
-                <div>Phone</div>
-                <div>Date</div>
-                {!hasLeadScraperRole() && <div>Scheduled By</div>}
-                <div>Actions</div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Name</div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Company</div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Email (Clicks)</div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Phone (Clicks)</div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Date</div>
+                {!hasLeadScraperRole() && <div style={{ display: 'flex', alignItems: 'center' }}>Scheduled By</div>}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Actions</div>
               </div>
 
               {/* Table Rows */}
               {leads.map((lead, index) => (
                 <div key={lead.id} style={{
                   display: 'grid',
-                  gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1fr 1fr 1fr 1fr' : '1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr',
+                  gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr' : '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr 1fr',
                   gap: '12px',
                   padding: '16px 20px',
                   borderBottom: index < leads.length - 1 ? '1px solid #f3f4f6' : 'none',
@@ -2325,12 +3108,85 @@ export default function Leads() {
                     fontSize: '13px',
                     color: '#6b7280',
                     display: 'flex',
-                    alignItems: 'center',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
+                    flexDirection: 'column',
+                    gap: '4px',
+                    justifyContent: 'center',
+                    minHeight: '40px'
                   }}>
-                    {lead.email}
+                    {lead.email ? (
+                      <>
+                        <a
+                          href={`mailto:${lead.email}`}
+                          onClick={(e) => handleEmailClick(e, lead)}
+                          style={{
+                            color: '#3b82f6',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontWeight: '500',
+                            display: 'block'
+                          }}
+                          onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                          onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                        >
+                          {lead.email}
+                        </a>
+                        <span style={{
+                          fontSize: '11px',
+                          color: '#9ca3af',
+                          fontWeight: '500',
+                          display: 'block'
+                        }}>
+                          {lead.email_clicks || 0} clicks
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ color: '#9ca3af', display: 'flex', alignItems: 'center', minHeight: '40px' }}>N/A</span>
+                    )}
+                  </div>
+                  <div style={{
+                    fontSize: '13px',
+                    color: '#6b7280',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    justifyContent: 'center',
+                    minHeight: '40px'
+                  }}>
+                    {lead.phone ? (
+                      <>
+                        <a
+                          href={`tel:${lead.phone}`}
+                          onClick={(e) => handlePhoneClick(e, lead)}
+                          style={{
+                            color: '#3b82f6',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontWeight: '500',
+                            display: 'block'
+                          }}
+                          onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                          onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                        >
+                          {lead.phone}
+                        </a>
+                        <span style={{
+                          fontSize: '11px',
+                          color: '#9ca3af',
+                          fontWeight: '500',
+                          display: 'block'
+                        }}>
+                          {lead.phone_clicks || 0} clicks
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ color: '#9ca3af', display: 'flex', alignItems: 'center', minHeight: '40px' }}>N/A</span>
+                    )}
                   </div>
                   <div style={{
                     fontSize: '13px',
@@ -2339,18 +3195,8 @@ export default function Leads() {
                     alignItems: 'center',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {lead.phone || 'N/A'}
-                  </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: '#6b7280',
-                    display: 'flex',
-                    alignItems: 'center',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    minHeight: '20px'
                   }}>
                     {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'}
                   </div>
@@ -2362,122 +3208,227 @@ export default function Leads() {
                       alignItems: 'center',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      minHeight: '20px'
                     }}>
                       {lead.scheduled_by_names || 'Not scheduled'}
                     </div>
                   )}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}>
-                    <button 
-                      onClick={() => handleViewLead(lead)}
+                  <div 
+                    data-dropdown-container
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '20px',
+                      position: 'relative'
+                    }}
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenDropdownId(openDropdownId === lead.id ? null : lead.id);
+                      }}
                       style={{
-                        backgroundColor: '#6366f1',
-                        color: 'white',
-                        border: 'none',
-                        padding: '6px 12px',
+                        backgroundColor: 'transparent',
+                        color: '#6b7280',
+                        border: '1px solid #e5e7eb',
+                        padding: '6px 8px',
                         borderRadius: '6px',
                         cursor: 'pointer',
-                        fontSize: '11px',
-                        fontWeight: '500',
-                        whiteSpace: 'nowrap'
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '32px',
+                        height: '32px',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = '#f3f4f6';
+                        e.target.style.borderColor = '#d1d5db';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = 'transparent';
+                        e.target.style.borderColor = '#e5e7eb';
                       }}
                     >
-                      View
+                      ⋯
                     </button>
-                    {hasPermission('lead_notes', 'create') && (
-                      <button 
-                        onClick={() => handleAddNote(lead)}
+                    {openDropdownId === lead.id && (
+                      <div
+                        data-dropdown-container
                         style={{
-                          backgroundColor: '#f59e0b',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontWeight: '500',
-                          whiteSpace: 'nowrap'
+                          position: 'absolute',
+                          top: '100%',
+                          right: '0',
+                          marginTop: '4px',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                          zIndex: 1000,
+                          minWidth: '160px',
+                          padding: '4px 0'
                         }}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        Notes
-                      </button>
-                    )}
-                    {hasPermission('leads', 'update') && (
-                      <button 
-                        onClick={() => handleEditLead(lead)}
-                        style={{
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontWeight: '500',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {hasPermission('leads', 'update') && !hasLeadScraperRole() && (
-                      <button 
-                        onClick={() => openScheduleForm(lead)}
-                        style={{
-                          backgroundColor: hasUserScheduledLead(lead) ? '#f59e0b' : '#8b5cf6',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontWeight: '500',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {hasUserScheduledLead(lead) ? 'Reschedule' : 'Schedule'}
-                      </button>
-                    )}
-                    {hasPermission('leads', 'update') && hasUserScheduledLead(lead) && !hasLeadScraperRole() && (
-                      <button 
-                        onClick={() => handleCancelSchedule(lead.id)}
-                        style={{
-                          backgroundColor: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontWeight: '500',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    )}
-                    {hasPermission('sales', 'create') && (
-                      <button 
-                        onClick={() => convertLead(lead)}
-                        style={{
-                          backgroundColor: '#3b82f6',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontWeight: '500',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        Convert
-                      </button>
+                        <button
+                          onClick={() => {
+                            handleViewLead(lead);
+                            setOpenDropdownId(null);
+                          }}
+                          style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '8px 16px',
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            color: '#374151',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'background-color 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                        >
+                          <span>👁️</span> View
+                        </button>
+                        {hasPermission('lead_notes', 'create') && (
+                          <button
+                            onClick={() => {
+                              handleAddNote(lead);
+                              setOpenDropdownId(null);
+                            }}
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '8px 16px',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: '#374151',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              transition: 'background-color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                          >
+                            <span>📝</span> Notes
+                          </button>
+                        )}
+                        {hasPermission('leads', 'update') && (
+                          <button
+                            onClick={() => {
+                              handleEditLead(lead);
+                              setOpenDropdownId(null);
+                            }}
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '8px 16px',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: '#374151',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              transition: 'background-color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                          >
+                            <span>✏️</span> Edit
+                          </button>
+                        )}
+                        {hasPermission('leads', 'update') && !hasLeadScraperRole() && (
+                          <button
+                            onClick={() => {
+                              openScheduleForm(lead);
+                              setOpenDropdownId(null);
+                            }}
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '8px 16px',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: '#374151',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              transition: 'background-color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                          >
+                            <span>📅</span> {hasUserScheduledLead(lead) ? 'Reschedule' : 'Schedule'}
+                          </button>
+                        )}
+                        {hasPermission('leads', 'update') && hasUserScheduledLead(lead) && !hasLeadScraperRole() && (
+                          <button
+                            onClick={() => {
+                              handleCancelSchedule(lead.id);
+                              setOpenDropdownId(null);
+                            }}
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '8px 16px',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: '#374151',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              transition: 'background-color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                          >
+                            <span>❌</span> Cancel Schedule
+                          </button>
+                        )}
+                        {hasPermission('sales', 'create') && (
+                          <button
+                            onClick={() => {
+                              convertLead(lead);
+                              setOpenDropdownId(null);
+                            }}
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '8px 16px',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: '#374151',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              transition: 'background-color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                          >
+                            <span>🔄</span> Convert
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
