@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { usePermissions } from '../hooks/usePermissions';
 import { useUserBoards } from '../hooks/useUserBoards';
-import { hasLeadScraperRole, hasSalesRole, hasUpsellerRole, hasUpsellerManagerRole, hasProductionHeadRole, hasProductionLeadRole, hasProductionMemberRole, isAdmin } from '../utils/roleUtils';
+import { hasLeadScraperRole, hasSalesRole, hasUpsellerRole, hasUpsellerManagerRole, hasFrontSalesManagerRole, hasProductionHeadRole, hasProductionLeadRole, hasProductionMemberRole, isAdmin } from '../utils/roleUtils';
 import { getUserName, getUserRole } from '../utils/userUtils';
 import './Sidebar.css';
 
@@ -244,6 +244,14 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
+        {hasFrontSalesManagerRole() && (
+          <li className={`menu-item ${isActive('/front-sales-manager-dashboard') ? 'active' : ''}`}>
+            <Link to="/front-sales-manager-dashboard" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-users-cog menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Sales Manager Dashboard</span>}
+            </Link>
+          </li>
+        )}
         {hasProductionHeadRole() && (
           <li className={`menu-item ${isActive('/production-head-dashboard') ? 'active' : ''}`}>
             <Link to="/production-head-dashboard" className="menu-link" onClick={handleMenuClick}>
@@ -265,6 +273,54 @@ export default function Sidebar() {
             <Link to="/team-member-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-tasks menu-icon"></i>
               {!isCollapsed && <span className="menu-text">My Tasks</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('teams', 'view') && (
+          <li className={`menu-item ${isActive('/teams') ? 'active' : ''}`}>
+            <Link to="/teams" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-users-cog menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Teams</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('targets', 'view') && (
+          <li className={`menu-item ${isActive('/targets') ? 'active' : ''}`}>
+            <Link to="/targets" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-bullseye menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Targets</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('performance', 'view') && (
+          <li className={`menu-item ${isActive('/performance') ? 'active' : ''}`}>
+            <Link to="/performance" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-chart-bar menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Performance</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('upseller_teams', 'view') && (
+          <li className={`menu-item ${isActive('/upseller-teams') ? 'active' : ''}`}>
+            <Link to="/upseller-teams" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-user-friends menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Upseller Teams</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('upseller_targets', 'view') && (
+          <li className={`menu-item ${isActive('/upseller-targets') ? 'active' : ''}`}>
+            <Link to="/upseller-targets" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-crosshairs menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Upseller Targets</span>}
+            </Link>
+          </li>
+        )}
+        {hasPermission('upseller_performance', 'view') && (
+          <li className={`menu-item ${isActive('/upseller-performance') ? 'active' : ''}`}>
+            <Link to="/upseller-performance" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-chart-line menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Upseller Performance</span>}
             </Link>
           </li>
         )}
@@ -436,54 +492,6 @@ export default function Sidebar() {
             </li>
           );
         })()}
-        {hasPermission('teams', 'view') && (
-          <li className={`menu-item ${isActive('/teams') ? 'active' : ''}`}>
-            <Link to="/teams" className="menu-link" onClick={handleMenuClick}>
-              <i className="fas fa-users-cog menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Teams</span>}
-            </Link>
-          </li>
-        )}
-        {hasPermission('targets', 'view') && (
-          <li className={`menu-item ${isActive('/targets') ? 'active' : ''}`}>
-            <Link to="/targets" className="menu-link" onClick={handleMenuClick}>
-              <i className="fas fa-bullseye menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Targets</span>}
-            </Link>
-          </li>
-        )}
-        {hasPermission('performance', 'view') && (
-          <li className={`menu-item ${isActive('/performance') ? 'active' : ''}`}>
-            <Link to="/performance" className="menu-link" onClick={handleMenuClick}>
-              <i className="fas fa-chart-bar menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Performance</span>}
-            </Link>
-          </li>
-        )}
-        {hasPermission('upseller_teams', 'view') && (
-          <li className={`menu-item ${isActive('/upseller-teams') ? 'active' : ''}`}>
-            <Link to="/upseller-teams" className="menu-link" onClick={handleMenuClick}>
-              <i className="fas fa-user-friends menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Upseller Teams</span>}
-            </Link>
-          </li>
-        )}
-        {hasPermission('upseller_targets', 'view') && (
-          <li className={`menu-item ${isActive('/upseller-targets') ? 'active' : ''}`}>
-            <Link to="/upseller-targets" className="menu-link" onClick={handleMenuClick}>
-              <i className="fas fa-crosshairs menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Upseller Targets</span>}
-            </Link>
-          </li>
-        )}
-        {hasPermission('upseller_performance', 'view') && (
-          <li className={`menu-item ${isActive('/upseller-performance') ? 'active' : ''}`}>
-            <Link to="/upseller-performance" className="menu-link" onClick={handleMenuClick}>
-              <i className="fas fa-chart-line menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Upseller Performance</span>}
-            </Link>
-          </li>
-        )}
         {isAdmin() && (
           <li className={`menu-item ${isActive('/backup') ? 'active' : ''}`}>
             <Link to="/backup" className="menu-link" onClick={handleMenuClick}>

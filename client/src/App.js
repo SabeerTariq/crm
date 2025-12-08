@@ -12,6 +12,7 @@ import LeadScraperDashboard from './pages/LeadScraperDashboard';
 import FrontSellerDashboard from './pages/FrontSellerDashboard';
 import UpsellerDashboard from './pages/UpsellerDashboard';
 import UpsellManagerDashboard from './pages/UpsellManagerDashboard';
+import FrontSalesManagerDashboard from './pages/FrontSalesManagerDashboard';
 import ProductionHeadDashboard from './pages/ProductionHeadDashboard';
 import DepartmentLeaderDashboard from './pages/DepartmentLeaderDashboard';
 import TeamMemberDashboard from './pages/TeamMemberDashboard';
@@ -82,6 +83,7 @@ function App() {
         <Route path="/front-seller-dashboard" element={<FrontSellerDashboard />} />
         <Route path="/upseller-dashboard" element={<UpsellerDashboard />} />
         <Route path="/upsell-manager-dashboard" element={<UpsellManagerDashboard />} />
+        <Route path="/front-sales-manager-dashboard" element={<FrontSalesManagerDashboard />} />
         <Route path="/production-head-dashboard" element={<ProductionHeadDashboard />} />
         <Route path="/department-leader-dashboard/:departmentId" element={<DepartmentLeaderDashboard />} />
         <Route path="/team-member-dashboard" element={<TeamMemberDashboard />} />

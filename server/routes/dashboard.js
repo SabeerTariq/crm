@@ -34,6 +34,21 @@ const checkSalesRole = (req, res, next) => {
   res.status(403).json({ message: 'Access denied. Sales role required.' });
 };
 
+// Middleware to check if user has front sales manager role
+const checkFrontSalesManagerRole = (req, res, next) => {
+  // Check admin role first (role_id = 1)
+  if (req.user.role_id === 1) {
+    return next();
+  }
+  
+  // Check front-sales-manager role (role_id = 4)
+  if (req.user.role_id === 4) {
+    return next();
+  }
+  
+  res.status(403).json({ message: 'Access denied. Front Sales Manager role required.' });
+};
+
 // Get dashboard statistics
 router.get('/stats', auth, checkLeadScraperRole, async (req, res) => {
   try {
@@ -426,5 +441,365 @@ async function getCommissionDataForFrontSeller(userId) {
     });
   });
 }
+
+// FRONT SALES MANAGER DASHBOARD ENDPOINTS
+
+// Get front sales manager dashboard data (similar to upsell manager dashboard)
+router.get('/front-sales-manager/dashboard', auth, checkFrontSalesManagerRole, async (req, res) => {
+  try {
+    const { period = 'this_month', year, month } = req.query;
+    
+    // Determine date range based on period
+    let startDate, endDate, periodLabel;
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    switch (period) {
+      case 'this_year':
+        startDate = new Date(currentYear, 0, 1);
+        endDate = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+        periodLabel = `${currentYear}`;
+        break;
+      case 'this_month':
+        startDate = new Date(currentYear, currentMonth - 1, 1);
+        endDate = new Date(currentYear, currentMonth - 1, new Date(currentYear, currentMonth, 0).getDate(), 23, 59, 59, 999);
+        periodLabel = `${currentDate.toLocaleString('default', { month: 'long' })} ${currentYear}`;
+        break;
+      case 'all_time':
+        startDate = new Date('2020-01-01');
+        endDate = new Date();
+        periodLabel = 'All Time';
+        break;
+      case 'custom':
+        if (!year || !month) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Year and month are required for custom period' 
+          });
+        }
+        startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+        endDate = new Date(parseInt(year), parseInt(month) - 1, new Date(parseInt(year), parseInt(month), 0).getDate(), 23, 59, 59, 999);
+        periodLabel = `${new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' })} ${year}`;
+        break;
+      default:
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid period. Use: this_year, this_month, all_time, or custom' 
+        });
+    }
+    
+    // Get all front sellers (role_id = 3)
+    const frontSellersSql = `
+      SELECT u.id, u.name, u.email, u.created_at
+      FROM users u
+      WHERE u.role_id = 3
+      ORDER BY u.name
+    `;
+    
+    const frontSellersResults = await new Promise((resolve, reject) => {
+      db.query(frontSellersSql, (err, results) => {
+        if (err) reject(err);
+        else resolve(results || []);
+      });
+    });
+    
+    // Get comprehensive analytics for each front seller
+    const analyticsPromises = frontSellersResults.map(async (frontSeller) => {
+      const sellerId = frontSeller.id;
+      
+      // Get total converted customers count
+      const totalCustomersSql = `
+        SELECT COUNT(*) as total_customers
+        FROM customers c
+        WHERE c.assigned_to = ?
+      `;
+      
+      // Get customers converted in period
+      const periodCustomersSql = `
+        SELECT COUNT(*) as period_customers
+        FROM customers c
+        WHERE c.assigned_to = ?
+          AND c.converted_at >= ?
+          AND c.converted_at <= ?
+      `;
+      
+      // Get total leads assigned to this seller
+      const totalLeadsSql = `
+        SELECT COUNT(*) as total_leads
+        FROM leads l
+        WHERE l.assigned_to = ?
+      `;
+      
+      // Get leads converted to customers in period
+      const leadsConvertedSql = `
+        SELECT COUNT(*) as leads_converted
+        FROM customers c
+        WHERE c.assigned_to = ?
+          AND c.converted_at >= ?
+          AND c.converted_at <= ?
+      `;
+      
+      // Get commission data (wire transfer and Zelle payments)
+      const commissionSql = `
+        SELECT 
+          pt.payment_source,
+          COALESCE(SUM(pt.amount), 0) as total_amount,
+          COUNT(pt.id) as payment_count
+        FROM payment_transactions pt
+        JOIN sales s ON pt.sale_id = s.id
+        JOIN customers c ON s.customer_id = c.id
+        WHERE c.assigned_to = ? 
+          AND pt.payment_source IN ('wire', 'zelle')
+          AND pt.created_at >= ?
+          AND pt.created_at <= ?
+        GROUP BY pt.payment_source
+      `;
+      
+      // Get total commission data (all time)
+      const totalCommissionSql = `
+        SELECT 
+          pt.payment_source,
+          COALESCE(SUM(pt.amount), 0) as total_amount,
+          COUNT(pt.id) as payment_count
+        FROM payment_transactions pt
+        JOIN sales s ON pt.sale_id = s.id
+        JOIN customers c ON s.customer_id = c.id
+        WHERE c.assigned_to = ? 
+          AND pt.payment_source IN ('wire', 'zelle')
+        GROUP BY pt.payment_source
+      `;
+      
+      // Get target data based on period
+      let targetSql, targetParams;
+      
+      if (period === 'this_month') {
+        targetSql = `
+          SELECT 
+            COALESCE(t.target_value, 0) as total_target,
+            COALESCE(COUNT(DISTINCT c.id), 0) as achieved
+          FROM targets t
+          LEFT JOIN customers c ON c.assigned_to = t.user_id 
+            AND YEAR(c.converted_at) = t.target_year 
+            AND MONTH(c.converted_at) = t.target_month
+          WHERE t.user_id = ? 
+            AND t.target_year = ? 
+            AND t.target_month = ?
+          GROUP BY t.id, t.target_value
+        `;
+        targetParams = [sellerId, currentYear, currentMonth];
+      } else if (period === 'this_year') {
+        targetSql = `
+          SELECT 
+            COALESCE(SUM(t.target_value), 0) as total_target,
+            COALESCE(COUNT(DISTINCT c.id), 0) as achieved
+          FROM targets t
+          LEFT JOIN customers c ON c.assigned_to = t.user_id 
+            AND YEAR(c.converted_at) = t.target_year 
+            AND MONTH(c.converted_at) = t.target_month
+          WHERE t.user_id = ? 
+            AND t.target_year = ?
+        `;
+        targetParams = [sellerId, currentYear];
+      } else if (period === 'custom') {
+        targetSql = `
+          SELECT 
+            COALESCE(t.target_value, 0) as total_target,
+            COALESCE(COUNT(DISTINCT c.id), 0) as achieved
+          FROM targets t
+          LEFT JOIN customers c ON c.assigned_to = t.user_id 
+            AND YEAR(c.converted_at) = t.target_year 
+            AND MONTH(c.converted_at) = t.target_month
+          WHERE t.user_id = ? 
+            AND t.target_year = ? 
+            AND t.target_month = ?
+          GROUP BY t.id, t.target_value
+        `;
+        targetParams = [sellerId, parseInt(year), parseInt(month)];
+      } else { // all_time
+        targetSql = `
+          SELECT 
+            COALESCE(SUM(t.target_value), 0) as total_target,
+            COALESCE(COUNT(DISTINCT c.id), 0) as achieved
+          FROM targets t
+          LEFT JOIN customers c ON c.assigned_to = t.user_id 
+            AND YEAR(c.converted_at) = t.target_year 
+            AND MONTH(c.converted_at) = t.target_month
+          WHERE t.user_id = ?
+        `;
+        targetParams = [sellerId];
+      }
+      
+      const [totalCustomers, periodCustomers, totalLeads, leadsConverted, commission, totalCommission, targets] = await Promise.all([
+        new Promise((resolve, reject) => {
+          db.query(totalCustomersSql, [sellerId], (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0]?.total_customers || 0);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(periodCustomersSql, [sellerId, startDate, endDate], (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0]?.period_customers || 0);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(totalLeadsSql, [sellerId], (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0]?.total_leads || 0);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(leadsConvertedSql, [sellerId, startDate, endDate], (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0]?.leads_converted || 0);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(commissionSql, [sellerId, startDate, endDate], (err, results) => {
+            if (err) reject(err);
+            else resolve(results || []);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(totalCommissionSql, [sellerId], (err, results) => {
+            if (err) reject(err);
+            else resolve(results || []);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(targetSql, targetParams, (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0] || { total_target: 0, achieved: 0 });
+          });
+        })
+      ]);
+      
+      // Process commission data
+      let wireTransfer = 0, zelle = 0, wireCount = 0, zelleCount = 0;
+      let totalWireTransfer = 0, totalZelle = 0, totalWireCount = 0, totalZelleCount = 0;
+      
+      commission.forEach(row => {
+        if (row.payment_source === 'wire') {
+          wireTransfer = parseFloat(row.total_amount);
+          wireCount = parseInt(row.payment_count);
+        } else if (row.payment_source === 'zelle') {
+          zelle = parseFloat(row.total_amount);
+          zelleCount = parseInt(row.payment_count);
+        }
+      });
+      
+      totalCommission.forEach(row => {
+        if (row.payment_source === 'wire') {
+          totalWireTransfer = parseFloat(row.total_amount);
+          totalWireCount = parseInt(row.payment_count);
+        } else if (row.payment_source === 'zelle') {
+          totalZelle = parseFloat(row.total_amount);
+          totalZelleCount = parseInt(row.payment_count);
+        }
+      });
+      
+      const targetValue = parseFloat(targets.total_target) || 0;
+      const achievedValue = parseInt(targets.achieved) || 0;
+      
+      return {
+        sellerId: frontSeller.id,
+        sellerName: frontSeller.name,
+        sellerEmail: frontSeller.email,
+        sellerCreatedAt: frontSeller.created_at,
+        metrics: {
+          totalCustomers: parseInt(totalCustomers),
+          periodCustomers: parseInt(periodCustomers),
+          totalLeads: parseInt(totalLeads),
+          leadsConverted: parseInt(leadsConverted),
+          conversionRate: totalLeads > 0 ? Math.round((periodCustomers / totalLeads) * 100) : 0,
+          periodCommission: {
+            wireTransfer: wireTransfer,
+            wireCount: wireCount,
+            zelle: zelle,
+            zelleCount: zelleCount,
+            total: wireTransfer + zelle,
+            totalCount: wireCount + zelleCount
+          },
+          allTimeCommission: {
+            wireTransfer: totalWireTransfer,
+            wireCount: totalWireCount,
+            zelle: totalZelle,
+            zelleCount: totalZelleCount,
+            total: totalWireTransfer + totalZelle,
+            totalCount: totalWireCount + totalZelleCount
+          },
+          target: targetValue,
+          achieved: achievedValue,
+          progressPercentage: targetValue > 0 ? 
+            Math.round((achievedValue / targetValue) * 100) : 0
+        }
+      };
+    });
+    
+    const frontSellerAnalytics = await Promise.all(analyticsPromises);
+    
+    // Calculate team totals
+    const teamTotals = frontSellerAnalytics.reduce((totals, seller) => {
+      totals.totalCustomers += seller.metrics.totalCustomers;
+      totals.periodCustomers += seller.metrics.periodCustomers;
+      totals.totalLeads += seller.metrics.totalLeads;
+      totals.leadsConverted += seller.metrics.leadsConverted;
+      totals.periodCommission += seller.metrics.periodCommission.total;
+      totals.allTimeCommission += seller.metrics.allTimeCommission.total;
+      totals.target += seller.metrics.target;
+      totals.achieved += seller.metrics.achieved;
+      return totals;
+    }, {
+      totalCustomers: 0,
+      periodCustomers: 0,
+      totalLeads: 0,
+      leadsConverted: 0,
+      periodCommission: 0,
+      allTimeCommission: 0,
+      target: 0,
+      achieved: 0,
+      progressPercentage: 0,
+      conversionRate: 0
+    });
+    
+    teamTotals.progressPercentage = teamTotals.target > 0 ? 
+      Math.round((teamTotals.achieved / teamTotals.target) * 100) : 0;
+    teamTotals.conversionRate = teamTotals.totalLeads > 0 ? 
+      Math.round((teamTotals.periodCustomers / teamTotals.totalLeads) * 100) : 0;
+    
+    // Sort front sellers by performance (achieved)
+    const sortedFrontSellers = frontSellerAnalytics.sort((a, b) => 
+      b.metrics.achieved - a.metrics.achieved
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        period: {
+          type: period,
+          label: periodLabel,
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0]
+        },
+        teamTotals,
+        frontSellers: sortedFrontSellers,
+        summary: {
+          totalFrontSellers: frontSellerAnalytics.length,
+          topPerformer: sortedFrontSellers[0] || null,
+          averagePerformance: frontSellerAnalytics.length > 0 ? 
+            Math.round(frontSellerAnalytics.reduce((sum, s) => sum + s.metrics.progressPercentage, 0) / frontSellerAnalytics.length) : 0
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching front sales manager dashboard data:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching dashboard data' 
+    });
+  }
+});
 
 module.exports = router;

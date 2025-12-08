@@ -99,17 +99,31 @@ export default function UpsellerTargets() {
   };
 
   const deleteTarget = async (id) => {
-    if (!window.confirm('Delete this cash in target?')) return;
+    const targetToDelete = targets.find(t => t.id === id);
+    const confirmMessage = targetToDelete 
+      ? `Are you sure you want to delete the cash in target for ${targetToDelete.user_name}?\n\nTarget: $${parseFloat(targetToDelete.target_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\nThis action cannot be undone.`
+      : 'Are you sure you want to delete this cash in target? This action cannot be undone.';
+    
+    if (!window.confirm(confirmMessage)) return;
     
     try {
+      setError(null);
       const token = localStorage.getItem('token');
       await api.delete(`/upseller-targets/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Show success message temporarily
+      const successMessage = targetToDelete 
+        ? `Cash in target for ${targetToDelete.user_name} deleted successfully`
+        : 'Cash in target deleted successfully';
+      setError(null);
+      // Refresh the list
       fetchTargets();
+      // Optional: Show success notification (you can replace with a toast notification library)
+      alert(successMessage);
     } catch (err) {
       console.error('Error deleting upseller target:', err);
-      setError(err.response?.data?.message || 'Failed to delete cash in target');
+      setError(err.response?.data?.message || 'Failed to delete cash in target. Please try again.');
     }
   };
 

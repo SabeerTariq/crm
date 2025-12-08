@@ -1,7 +1,6 @@
-// server/routes/backup.js
 const express = require('express');
 const router = express.Router();
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
@@ -9,19 +8,17 @@ const auth = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin');
 require('dotenv').config();
 
-// Ensure backups directory exists
+
 const backupsDir = path.join(__dirname, '..', 'backups');
 if (!fs.existsSync(backupsDir)) {
   fs.mkdirSync(backupsDir, { recursive: true });
 }
 
-// Configure multer for backup file uploads
 const backupStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, backupsDir);
   },
   filename: (req, file, cb) => {
-    // Keep original filename but add timestamp if needed to avoid conflicts
     const originalName = path.basename(file.originalname, path.extname(file.originalname));
     const ext = path.extname(file.originalname);
     const timestamp = Date.now();
@@ -45,7 +42,6 @@ const uploadBackup = multer({
   }
 });
 
-// GET: List all backup files
 router.get('/list', auth, isAdmin, (req, res) => {
   try {
     const files = fs.readdirSync(backupsDir)
@@ -60,7 +56,7 @@ router.get('/list', auth, isAdmin, (req, res) => {
           modified: stats.mtime
         };
       })
-      .sort((a, b) => b.created - a.created); // Sort by newest first
+      .sort((a, b) => b.created - a.created);
 
     res.json({ backups: files });
   } catch (error) {
@@ -69,7 +65,6 @@ router.get('/list', auth, isAdmin, (req, res) => {
   }
 });
 
-// POST: Upload a backup file
 router.post('/upload', auth, isAdmin, (req, res) => {
   uploadBackup.single('backupFile')(req, res, (err) => {
     // Handle multer errors
@@ -115,7 +110,6 @@ router.post('/upload', auth, isAdmin, (req, res) => {
   });
 });
 
-// POST: Create a new backup
 router.post('/create', auth, isAdmin, (req, res) => {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0] + '_' + 
                    new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
@@ -127,7 +121,6 @@ router.post('/create', auth, isAdmin, (req, res) => {
   const dbPassword = process.env.DB_PASSWORD || '';
   const dbName = process.env.DB_NAME || 'crm_db';
 
-  // Build mysqldump command
   let mysqldumpCmd = `mysqldump -u ${dbUser}`;
   if (dbPassword) {
     mysqldumpCmd += ` -p${dbPassword}`;
@@ -144,7 +137,6 @@ router.post('/create', auth, isAdmin, (req, res) => {
       });
     }
 
-    // Check if file was created and has content
     if (fs.existsSync(filepath)) {
       const stats = fs.statSync(filepath);
       if (stats.size > 0) {
@@ -164,7 +156,6 @@ router.post('/create', auth, isAdmin, (req, res) => {
   });
 });
 
-// GET: Download a backup file
 router.get('/download/:filename', auth, isAdmin, (req, res) => {
   const filename = req.params.filename;
   
@@ -189,7 +180,6 @@ router.get('/download/:filename', auth, isAdmin, (req, res) => {
   });
 });
 
-// DELETE: Delete a backup file
 router.delete('/delete/:filename', auth, isAdmin, (req, res) => {
   const filename = req.params.filename;
   
@@ -213,7 +203,6 @@ router.delete('/delete/:filename', auth, isAdmin, (req, res) => {
   }
 });
 
-// POST: Restore database from backup
 router.post('/restore', auth, isAdmin, (req, res) => {
   const { filename } = req.body;
 
@@ -237,7 +226,6 @@ router.post('/restore', auth, isAdmin, (req, res) => {
   const dbPassword = process.env.DB_PASSWORD || '';
   const dbName = process.env.DB_NAME || 'crm_db';
 
-  // Build mysql restore command
   let mysqlCmd = `mysql -u ${dbUser}`;
   if (dbPassword) {
     mysqlCmd += ` -p${dbPassword}`;
@@ -255,6 +243,79 @@ router.post('/restore', auth, isAdmin, (req, res) => {
     }
 
     res.json({ message: 'Database restored successfully' });
+  });
+});
+
+router.get('/export', (req, res) => {
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbUser = process.env.DB_USER || 'root';
+  const dbPassword = process.env.DB_PASSWORD || '';
+  const dbName = process.env.DB_NAME || 'crm_db';
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0] + '_' + 
+                   new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
+  const filename = `crm_db_export_${timestamp}.sql`;
+
+  res.setHeader('Content-Type', 'application/sql');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+  const mysqldumpArgs = ['-u', dbUser];
+  if (dbPassword) {
+    mysqldumpArgs.push(`-p${dbPassword}`);
+  }
+  mysqldumpArgs.push('-h', dbHost, dbName);
+
+  const mysqldump = spawn('mysqldump', mysqldumpArgs);
+
+  mysqldump.on('error', (error) => {
+    console.error('mysqldump spawn error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        message: 'Error starting database export', 
+        error: error.message 
+      });
+    }
+  });
+
+  let errorOutput = '';
+  mysqldump.stderr.on('data', (data) => {
+    errorOutput += data.toString();
+    console.warn('mysqldump warning:', data.toString());
+  });
+
+  mysqldump.stdout.on('data', (chunk) => {
+    if (!res.headersSent) {
+      res.writeHead(200, {
+        'Content-Type': 'application/sql',
+        'Content-Disposition': `attachment; filename="${filename}"`
+      });
+    }
+    res.write(chunk);
+  });
+
+  mysqldump.on('close', (code) => {
+    if (code !== 0) {
+      console.error('mysqldump exited with code:', code);
+      console.error('Error output:', errorOutput);
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          message: 'Error exporting database', 
+          error: errorOutput || 'mysqldump process failed',
+          exitCode: code
+        });
+      } else {
+        res.end();
+      }
+    } else {
+      res.end();
+    }
+  });
+
+  // Handle client disconnect
+  req.on('close', () => {
+    if (!mysqldump.killed) {
+      mysqldump.kill();
+    }
   });
 });
 

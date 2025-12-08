@@ -99,17 +99,31 @@ export default function Targets() {
   };
 
   const deleteTarget = async (id) => {
-    if (!window.confirm('Delete this target?')) return;
+    const targetToDelete = targets.find(t => t.id === id);
+    const confirmMessage = targetToDelete 
+      ? `Are you sure you want to delete the target for ${targetToDelete.user_name}?\n\nTarget: ${targetToDelete.target_value} customers\n\nThis action cannot be undone.`
+      : 'Are you sure you want to delete this target? This action cannot be undone.';
+    
+    if (!window.confirm(confirmMessage)) return;
     
     try {
+      setError(null);
       const token = localStorage.getItem('token');
       await api.delete(`/targets/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Show success message temporarily
+      const successMessage = targetToDelete 
+        ? `Target for ${targetToDelete.user_name} deleted successfully`
+        : 'Target deleted successfully';
+      setError(null);
+      // Refresh the list
       fetchTargets();
+      // Optional: Show success notification (you can replace with a toast notification library)
+      alert(successMessage);
     } catch (err) {
       console.error('Error deleting target:', err);
-      setError(err.response?.data?.message || 'Failed to delete target');
+      setError(err.response?.data?.message || 'Failed to delete target. Please try again.');
     }
   };
 

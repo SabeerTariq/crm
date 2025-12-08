@@ -59,6 +59,17 @@ export const hasUpsellerManagerRole = () => {
   return userRoleId === 6;
 };
 
+export const hasFrontSalesManagerRole = () => {
+  // Check admin role first (role_id = 1)
+  const userRoleId = getUserRoleId();
+  if (userRoleId === 1) {
+    return true;
+  }
+  
+  // Check front-sales-manager role (role_id = 4)
+  return userRoleId === 4;
+};
+
 export const isAdmin = () => {
   return getUserRoleId() === 1;
 };
