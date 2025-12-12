@@ -97,11 +97,34 @@ export default function Backup() {
     setCreating(true);
     setMessage({ type: '', text: '' });
     try {
-      const res = await api.post('/backup/create', {}, { headers: tokenHeader() });
+      const res = await api.post('/backup/create', {}, { 
+        headers: tokenHeader(),
+        timeout: 300000 // 5 minutes timeout for large databases
+      });
       setMessage({ type: 'success', text: res.data.message || 'Backup created successfully' });
       await loadBackups();
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to create backup' });
+      let errorMessage = 'Failed to create backup';
+      
+      if (err.response?.data) {
+        // Use detailed error message from server
+        errorMessage = err.response.data.message || errorMessage;
+        
+        // Add additional details if available
+        if (err.response.data.error) {
+          errorMessage += `\n\nError details: ${err.response.data.error}`;
+        }
+        if (err.response.data.suggestion) {
+          errorMessage += `\n\nSuggestion: ${err.response.data.suggestion}`;
+        }
+      } else if (err.code === 'ECONNABORTED') {
+        errorMessage = 'Backup creation timed out. The database might be very large. Please try again or contact support.';
+      } else if (err.message) {
+        errorMessage = `Failed to create backup: ${err.message}`;
+      }
+      
+      setMessage({ type: 'error', text: errorMessage });
+      console.error('Backup creation error:', err);
     } finally {
       setCreating(false);
     }

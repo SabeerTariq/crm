@@ -169,7 +169,7 @@ export default function Payments() {
 
   const getPaymentTypeColor = (type) => {
     switch (type) {
-      case 'one_time': return '#3b82f6';
+      case 'fully_paid': return '#3b82f6';
       case 'installments': return '#f59e0b';
       case 'recurring': return '#22c55e';
       default: return '#6b7280';
@@ -567,7 +567,7 @@ export default function Payments() {
                 }}
               >
                 <option value="">All Types</option>
-                <option value="one_time">One Time</option>
+                <option value="fully_paid">Fully Paid</option>
                 <option value="installments">Installments</option>
                 <option value="recurring">Recurring</option>
               </select>

@@ -71,6 +71,8 @@ export default function Leads() {
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [leadDocuments, setLeadDocuments] = useState({});
+  const [convertedLeads, setConvertedLeads] = useState([]);
+  const [loadingConvertedLeads, setLoadingConvertedLeads] = useState(false);
   const { hasPermission, loading: permissionsLoading } = usePermissions();
 
   // Helper function to check if current user has scheduled this lead
@@ -251,12 +253,19 @@ export default function Leads() {
       const response = await api.get(`/leads/${leadId}/documents`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Handle both response formats: response.data.documents or response.data directly
+      const documents = response.data.documents || response.data || [];
       setLeadDocuments(prev => ({
         ...prev,
-        [leadId]: response.data.documents || []
+        [leadId]: Array.isArray(documents) ? documents : []
       }));
     } catch (error) {
       console.error('Error fetching documents:', error);
+      // Set empty array on error to prevent undefined issues
+      setLeadDocuments(prev => ({
+        ...prev,
+        [leadId]: []
+      }));
     }
   };
 
@@ -813,6 +822,21 @@ export default function Leads() {
     }
   }, [pagination.limit, filters]);
 
+  const loadConvertedLeads = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    setLoadingConvertedLeads(true);
+    try {
+      const response = await api.get('/leads/converted', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setConvertedLeads(response.data || []);
+    } catch (error) {
+      console.error('Error fetching converted leads:', error);
+    } finally {
+      setLoadingConvertedLeads(false);
+    }
+  }, []);
+
   const loadFilterOptions = useCallback(async () => {
     const token = localStorage.getItem('token');
     try {
@@ -896,7 +920,8 @@ export default function Leads() {
     
     loadLeads();
     loadFilterOptions();
-  }, [hasPermission, loadLeads, loadFilterOptions]);
+    loadConvertedLeads();
+  }, [hasPermission, loadLeads, loadFilterOptions, loadConvertedLeads]);
 
   // Handle Escape key to close modal
   useEffect(() => {
@@ -1865,7 +1890,7 @@ export default function Leads() {
                   )}
                   
                   {/* Display existing documents */}
-                  {editingLead && leadDocuments[editingLead.id] && leadDocuments[editingLead.id].length > 0 && (
+                  {editingLead && (
                     <div style={{ marginTop: '16px' }}>
                       <label style={{ 
                         display: 'block', 
@@ -1876,65 +1901,93 @@ export default function Leads() {
                       }}>
                         Existing Documents
                       </label>
-                      <div style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        gap: '8px',
-                        maxHeight: '200px',
-                        overflowY: 'auto',
-                        padding: '8px',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '8px',
-                        border: '1px solid #e5e7eb'
-                      }}>
-                        {leadDocuments[editingLead.id].map((doc) => (
-                          <div key={doc.id} style={{ 
+                      {leadDocuments[editingLead.id] !== undefined ? (
+                        Array.isArray(leadDocuments[editingLead.id]) && leadDocuments[editingLead.id].length > 0 ? (
+                          <div style={{ 
                             display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center',
+                            flexDirection: 'column', 
+                            gap: '8px',
+                            maxHeight: '200px',
+                            overflowY: 'auto',
                             padding: '8px',
-                            backgroundColor: '#ffffff',
-                            borderRadius: '6px',
+                            backgroundColor: '#f9fafb',
+                            borderRadius: '8px',
                             border: '1px solid #e5e7eb'
                           }}>
-                            <span style={{ fontSize: '13px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {doc.file_name}
-                            </span>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                onClick={() => downloadDocument(editingLead.id, doc.id, doc.file_name)}
-                                style={{
-                                  padding: '4px 8px',
-                                  fontSize: '12px',
-                                  backgroundColor: '#3b82f6',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Download
-                              </button>
-                              {hasPermission('leads', 'update') && (
-                                <button
-                                  onClick={() => deleteDocument(editingLead.id, doc.id)}
-                                  style={{
-                                    padding: '4px 8px',
-                                    fontSize: '12px',
-                                    backgroundColor: '#ef4444',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  Delete
-                                </button>
-                              )}
-                            </div>
+                            {leadDocuments[editingLead.id].map((doc) => (
+                              <div key={doc.id} style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center',
+                                padding: '8px',
+                                backgroundColor: '#ffffff',
+                                borderRadius: '6px',
+                                border: '1px solid #e5e7eb'
+                              }}>
+                                <span style={{ fontSize: '13px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {doc.file_name}
+                                </span>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button
+                                    onClick={() => downloadDocument(editingLead.id, doc.id, doc.file_name)}
+                                    style={{
+                                      padding: '4px 8px',
+                                      fontSize: '12px',
+                                      backgroundColor: '#3b82f6',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Download
+                                  </button>
+                                  {hasPermission('leads', 'update') && (
+                                    <button
+                                      onClick={() => deleteDocument(editingLead.id, doc.id)}
+                                      style={{
+                                        padding: '4px 8px',
+                                        fontSize: '12px',
+                                        backgroundColor: '#ef4444',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        ) : (
+                          <div style={{
+                            padding: '12px',
+                            backgroundColor: '#f9fafb',
+                            borderRadius: '8px',
+                            border: '1px solid #e5e7eb',
+                            fontSize: '13px',
+                            color: '#6b7280',
+                            textAlign: 'center'
+                          }}>
+                            No documents uploaded
+                          </div>
+                        )
+                      ) : (
+                        <div style={{
+                          padding: '12px',
+                          backgroundColor: '#f0f9ff',
+                          borderRadius: '8px',
+                          border: '1px solid #bfdbfe',
+                          fontSize: '13px',
+                          color: '#1e40af',
+                          textAlign: 'center'
+                        }}>
+                          Loading documents...
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2513,87 +2566,100 @@ export default function Leads() {
                 }}>
                   Documents/Media
                 </h3>
-                {viewingLead && leadDocuments[viewingLead.id] && leadDocuments[viewingLead.id].length > 0 ? (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                  }}>
-                    {leadDocuments[viewingLead.id].map((doc) => (
-                      <div key={doc.id} style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '12px 16px',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '8px',
-                        border: '1px solid #e5e7eb',
-                        transition: 'background-color 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            color: '#1f2937',
-                            marginBottom: '4px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {doc.file_name}
-                          </div>
-                          <div style={{
-                            fontSize: '12px',
-                            color: '#6b7280',
-                            display: 'flex',
-                            gap: '12px',
-                            alignItems: 'center'
-                          }}>
-                            <span>{(doc.file_size / 1024).toFixed(2)} KB</span>
-                            {doc.uploaded_by_name && (
-                              <span>Uploaded by: {doc.uploaded_by_name}</span>
-                            )}
-                            {doc.created_at && (
-                              <span>{new Date(doc.created_at).toLocaleDateString()}</span>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => downloadDocument(viewingLead.id, doc.id, doc.file_name)}
-                          style={{
-                            padding: '8px 16px',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.2s ease',
-                            whiteSpace: 'nowrap',
-                            marginLeft: '12px'
-                          }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                {viewingLead && leadDocuments[viewingLead.id] !== undefined ? (
+                  Array.isArray(leadDocuments[viewingLead.id]) && leadDocuments[viewingLead.id].length > 0 ? (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}>
+                      {leadDocuments[viewingLead.id].map((doc) => (
+                        <div key={doc.id} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '12px 16px',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '8px',
+                          border: '1px solid #e5e7eb',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
                         >
-                          Download
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              color: '#1f2937',
+                              marginBottom: '4px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {doc.file_name}
+                            </div>
+                            <div style={{
+                              fontSize: '12px',
+                              color: '#6b7280',
+                              display: 'flex',
+                              gap: '12px',
+                              alignItems: 'center'
+                            }}>
+                              <span>{(doc.file_size / 1024).toFixed(2)} KB</span>
+                              {doc.uploaded_by_name && (
+                                <span>Uploaded by: {doc.uploaded_by_name}</span>
+                              )}
+                              {doc.created_at && (
+                                <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => downloadDocument(viewingLead.id, doc.id, doc.file_name)}
+                            style={{
+                              padding: '8px 16px',
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.2s ease',
+                              whiteSpace: 'nowrap',
+                              marginLeft: '12px'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                          >
+                            Download
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{
+                      backgroundColor: '#f9fafb',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      color: '#6b7280',
+                      textAlign: 'center'
+                    }}>
+                      No documents uploaded
+                    </div>
+                  )
                 ) : (
                   <div style={{
-                    backgroundColor: '#f9fafb',
+                    backgroundColor: '#f0f9ff',
                     padding: '16px',
                     borderRadius: '8px',
                     fontSize: '14px',
-                    color: '#6b7280',
+                    color: '#1e40af',
                     textAlign: 'center'
                   }}>
-                    No documents uploaded
+                    Loading documents...
                   </div>
                 )}
               </div>
@@ -3006,7 +3072,7 @@ export default function Leads() {
           backgroundColor: '#ffffff',
           border: '2px solid #e2e8f0',
           borderRadius: '16px',
-          overflow: 'hidden',
+          overflow: 'auto',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
         }}>
           {loading ? (
@@ -3491,6 +3557,377 @@ export default function Leads() {
                 </div>
               )}
             </>
+          )}
+        </div>
+
+        {/* Converted Leads Section */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '2px solid #e2e8f0',
+          borderRadius: '16px',
+          padding: '24px',
+          marginTop: '24px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px',
+            paddingBottom: '16px',
+            borderBottom: '2px solid #e2e8f0'
+          }}>
+            <h2 style={{
+              margin: 0,
+              color: '#1f2937',
+              fontSize: '24px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              Converted Leads
+            </h2>
+            <div style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              backgroundColor: '#f3f4f6',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontWeight: '500'
+            }}>
+              {loadingConvertedLeads ? 'Loading...' : `${convertedLeads.length} converted`}
+            </div>
+          </div>
+
+          {loadingConvertedLeads ? (
+            <div style={{
+              padding: '40px',
+              textAlign: 'center',
+              color: '#6b7280'
+            }}>
+              Loading converted leads...
+            </div>
+          ) : convertedLeads.length === 0 ? (
+            <div style={{
+              padding: '40px',
+              textAlign: 'center',
+              color: '#6b7280'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+              <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>No converted leads</h3>
+              <p style={{ margin: '0' }}>
+                No leads have been converted to customers yet.
+              </p>
+            </div>
+          ) : (
+            <div style={{
+              maxHeight: '500px',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              border: '1px solid #e5e7eb',
+              borderRadius: '12px',
+              backgroundColor: '#f9fafb'
+            }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr',
+                gap: '12px',
+                padding: '16px'
+              }}>
+                {convertedLeads.map((convertedLead, index) => (
+                  <div
+                    key={convertedLead.id}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                    }}
+                  >
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '16px'
+                    }}>
+                      <div>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '4px'
+                        }}>
+                          Name
+                        </div>
+                        <div style={{
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: '#1f2937'
+                        }}>
+                          {convertedLead.name || 'N/A'}
+                        </div>
+                        {convertedLead.company_name && (
+                          <>
+                            <div style={{
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              marginTop: '12px',
+                              marginBottom: '4px'
+                            }}>
+                              Company
+                            </div>
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#374151'
+                            }}>
+                              {convertedLead.company_name}
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <div>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '4px'
+                        }}>
+                          Contact
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#374151',
+                          marginBottom: '4px'
+                        }}>
+                          📧 {convertedLead.email || 'N/A'}
+                        </div>
+                        {convertedLead.phone && (
+                          <div style={{
+                            fontSize: '14px',
+                            color: '#374151'
+                          }}>
+                            📞 {convertedLead.phone}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '4px'
+                        }}>
+                          Location
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#374151'
+                        }}>
+                          {convertedLead.city && convertedLead.state 
+                            ? `${convertedLead.city}, ${convertedLead.state}`
+                            : convertedLead.city || convertedLead.state || 'N/A'}
+                        </div>
+                        {convertedLead.source && (
+                          <>
+                            <div style={{
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              marginTop: '12px',
+                              marginBottom: '4px'
+                            }}>
+                              Source
+                            </div>
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#374151'
+                            }}>
+                              {convertedLead.source}
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <div>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '4px'
+                        }}>
+                          Conversion Details
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#374151',
+                          marginBottom: '8px'
+                        }}>
+                          <span style={{
+                            backgroundColor: '#dbeafe',
+                            color: '#1e40af',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            Converted: {convertedLead.converted_at 
+                              ? new Date(convertedLead.converted_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : 'N/A'}
+                          </span>
+                        </div>
+                        {convertedLead.created_by_name && (
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#6b7280',
+                            marginTop: '4px'
+                          }}>
+                            By: {convertedLead.created_by_name}
+                          </div>
+                        )}
+                        {convertedLead.assigned_to_name && (
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#6b7280',
+                            marginTop: '4px'
+                          }}>
+                            Assigned: {convertedLead.assigned_to_name}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '4px'
+                        }}>
+                          Sales Performance
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#374151',
+                          marginBottom: '4px'
+                        }}>
+                          <span style={{
+                            backgroundColor: '#f0fdf4',
+                            color: '#166534',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            Sales: {convertedLead.sales_count || 0}
+                          </span>
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#374151'
+                        }}>
+                          <span style={{
+                            backgroundColor: '#fef3c7',
+                            color: '#92400e',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            Revenue: ${parseFloat(convertedLead.total_revenue || 0).toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {convertedLead.service_required && (
+                      <div style={{
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid #e5e7eb'
+                      }}>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '4px'
+                        }}>
+                          Service Required
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#374151'
+                        }}>
+                          {convertedLead.service_required}
+                        </div>
+                      </div>
+                    )}
+
+                    {convertedLead.notes && (
+                      <div style={{
+                        marginTop: '12px',
+                        paddingTop: '12px',
+                        borderTop: '1px solid #e5e7eb'
+                      }}>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '4px'
+                        }}>
+                          Notes
+                        </div>
+                        <div style={{
+                          fontSize: '13px',
+                          color: '#6b7280',
+                          lineHeight: '1.5'
+                        }}>
+                          {convertedLead.notes}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 

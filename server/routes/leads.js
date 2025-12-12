@@ -214,6 +214,75 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
   }
 });
 
+// Get converted leads (customers that were converted from leads)
+router.get('/converted', auth, authorize('leads','read'), (req, res) => {
+  const isAdmin = req.user.role_id === 1;
+  const userId = req.user.id;
+  
+  // Get converted customers (customers with converted_at timestamp)
+  // Include information about who converted them and when
+  const sql = isAdmin ? `
+    SELECT 
+      c.id,
+      c.name,
+      c.company_name,
+      c.email,
+      c.phone,
+      c.city,
+      c.state,
+      c.source,
+      c.service_required,
+      c.notes,
+      c.converted_at,
+      c.created_at,
+      u1.name as created_by_name,
+      u2.name as assigned_to_name,
+      (SELECT COUNT(*) FROM sales WHERE customer_id = c.id) as sales_count,
+      (SELECT COALESCE(SUM(cash_in), 0) FROM sales WHERE customer_id = c.id) as total_revenue
+    FROM customers c
+    LEFT JOIN users u1 ON c.created_by = u1.id
+    LEFT JOIN users u2 ON c.assigned_to = u2.id
+    WHERE c.converted_at IS NOT NULL
+    ORDER BY c.converted_at DESC
+    LIMIT 100
+  ` : `
+    SELECT 
+      c.id,
+      c.name,
+      c.company_name,
+      c.email,
+      c.phone,
+      c.city,
+      c.state,
+      c.source,
+      c.service_required,
+      c.notes,
+      c.converted_at,
+      c.created_at,
+      u1.name as created_by_name,
+      u2.name as assigned_to_name,
+      (SELECT COUNT(*) FROM sales WHERE customer_id = c.id) as sales_count,
+      (SELECT COALESCE(SUM(cash_in), 0) FROM sales WHERE customer_id = c.id) as total_revenue
+    FROM customers c
+    LEFT JOIN users u1 ON c.created_by = u1.id
+    LEFT JOIN users u2 ON c.assigned_to = u2.id
+    WHERE c.converted_at IS NOT NULL 
+      AND (c.created_by = ? OR c.assigned_to = ?)
+    ORDER BY c.converted_at DESC
+    LIMIT 100
+  `;
+  
+  const queryParams = isAdmin ? [] : [userId, userId];
+  
+  db.query(sql, queryParams, (err, results) => {
+    if (err) {
+      console.error('Error fetching converted leads:', err);
+      return res.status(500).json({ message: 'Error fetching converted leads' });
+    }
+    res.json(results);
+  });
+});
+
 // Get filter options for leads
 router.get('/filter-options', auth, authorize('leads','read'), (req, res) => {
   const isAdmin = req.user.role_id === 1;

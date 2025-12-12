@@ -387,8 +387,30 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
 });
 
 // Update Sale
-router.put('/:id', auth, authorize('sales','update'), (req, res) => {
+router.put('/:id', auth, authorize('sales','update'), salesUpload.single('agreement'), (req, res) => {
   const saleId = req.params.id;
+  
+  // Handle both JSON and FormData requests
+  let bodyData = req.body;
+  if (req.file) {
+    // If file is uploaded, req.body fields come as strings from FormData
+    bodyData = {
+      customer_id: req.body.customer_id ? parseInt(req.body.customer_id) : null,
+      customer_name: req.body.customer_name || '',
+      customer_email: req.body.customer_email || '',
+      customer_phone: req.body.customer_phone || '',
+      unit_price: req.body.unit_price ? parseFloat(req.body.unit_price) : 0,
+      cash_in: req.body.cash_in ? parseFloat(req.body.cash_in) : 0,
+      notes: req.body.notes || '',
+      services: req.body.services || '',
+      service_details: req.body.service_details || '',
+      payment_type: req.body.payment_type || 'fully_paid',
+      payment_source: req.body.payment_source || 'wire',
+      payment_company: req.body.payment_company || 'american_digital_agency',
+      brand: req.body.brand || 'liberty_web_studio'
+    };
+  }
+  
   const { 
     customer_id, 
     customer_name, 
@@ -403,7 +425,7 @@ router.put('/:id', auth, authorize('sales','update'), (req, res) => {
     payment_source,
     payment_company,
     brand
-  } = req.body;
+  } = bodyData;
   
   // Calculate values
   const gross_value = unit_price;
@@ -430,24 +452,102 @@ router.put('/:id', auth, authorize('sales','update'), (req, res) => {
   }
   
   function updateSale() {
-    const sql = `
-      UPDATE sales SET 
-        customer_id = ?, customer_name = ?, customer_email = ?, customer_phone = ?,
-        unit_price = ?, gross_value = ?, net_value = ?, cash_in = ?, remaining = ?, 
-        notes = ?, services = ?, service_details = ?, 
-        payment_type = ?, payment_source = ?, payment_company = ?, brand = ?
-      WHERE id = ?
-    `;
+    // Handle agreement file if uploaded
+    let agreementData = {};
+    if (req.file) {
+      agreementData = {
+        agreement_file_name: req.file.originalname,
+        agreement_file_path: req.file.path,
+        agreement_file_size: req.file.size,
+        agreement_file_type: req.file.mimetype,
+        agreement_uploaded_at: new Date()
+      };
+    }
     
-    const params = [
-      customer_id || null, customer_name, customer_email, customer_phone,
-      unit_price, gross_value, net_value, cash_in, remaining, 
-      notes, services, service_details, payment_type,
-      payment_source, payment_company, brand, saleId
-    ];
+    // Build SQL query - include agreement fields if file is uploaded
+    let sql;
+    let params;
+    
+    if (req.file) {
+      // Update with agreement file
+      sql = `
+        UPDATE sales SET 
+          customer_id = ?, customer_name = ?, customer_email = ?, customer_phone = ?,
+          unit_price = ?, gross_value = ?, net_value = ?, cash_in = ?, remaining = ?, 
+          notes = ?, services = ?, service_details = ?, 
+          payment_type = ?, payment_source = ?, payment_company = ?, brand = ?,
+          agreement_file_name = ?, agreement_file_path = ?, agreement_file_size = ?, 
+          agreement_file_type = ?, agreement_uploaded_at = ?
+        WHERE id = ?
+      `;
+      
+      params = [
+        customer_id || null, 
+        customer_name || null, 
+        customer_email || null, 
+        customer_phone || null,
+        unit_price || 0, 
+        gross_value || 0, 
+        net_value || 0, 
+        cash_in || 0, 
+        remaining || 0, 
+        notes || null, 
+        services || null, 
+        service_details || null, 
+        payment_type || null,
+        payment_source || null, 
+        payment_company || null, 
+        brand || null,
+        agreementData.agreement_file_name || null,
+        agreementData.agreement_file_path || null,
+        agreementData.agreement_file_size || null,
+        agreementData.agreement_file_type || null,
+        agreementData.agreement_uploaded_at || null,
+        saleId
+      ];
+    } else {
+      // Update without agreement file (don't change existing file)
+      sql = `
+        UPDATE sales SET 
+          customer_id = ?, customer_name = ?, customer_email = ?, customer_phone = ?,
+          unit_price = ?, gross_value = ?, net_value = ?, cash_in = ?, remaining = ?, 
+          notes = ?, services = ?, service_details = ?, 
+          payment_type = ?, payment_source = ?, payment_company = ?, brand = ?
+        WHERE id = ?
+      `;
+      
+      params = [
+        customer_id || null, 
+        customer_name || null, 
+        customer_email || null, 
+        customer_phone || null,
+        unit_price || 0, 
+        gross_value || 0, 
+        net_value || 0, 
+        cash_in || 0, 
+        remaining || 0, 
+        notes || null, 
+        services || null, 
+        service_details || null, 
+        payment_type || null,
+        payment_source || null, 
+        payment_company || null, 
+        brand || null, 
+        saleId
+      ];
+    }
     
     db.query(sql, params, (err, result) => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.error('Error updating sale:', err);
+        console.error('SQL:', sql);
+        console.error('Params:', params);
+        return res.status(500).json({ 
+          message: 'Error updating sale', 
+          error: err.message,
+          sqlError: err.sqlMessage 
+        });
+      }
       if (result.affectedRows === 0) return res.status(404).json({ message: 'Sale not found' });
       res.json({ message: 'Sale updated successfully' });
     });

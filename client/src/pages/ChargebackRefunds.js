@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '../components/PageLayout';
 import api from '../services/api';
+import { usePermissions } from '../hooks/usePermissions';
 import './ChargebackRefunds.css';
 
 const ChargebackRefunds = () => {
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
   const [activeTab, setActiveTab] = useState('chargeback');
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -412,24 +414,26 @@ const ChargebackRefunds = () => {
               Retained (Resolved)
             </button>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setEditingRecord(null);
-              setFormData({
-                customer_id: '',
-                sale_id: '',
-                type: activeTab,
-                amount: '',
-                refund_type: 'full',
-                reason: ''
-              });
-              setShowModal(true);
-            }}
-          >
-            <i className="fas fa-plus"></i>
-            Add New {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </button>
+          {hasPermission('chargeback_refunds', 'create') && (
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setEditingRecord(null);
+                setFormData({
+                  customer_id: '',
+                  sale_id: '',
+                  type: activeTab,
+                  amount: '',
+                  refund_type: 'full',
+                  reason: ''
+                });
+                setShowModal(true);
+              }}
+            >
+              <i className="fas fa-plus"></i>
+              Add New {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+            </button>
+          )}
         </div>
 
         {/* Records Table */}
@@ -491,14 +495,16 @@ const ChargebackRefunds = () => {
                     <td>{formatDate(record.created_at)}</td>
                     <td>
                       <div className="action-buttons">
-                        <button
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => handleEdit(record)}
-                          title="Edit"
-                        >
-                          <i className="fas fa-edit"></i>
-                        </button>
-                        {record.status === 'pending' && (
+                        {hasPermission('chargeback_refunds', 'update') && (
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => handleEdit(record)}
+                            title="Edit"
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                        )}
+                        {record.status === 'pending' && hasPermission('chargeback_refunds', 'update') && (
                           <>
                             <button
                               className="btn btn-sm btn-outline-success"
@@ -523,7 +529,7 @@ const ChargebackRefunds = () => {
                             </button>
                           </>
                         )}
-                        {(record.type === 'chargeback' || record.type === 'refund') && record.status !== 'retained' && (
+                        {(record.type === 'chargeback' || record.type === 'refund') && record.status !== 'retained' && hasPermission('chargeback_refunds', 'update') && (
                           <button
                             className="btn btn-sm btn-outline-success"
                             onClick={() => handleConvertToRetained(record.id)}
@@ -532,13 +538,15 @@ const ChargebackRefunds = () => {
                             <i className="fas fa-user-check"></i>
                           </button>
                         )}
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDelete(record.id)}
-                          title="Delete"
-                        >
-                          <i className="fas fa-trash"></i>
-                        </button>
+                        {hasPermission('chargeback_refunds', 'delete') && (
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleDelete(record.id)}
+                            title="Delete"
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

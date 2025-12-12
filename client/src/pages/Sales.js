@@ -37,7 +37,7 @@ export default function Sales() {
     notes: '',
     services: '',
     service_details: '',
-    payment_type: 'one_time',
+    payment_type: 'fully_paid',
     payment_source: 'wire',
     payment_company: 'american_digital_agency',
     brand: 'liberty_web_studio',
@@ -211,7 +211,7 @@ export default function Sales() {
       notes: '',
       services: '',
       service_details: '',
-      payment_type: 'one_time',
+      payment_type: 'fully_paid',
       payment_source: 'wire',
       payment_company: 'american_digital_agency',
       brand: 'liberty_web_studio',
@@ -310,24 +310,27 @@ export default function Sales() {
       formData.lead_id = convertingLead.lead_id;
     }
     
-    // Validate based on user role
-    if (userRoleId === 3) {
-      // Sales role: must select a lead
-      if (!formData.lead_id) {
-        alert('Sales role must select a lead to convert to customer');
-        return;
-      }
-    } else if (userRoleId === 5) {
-      // Upseller role: must select a customer
-      if (!formData.customer_id) {
-        alert('Upseller role must select an existing customer');
-        return;
-      }
-    } else {
-      // Other roles: either customer or lead is selected
-      if (!formData.customer_id && !formData.lead_id) {
-        alert('Please select either an existing customer or a lead to convert');
-        return;
+    // Skip customer/lead validation when editing - customer is already set and cannot be changed
+    if (!editingSale) {
+      // Validate based on user role (only for new sales)
+      if (userRoleId === 3) {
+        // Sales role: must select a lead
+        if (!formData.lead_id) {
+          alert('Sales role must select a lead to convert to customer');
+          return;
+        }
+      } else if (userRoleId === 5) {
+        // Upseller role: must select a customer
+        if (!formData.customer_id) {
+          alert('Upseller role must select an existing customer');
+          return;
+        }
+      } else {
+        // Other roles: either customer or lead is selected
+        if (!formData.customer_id && !formData.lead_id) {
+          alert('Please select either an existing customer or a lead to convert');
+          return;
+        }
       }
     }
     
@@ -346,11 +349,28 @@ export default function Sales() {
         });
       }
 
+      // Build saleData with only the fields needed by the backend
       const saleData = {
-        ...formData,
-        services: allServices.length > 0 ? JSON.stringify(allServices) : formData.services,
-        service_details: allServices.length > 0 ? allServices.map(s => s.details).filter(d => d).join(', ') : formData.service_details
+        customer_id: formData.customer_id || null,
+        customer_name: formData.customer_name || '',
+        customer_email: formData.customer_email || '',
+        customer_phone: formData.customer_phone || '',
+        unit_price: formData.unit_price || 0,
+        cash_in: formData.cash_in || 0,
+        notes: formData.notes || '',
+        services: allServices.length > 0 ? JSON.stringify(allServices) : (formData.services || ''),
+        service_details: allServices.length > 0 ? allServices.map(s => s.details).filter(d => d).join(', ') : (formData.service_details || ''),
+        payment_type: formData.payment_type || 'fully_paid',
+        payment_source: formData.payment_source || 'wire',
+        payment_company: formData.payment_company || 'american_digital_agency',
+        brand: formData.brand || 'liberty_web_studio'
       };
+      
+      // When creating a new sale, add lead-related fields if converting a lead
+      if (!editingSale && convertingLead) {
+        saleData.lead_id = convertingLead.lead_id;
+        saleData.convert_lead = true;
+      }
       
       // Remove automatic installment fields when using custom installments
       if (formData.payment_type === 'installments' && formData.installment_type === 'custom') {
@@ -618,6 +638,17 @@ export default function Sales() {
     
     setServices(parsedServices);
     setCurrentService({ name: '', details: '' });
+    
+    // Set customer search field to display the customer name when editing
+    if (sale.customer_id && sale.customer_name) {
+      setCustomerSearch(sale.customer_name);
+    } else {
+      setCustomerSearch('');
+    }
+    
+    // Clear lead search when editing (since we're editing an existing sale)
+    setLeadSearch('');
+    
     setFormData({
       customer_id: sale.customer_id || null,
       customer_name: sale.customer_name || '',
@@ -628,7 +659,7 @@ export default function Sales() {
       notes: sale.notes || '',
       services: servicesText,
       service_details: sale.service_details || '',
-      payment_type: sale.payment_type || 'one_time',
+      payment_type: sale.payment_type || 'fully_paid',
       payment_source: sale.payment_source || 'wire',
       payment_company: sale.payment_company || 'american_digital_agency',
       brand: sale.brand || 'liberty_web_studio',
@@ -1062,7 +1093,7 @@ export default function Sales() {
                   }}
                 >
                   <option value="">All Types</option>
-                  <option value="one_time">One Time</option>
+                  <option value="fully_paid">Fully Paid</option>
                   <option value="installment">Installment</option>
                   <option value="recurring">Recurring</option>
                 </select>
@@ -1298,98 +1329,137 @@ export default function Sales() {
                   {canWorkWithCustomers && (
                     <div className="search-dropdown-container" style={{ position: 'relative' }}>
                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                        Search Customer {userRoleId === 5 ? '*' : ''}
+                        {editingSale ? 'Customer (Auto-filled from Sale)' : `Search Customer ${userRoleId === 5 ? '*' : ''}`}
                       </label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="text"
-                          placeholder="Type to search customers..."
-                          value={customerSearch}
-                          onChange={handleCustomerSearch}
-                          onFocus={() => setShowCustomerDropdown(true)}
-                        style={inputStyle}
-                        required={userRoleId === 5}
-                        />
-                        {formData.customer_id && (
-                          <button
-                            type="button"
-                            onClick={clearCustomerSelection}
-                            style={{
-                              position: 'absolute',
-                              right: '8px',
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              background: 'none',
-                              border: 'none',
-                              color: '#6b7280',
-                              cursor: 'pointer',
-                              fontSize: '18px',
-                              lineHeight: 1
-                            }}
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                      
-                      {/* Customer Dropdown */}
-                      {showCustomerDropdown && filteredCustomers.length > 0 && (
+                      {editingSale ? (
+                        /* Read-only customer display when editing */
                         <div style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          backgroundColor: 'white',
-                          border: '1px solid #d1d5db',
+                          padding: '12px 16px',
+                          backgroundColor: '#f9fafb',
+                          border: '1px solid #e5e7eb',
                           borderRadius: '8px',
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                          zIndex: 1000,
-                          maxHeight: '200px',
-                          overflowY: 'auto'
+                          borderLeft: '4px solid #3b82f6'
                         }}>
-                          {filteredCustomers.map(customer => (
-                            <div
-                              key={customer.id}
-                              onClick={() => handleCustomerSelect(customer)}
-                              style={{
-                                padding: '12px 16px',
-                                cursor: 'pointer',
-                                borderBottom: '1px solid #f3f4f6',
-                                ':hover': {
-                                  backgroundColor: '#f9fafb'
-                                }
-                              }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-                            >
-                              <div style={{ fontWeight: '500', color: '#1f2937' }}>{customer.name}</div>
-                              <div style={{ fontSize: '12px', color: '#6b7280' }}>{customer.email}</div>
-                              {customer.phone && (
-                                <div style={{ fontSize: '12px', color: '#6b7280' }}>{customer.phone}</div>
-                              )}
+                          <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
+                            {formData.customer_name || 'N/A'}
+                          </div>
+                          {formData.customer_email && (
+                            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '2px' }}>
+                              📧 {formData.customer_email}
                             </div>
-                          ))}
+                          )}
+                          {formData.customer_phone && (
+                            <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                              📞 {formData.customer_phone}
+                            </div>
+                          )}
+                          <div style={{ 
+                            marginTop: '8px', 
+                            padding: '6px 10px', 
+                            backgroundColor: '#dbeafe', 
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            color: '#1e40af',
+                            display: 'inline-block'
+                          }}>
+                            ℹ️ Customer cannot be changed when editing a sale
+                          </div>
                         </div>
-                      )}
-                      
-                      {userRoleId === 5 && (
-                        <div style={{ 
-                          marginTop: '8px', 
-                          padding: '8px', 
-                          backgroundColor: '#f0f9ff', 
-                          border: '1px solid #0ea5e9', 
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          color: '#0c4a6e'
-                        }}>
-                          💼 Upseller role: Search from assigned customers only
-                        </div>
+                      ) : (
+                        /* Editable customer search when creating new sale */
+                        <>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type="text"
+                              placeholder="Type to search customers..."
+                              value={customerSearch}
+                              onChange={handleCustomerSearch}
+                              onFocus={() => setShowCustomerDropdown(true)}
+                              style={inputStyle}
+                              required={userRoleId === 5}
+                            />
+                            {formData.customer_id && (
+                              <button
+                                type="button"
+                                onClick={clearCustomerSelection}
+                                style={{
+                                  position: 'absolute',
+                                  right: '8px',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#6b7280',
+                                  cursor: 'pointer',
+                                  fontSize: '18px',
+                                  lineHeight: 1
+                                }}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                          
+                          {/* Customer Dropdown */}
+                          {showCustomerDropdown && filteredCustomers.length > 0 && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: 0,
+                              right: 0,
+                              backgroundColor: 'white',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                              zIndex: 1000,
+                              maxHeight: '200px',
+                              overflowY: 'auto'
+                            }}>
+                              {filteredCustomers.map(customer => (
+                                <div
+                                  key={customer.id}
+                                  onClick={() => handleCustomerSelect(customer)}
+                                  style={{
+                                    padding: '12px 16px',
+                                    cursor: 'pointer',
+                                    borderBottom: '1px solid #f3f4f6',
+                                    ':hover': {
+                                      backgroundColor: '#f9fafb'
+                                    }
+                                  }}
+                                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
+                                  onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                                >
+                                  <div style={{ fontWeight: '500', color: '#1f2937' }}>{customer.name}</div>
+                                  <div style={{ fontSize: '12px', color: '#6b7280' }}>{customer.email}</div>
+                                  {customer.phone && (
+                                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{customer.phone}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {userRoleId === 5 && (
+                            <div style={{ 
+                              marginTop: '8px', 
+                              padding: '8px', 
+                              backgroundColor: '#f0f9ff', 
+                              border: '1px solid #0ea5e9', 
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              color: '#0c4a6e'
+                            }}>
+                              💼 Upseller role: Search from assigned customers only
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
 
-                  {/* Lead Selection - Only show for sales role and other roles */}
-                  {canWorkWithLeads && (
+                  {/* Lead Selection - Only show for sales role and other roles, but NOT when editing */}
+                  {canWorkWithLeads && !editingSale && (
                     <div className="search-dropdown-container" style={{ position: 'relative' }}>
                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
                         {userRoleId === 3 ? 'Search Lead to Convert *' : 'Or Search Lead to Convert'}
@@ -1786,7 +1856,7 @@ export default function Sales() {
                       required 
                       style={inputStyle}
                     >
-                      <option value="one_time">One Time Payment</option>
+                      <option value="fully_paid">Fully Paid</option>
                       <option value="recurring">Recurring Subscription</option>
                       <option value="installments">Installment Plan</option>
                     </select>
@@ -2522,9 +2592,9 @@ export default function Sales() {
                 {/* Payment Type */}
                 <div>
                   <span style={{
-                    backgroundColor: sale.payment_type === 'one_time' ? '#dbeafe' : 
+                    backgroundColor: sale.payment_type === 'fully_paid' ? '#dbeafe' : 
                                    sale.payment_type === 'installment' ? '#fef3c7' : '#d1fae5',
-                    color: sale.payment_type === 'one_time' ? '#1e40af' : 
+                    color: sale.payment_type === 'fully_paid' ? '#1e40af' : 
                           sale.payment_type === 'installment' ? '#92400e' : '#065f46',
                     padding: '6px 12px',
                     borderRadius: '20px',

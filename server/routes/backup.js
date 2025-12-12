@@ -121,37 +121,205 @@ router.post('/create', auth, isAdmin, (req, res) => {
   const dbPassword = process.env.DB_PASSWORD || '';
   const dbName = process.env.DB_NAME || 'crm_db';
 
-  let mysqldumpCmd = `mysqldump -u ${dbUser}`;
-  if (dbPassword) {
-    mysqldumpCmd += ` -p${dbPassword}`;
+  // Ensure backups directory exists and is writable
+  try {
+    if (!fs.existsSync(backupsDir)) {
+      fs.mkdirSync(backupsDir, { recursive: true });
+    }
+  } catch (dirError) {
+    console.error('Error creating backups directory:', dirError);
+    return res.status(500).json({ 
+      message: 'Error creating backups directory', 
+      error: dirError.message 
+    });
   }
-  mysqldumpCmd += ` -h ${dbHost} ${dbName} > "${filepath}"`;
 
-  exec(mysqldumpCmd, (error, stdout, stderr) => {
-    if (error) {
-      console.error('Backup error:', error);
+  // Build mysqldump arguments array (matching the working export route format)
+  const mysqldumpArgs = ['-u', dbUser];
+  if (dbPassword) {
+    mysqldumpArgs.push(`-p${dbPassword}`);
+  }
+  mysqldumpArgs.push('-h', dbHost);
+  // Add backup flags for consistency and reliability
+  mysqldumpArgs.push('--single-transaction', '--quick', '--lock-tables=false', '--routines', '--triggers');
+  mysqldumpArgs.push(dbName);
+
+  // Create write stream for backup file
+  const writeStream = fs.createWriteStream(filepath);
+  
+  // Spawn mysqldump process
+  const mysqldump = spawn('mysqldump', mysqldumpArgs);
+
+  let errorOutput = '';
+  let hasError = false;
+
+  // Handle mysqldump errors
+  mysqldump.on('error', (error) => {
+    hasError = true;
+    console.error('mysqldump spawn error:', error);
+    
+    // Close write stream if open
+    if (!writeStream.destroyed) {
+      writeStream.destroy();
+    }
+    
+    // Delete empty file if it was created
+    if (fs.existsSync(filepath)) {
+      try {
+        fs.unlinkSync(filepath);
+      } catch (unlinkError) {
+        console.error('Error deleting failed backup file:', unlinkError);
+      }
+    }
+
+    // Check if mysqldump is not found
+    if (error.code === 'ENOENT') {
       return res.status(500).json({ 
-        message: 'Error creating backup', 
-        error: error.message,
-        stderr: stderr 
+        message: 'mysqldump command not found. Please ensure MySQL client tools are installed.',
+        error: 'mysqldump is not available in PATH',
+        suggestion: 'Install MySQL client tools: sudo apt-get install mysql-client (Ubuntu/Debian) or sudo yum install mysql (CentOS/RHEL)'
       });
     }
 
-    if (fs.existsSync(filepath)) {
-      const stats = fs.statSync(filepath);
-      if (stats.size > 0) {
-        res.json({ 
-          message: 'Backup created successfully',
-          filename: filename,
-          size: stats.size,
-          path: filepath
-        });
-      } else {
-        fs.unlinkSync(filepath);
-        res.status(500).json({ message: 'Backup file is empty' });
-      }
+    return res.status(500).json({ 
+      message: 'Error starting backup process', 
+      error: error.message,
+      code: error.code
+    });
+  });
+
+  // Capture stderr (warnings and errors)
+  mysqldump.stderr.on('data', (data) => {
+    const errorText = data.toString();
+    errorOutput += errorText;
+    
+    // Check for authentication errors
+    if (errorText.includes('Access denied') || errorText.includes('ERROR 1045')) {
+      hasError = true;
+      console.error('MySQL authentication error:', errorText);
+    } else if (errorText.includes('ERROR')) {
+      hasError = true;
+      console.error('MySQL error:', errorText);
     } else {
-      res.status(500).json({ message: 'Backup file was not created' });
+      // Some warnings are normal, just log them
+      console.warn('mysqldump warning:', errorText);
+    }
+  });
+
+  // Pipe stdout to file
+  mysqldump.stdout.on('data', (chunk) => {
+    if (!hasError && !writeStream.destroyed) {
+      writeStream.write(chunk);
+    }
+  });
+
+  // Handle process completion
+  mysqldump.on('close', (code) => {
+    writeStream.end();
+
+    // Wait a moment for file to finish writing
+    setTimeout(() => {
+      if (hasError || code !== 0) {
+        // Delete failed backup file
+        if (fs.existsSync(filepath)) {
+          try {
+            fs.unlinkSync(filepath);
+          } catch (unlinkError) {
+            console.error('Error deleting failed backup file:', unlinkError);
+          }
+        }
+
+        // Provide detailed error message
+        let errorMessage = 'Error creating backup';
+        if (errorOutput.includes('Access denied') || errorOutput.includes('ERROR 1045')) {
+          errorMessage = 'Database authentication failed. Please check database credentials.';
+        } else if (errorOutput.includes('Unknown database')) {
+          errorMessage = `Database '${dbName}' not found. Please check database name.`;
+        } else if (errorOutput.includes('Can\'t connect')) {
+          errorMessage = `Cannot connect to database server at ${dbHost}. Please check database host and network connectivity.`;
+        } else if (errorOutput) {
+          errorMessage = `Backup process failed: ${errorOutput.substring(0, 200)}`;
+        }
+
+        return res.status(500).json({ 
+          message: errorMessage,
+          error: errorOutput || `mysqldump exited with code ${code}`,
+          exitCode: code
+        });
+      }
+
+      // Check if file was created and has content
+      if (fs.existsSync(filepath)) {
+        try {
+          const stats = fs.statSync(filepath);
+          if (stats.size > 0) {
+            res.json({ 
+              message: 'Backup created successfully',
+              filename: filename,
+              size: stats.size,
+              path: filepath
+            });
+          } else {
+            // Delete empty file
+            fs.unlinkSync(filepath);
+            res.status(500).json({ 
+              message: 'Backup file is empty. Check database connection and permissions.',
+              error: 'Empty backup file created'
+            });
+          }
+        } catch (statsError) {
+          console.error('Error checking backup file:', statsError);
+          res.status(500).json({ 
+            message: 'Error verifying backup file', 
+            error: statsError.message 
+          });
+        }
+      } else {
+        res.status(500).json({ 
+          message: 'Backup file was not created. Check file permissions and disk space.',
+          error: 'File not found after backup process'
+        });
+      }
+    }, 500);
+  });
+
+  // Handle write stream errors
+  writeStream.on('error', (error) => {
+    hasError = true;
+    console.error('Write stream error:', error);
+    mysqldump.kill();
+    
+    if (fs.existsSync(filepath)) {
+      try {
+        fs.unlinkSync(filepath);
+      } catch (unlinkError) {
+        console.error('Error deleting failed backup file:', unlinkError);
+      }
+    }
+
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        message: 'Error writing backup file. Check directory permissions.',
+        error: error.message,
+        suggestion: `Ensure the backups directory (${backupsDir}) is writable`
+      });
+    }
+  });
+
+  // Handle client disconnect
+  req.on('close', () => {
+    if (!mysqldump.killed) {
+      mysqldump.kill();
+    }
+    if (!writeStream.destroyed) {
+      writeStream.destroy();
+    }
+    if (fs.existsSync(filepath)) {
+      try {
+        fs.unlinkSync(filepath);
+      } catch (unlinkError) {
+        console.error('Error cleaning up backup file on client disconnect:', unlinkError);
+      }
     }
   });
 });
