@@ -10,7 +10,7 @@ router.get('/', auth, authorize('customers','read'), (req, res) => {
   
   if (isAdmin) {
     // Admin can see all customers
-    db.query('SELECT * FROM customers ORDER BY id DESC', (err, results) => {
+    db.query('SELECT * FROM customers ORDER BY converted_at DESC', (err, results) => {
       if (err) return res.status(500).json(err);
       res.json(results);
     });
@@ -32,7 +32,7 @@ router.get('/', auth, authorize('customers','read'), (req, res) => {
       FROM customers c
       INNER JOIN customer_assignments ca ON c.id = ca.customer_id
       WHERE ca.upseller_id = ? AND ca.status = 'active'
-      ORDER BY c.id DESC
+      ORDER BY c.converted_at DESC
     `;
     
     db.query(sql, [userId], (err, results) => {
@@ -43,7 +43,7 @@ router.get('/', auth, authorize('customers','read'), (req, res) => {
   }
   
   // For other roles (front-sales-manager, sales, production-head, etc.), show all customers
-  db.query('SELECT * FROM customers ORDER BY id DESC', (err, results) => {
+  db.query('SELECT * FROM customers ORDER BY converted_at DESC', (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
   });

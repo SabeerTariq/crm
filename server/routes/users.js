@@ -26,7 +26,7 @@ router.get('/', auth, isAdmin, authorize('users','read'), (req, res) => {
       END as user_type
     FROM users u
     LEFT JOIN roles r ON u.role_id = r.id
-    ORDER BY u.id DESC
+    ORDER BY u.created_at DESC
   `;
   db.query(sql, (err, rows) => {
     if (err) return res.status(500).json(err);

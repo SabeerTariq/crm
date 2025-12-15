@@ -41,6 +41,7 @@ export default function Sales() {
     payment_source: 'wire',
     payment_company: 'american_digital_agency',
     brand: 'liberty_web_studio',
+    custom_brand: '',
     lead_id: '',
     convert_lead: false,
     // Payment type specific fields
@@ -215,6 +216,7 @@ export default function Sales() {
       payment_source: 'wire',
       payment_company: 'american_digital_agency',
       brand: 'liberty_web_studio',
+      custom_brand: '',
       lead_id: '',
       convert_lead: false,
       installment_count: 1,
@@ -363,7 +365,7 @@ export default function Sales() {
         payment_type: formData.payment_type || 'fully_paid',
         payment_source: formData.payment_source || 'wire',
         payment_company: formData.payment_company || 'american_digital_agency',
-        brand: formData.brand || 'liberty_web_studio'
+        brand: formData.brand === 'other' && formData.custom_brand ? formData.custom_brand : (formData.brand || 'liberty_web_studio')
       };
       
       // When creating a new sale, add lead-related fields if converting a lead
@@ -649,6 +651,29 @@ export default function Sales() {
     // Clear lead search when editing (since we're editing an existing sale)
     setLeadSearch('');
     
+    // Check if brand is a predefined option or custom
+    const predefinedBrands = [
+      'american_digital_agency',
+      'american_digital_publishers',
+      'the_web_sense',
+      'the_tech_designers',
+      'elite_pro_website',
+      'design_lord',
+      'web_designs_library',
+      'web_harmony',
+      'logic_works',
+      'liberty_web_studio',
+      'american_brand_designer',
+      'pixels_and_the_beast',
+      'american_book_studio',
+      'smart_web_designers',
+      'web_designs_lab',
+      'my_american_logo'
+    ];
+    
+    const saleBrand = sale.brand || 'liberty_web_studio';
+    const isCustomBrand = saleBrand && !predefinedBrands.includes(saleBrand);
+    
     setFormData({
       customer_id: sale.customer_id || null,
       customer_name: sale.customer_name || '',
@@ -662,7 +687,8 @@ export default function Sales() {
       payment_type: sale.payment_type || 'fully_paid',
       payment_source: sale.payment_source || 'wire',
       payment_company: sale.payment_company || 'american_digital_agency',
-      brand: sale.brand || 'liberty_web_studio',
+      brand: isCustomBrand ? 'other' : saleBrand,
+      custom_brand: isCustomBrand ? saleBrand : '',
       // Payment type specific fields
       installment_count: sale.installment_count || 1,
       installment_frequency: sale.installment_frequency || 'monthly',
@@ -1152,8 +1178,22 @@ export default function Sales() {
                   }}
                 >
                   <option value="">All Brands</option>
-                  <option value="liberty_web_studio">Liberty Web Studio</option>
                   <option value="american_digital_agency">American Digital Agency</option>
+                  <option value="american_digital_publishers">American Digital Publishers</option>
+                  <option value="the_web_sense">The Web Sense</option>
+                  <option value="the_tech_designers">The Tech Designers</option>
+                  <option value="elite_pro_website">Elite Pro Website</option>
+                  <option value="design_lord">Design Lord</option>
+                  <option value="web_designs_library">Web Designs Library</option>
+                  <option value="web_harmony">Web Harmony</option>
+                  <option value="logic_works">Logic Works</option>
+                  <option value="liberty_web_studio">Liberty Web Studio</option>
+                  <option value="american_brand_designer">American Brand Designer</option>
+                  <option value="pixels_and_the_beast">Pixels and the Beast</option>
+                  <option value="american_book_studio">American Book Studio</option>
+                  <option value="smart_web_designers">Smart Web Designers</option>
+                  <option value="web_designs_lab">Web Designs Lab</option>
+                  <option value="my_american_logo">My American Logo</option>
                 </select>
               </div>
 
@@ -1914,9 +1954,38 @@ export default function Sales() {
                       required 
                       style={inputStyle}
                     >
+                      <option value="american_digital_agency">American Digital Agency</option>
+                      <option value="american_digital_publishers">American Digital Publishers</option>
+                      <option value="the_web_sense">The Web Sense</option>
+                      <option value="the_tech_designers">The Tech Designers</option>
+                      <option value="elite_pro_website">Elite Pro Website</option>
+                      <option value="design_lord">Design Lord</option>
+                      <option value="web_designs_library">Web Designs Library</option>
+                      <option value="web_harmony">Web Harmony</option>
+                      <option value="logic_works">Logic Works</option>
                       <option value="liberty_web_studio">Liberty Web Studio</option>
-                      <option value="others">Others</option>
+                      <option value="american_brand_designer">American Brand Designer</option>
+                      <option value="pixels_and_the_beast">Pixels and the Beast</option>
+                      <option value="american_book_studio">American Book Studio</option>
+                      <option value="smart_web_designers">Smart Web Designers</option>
+                      <option value="web_designs_lab">Web Designs Lab</option>
+                      <option value="my_american_logo">My American Logo</option>
+                      <option value="other">Other</option>
                     </select>
+                    {formData.brand === 'other' && (
+                      <input
+                        type="text"
+                        name="custom_brand"
+                        placeholder="Enter brand name"
+                        value={formData.custom_brand}
+                        onChange={handleFormChange}
+                        required
+                        style={{
+                          ...inputStyle,
+                          marginTop: '8px'
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 27, 2025 at 01:04 AM
+-- Generation Time: Dec 15, 2025 at 03:50 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -195,7 +195,11 @@ INSERT INTO `customers` (`id`, `name`, `company_name`, `email`, `phone`, `city`,
 (98, 'Camden Graves', 'Clemons and Mcneil Inc', 'lefi@mailinator.com', '+1 (822) 203-3275', 'Amet tempore ipsa', 'Magnam nobis magnam ', 'Amet sunt minim com', 'Et doloribus cupidit', 'Et sunt inventore n', 8, 8, '2025-10-21 23:59:44', '2025-10-22 22:18:18', 2000.00, 1000.00, 1000.00, NULL, 'active'),
 (99, 'Chastity Mack', 'Osborn and Tillman LLC', 'ranukuqine@mailinator.com', '+1 (243) 355-6826', 'Nisi similique omnis', 'Numquam ut alias bea', 'Animi explicabo Ve', 'Qui fugiat esse de', 'Quam laudantium err', 1, 1, '2025-10-22 22:01:08', '2025-10-22 22:26:58', 3000.00, 1000.00, 2000.00, NULL, 'refunded'),
 (100, 'Molly Marquez', 'Stevens and Berg Plc', 'fovokazaky@mailinator.com', '+1 (757) 208-3131', 'Aperiam officia ipsu', 'Consequuntur repudia', 'Voluptatem dolore pr', 'Libero ipsum dolores', 'Velit magna cumque ', 1, 1, '2025-10-22 22:15:44', '2025-10-22 22:47:46', 1000.00, 500.00, 500.00, NULL, 'chargeback'),
-(101, 'Clio Jensen', 'Powell Cox Plc', 'qinyfo@mailinator.com', '+1 (562) 433-2837', 'Nam modi ad autem es', 'Rerum a dolorem aute', 'In sit deserunt et ', 'Autem porro esse su', 'Similique velit tem', 8, 8, '2025-11-12 17:50:13', '2025-11-12 17:50:13', 1000.00, 500.00, 500.00, NULL, 'active');
+(101, 'Clio Jensen', 'Powell Cox Plc', 'qinyfo@mailinator.com', '+1 (562) 433-2837', 'Nam modi ad autem es', 'Rerum a dolorem aute', 'In sit deserunt et ', 'Autem porro esse su', 'Similique velit tem', 8, 8, '2025-11-12 17:50:13', '2025-11-12 17:50:13', 1000.00, 500.00, 500.00, NULL, 'active'),
+(102, 'Xenia S', '', 'xeniasapanidi@gmail.com', '442074904332', 'London Area', 'United Kingdom', 'Web Flow', 'Linkedin', 'https://www.linkedin.com/in/xeniasapanidi/	Good morning people! 🌄 Who recommends a good Webflow freelance web developer? Essentially, JavaScript, CSS and HTML?', 7, 7, '2025-12-12 14:41:23', '2025-12-12 14:41:23', 500.00, 500.00, 0.00, NULL, 'active'),
+(103, 'Lauren Stinson ', 'shopcozy101', 'Lms@shopcozy101.com', '(313) 330-8842', 'Detroit', 'Michigan', 'Web Design', 'Facebook', 'Good morning. In need of a web designer as soon as possible! Please send recommendations.\n\nwww.getcozy101.com\n', 7, 7, '2025-12-12 14:48:32', '2025-12-12 14:48:32', 1000.00, 500.00, 500.00, NULL, 'active'),
+(104, 'Akaash Nazir', '', 'akaashbusiness@outlook.com', '', '', 'United Kingdom', 'App', 'Linkedin', 'https://www.linkedin.com/in/akaash-nazir-899a8020a/	I am looking to hire a software developer who has experience building apps using AI tools, please DM me.Experience in UI & UXExperience in SaaS preferably Experience in Marketplaces preferably Experience using AI toolsThank you!', 7, 7, '2025-12-12 14:56:19', '2025-12-12 14:56:19', 849.00, 61.00, 788.00, NULL, 'active'),
+(105, 'Kessie Russo', 'Oliver Mack Traders', 'cuhur@mailinator.com', '+1 (523) 892-9357', 'Illum tempore est ', 'Magnam aut occaecat ', 'Et irure rerum deser', 'Facebook', 'Adipisci vero repreh', 1, 1, '2025-12-15 13:56:26', '2025-12-15 13:56:26', 1000.00, 500.00, 500.00, NULL, 'active');
 
 -- --------------------------------------------------------
 
@@ -465,12 +469,9 @@ INSERT INTO `leads` (`id`, `name`, `company_name`, `nature_of_business`, `email`
 (136, 'Damien Stone ', 'stonehardboxing.com', NULL, 'dstone30now@yahoo.com', NULL, NULL, '(602) 751-0030', NULL, 'Tempe, ', 'Arizona', NULL, NULL, 'Website', 'Facebook', 'https://www.facebook.com/damien.stone.167	Looking for a good web designer. Not a web design company. See if you can hit me up before the holidays', NULL, 'Rush hours', '02:28:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-25 21:28:50', '2025-11-25 21:28:50'),
 (137, 'Kyle ', 'ussantelectric.net ', NULL, 'Kyle@ussantelectric.net', NULL, NULL, '(401) 636-2101', NULL, 'Cumberland', 'RI, 02864', NULL, NULL, 'General Software Development', 'Bark Scrapped', 'To create a custom project management software. It\'s for Construction business.\n', NULL, 'Normal hours', '18:02:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:33:00', '2025-11-26 18:33:00'),
 (138, 'Monica', 'sunstonemontessori.org', NULL, 'mwright@sunstonemontessori.org', NULL, NULL, '(503) 768-3847', NULL, 'Portland', 'OR, 97206', NULL, NULL, 'Web Design', 'Bark Scrapped', 'Make changes to my current WordPress website. \nCurrent website needs renovation to make it more current, particularly the home page. Want to drive enrollment to our middle school. We serve ages 16 months -15 years. SEO as well.', '0.00', 'Rush hours', '20:26:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:38:33', '2025-11-26 18:38:48'),
-(139, 'Lauren Stinson ', 'shopcozy101', NULL, 'Lms@shopcozy101.com', NULL, NULL, '(313) 330-8842', NULL, 'Detroit', 'Michigan', NULL, NULL, 'Web Design', 'Facebook', 'Good morning. In need of a web designer as soon as possible! Please send recommendations.\n\nwww.getcozy101.com\n', NULL, 'Rush hours', '20:57:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:40:38', '2025-11-26 18:40:38'),
 (140, 'Sharon Franks', '', NULL, 'symonesflc@yahoo.com', NULL, NULL, '(816) 812-2914 ', NULL, 'Grandview', 'Missouri', NULL, NULL, 'Publishing ', 'Facebook', 'Hey everyone I\'m actually looking for someone to help me publish my book I also need a cover.\n', NULL, 'Rush hours', '01:00:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:42:34', '2025-11-26 18:47:31'),
 (141, 'Tyrance', '', NULL, 'tyrancelewis@yahoo.com', NULL, NULL, '(225) 450-5260', NULL, 'Gonzales', 'LA, 70737', NULL, NULL, ' Web Design ', 'Facebook', 'Make changes to my current Wix website. \n', NULL, 'Normal hours', '16:59:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:42:34', '2025-11-26 18:42:34'),
 (142, 'Dmytro Uzundai', '', NULL, 'dmytro@blazesoft.ca', NULL, NULL, '', NULL, 'Toronto, Ontario', 'Canada', NULL, NULL, 'UX/UI designer', 'Linkedin', 'https://www.linkedin.com/in/duzundai/	We\'re looking for an experienced UX/UI designer to create an outstanding casino/sportsbook website. Past iGaming experience is a must.You will work remotely and have freedom to create something special, a product to be proud of.Please, share/tag anyone you\'d recommend, DM to review portfolio and discuss the opportunity.Activate to view larger image,', '0.00', 'Rush hours', '23:45:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 18:45:25', '2025-11-26 18:45:25'),
-(143, 'Xenia S', '', NULL, 'xeniasapanidi@gmail.com', NULL, NULL, '442074904332', NULL, 'London Area', 'United Kingdom', NULL, NULL, 'Web Flow', 'Linkedin', 'https://www.linkedin.com/in/xeniasapanidi/	Good morning people! 🌄 Who recommends a good Webflow freelance web developer? Essentially, JavaScript, CSS and HTML?', NULL, 'Rush hours', '23:46:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 18:46:39', '2025-11-26 18:46:39'),
-(144, 'Akaash Nazir', '', NULL, 'akaashbusiness@outlook.com', NULL, NULL, '', NULL, '', 'United Kingdom', NULL, NULL, 'App', 'Linkedin', 'https://www.linkedin.com/in/akaash-nazir-899a8020a/	I am looking to hire a software developer who has experience building apps using AI tools, please DM me.Experience in UI & UXExperience in SaaS preferably Experience in Marketplaces preferably Experience using AI toolsThank you!', NULL, 'Rush hours', '23:47:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 18:47:25', '2025-11-26 18:47:25'),
 (145, 'Lilian S', 'https://www.alilbitofbiz.com/', NULL, 'lilian@alilbitofbiz.com', NULL, NULL, ' (812) 216-5570', NULL, 'Carmel', 'Indiana', NULL, NULL, 'SMM', 'Linkedin', 'https://www.linkedin.com/in/lilian-s-177973161/	Hi friends,I’m currently looking for experienced contract/freelance social media professionals to support content creation and digital strategy. They should be flexible, collaborative, and highly detail-oriented, with strong hands-on experience in content creation — particularly video (beyond basic Canva use).Bonus points if they’ve worked in a salon or beauty-adjacent environment!If you know someone who might be a great fit, please send them my way. I’d love to connect.', NULL, 'Rush hours', '23:48:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 18:48:27', '2025-11-26 18:48:27'),
 (146, 'Damien Stone ', '', NULL, 'dantestone6699@yahoo.com', NULL, NULL, '(602) 751-0030 ', NULL, 'Tempe', 'AZ 85282', NULL, NULL, 'Web Design', 'Facebook', 'Looking for a good web designer. Not a web design company. See if you can hit me up before the holidays.\n', '0.00', 'Rush hours', '00:31:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:49:06', '2025-11-26 18:49:06'),
 (147, 'Tatiana Rodriguez', '', NULL, 'tatirodriguez717@yahoo.com', NULL, NULL, '(717) 454-1338', NULL, 'Lebanon', 'PA 17042', NULL, NULL, 'Illustration', 'Facebook', 'I’m looking for a talented illustrator to bring a 10-page children’s book to life, including a front and back cover, with a turnaround time of about one month.\nThis project covers a sensitive but gentle topic — a metaphorical story about grooming awareness. I already have the full storyline written, along with examples of the style I’m looking for, including character concepts and scenery references.\nAs a public survivor of child exploitation, my mission is to create safe, age-appropriate tools for children and families. I also participate in pageants to raise awareness about human trafficking and to showcase healing through the arts.\nMy goal is to publish this book and begin a statewide tour in January 2026. If you or someone you know specializes in warm, expressive, child-friendly illustration, I’d love to connect.\n', NULL, 'Rush hours', '23:55:00', 'Weekdays', 18, 18, NULL, 0, NULL, '2025-11-26 18:50:49', '2025-11-26 18:56:49'),
@@ -479,7 +480,10 @@ INSERT INTO `leads` (`id`, `name`, `company_name`, `nature_of_business`, `email`
 (150, 'Eric MacDougall', 'https://ericmacdougall.com/', NULL, 'ericmacdougall@nitrograph.com', NULL, NULL, '', NULL, 'British Columbia, ', 'Canada', NULL, NULL, 'react native dev', 'Linkedin', 'https://www.linkedin.com/in/ericmacdougall/	Looking for a react native dev that is extremely efficient at shipping with ai tools, excellent with design and ui, and can create engaging / animated and game interfaces.', NULL, 'Rush hours', '01:34:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 20:34:26', '2025-11-26 20:34:26'),
 (151, 'Kate Justet Triplett ', '', NULL, 'kate_triplett@yahoo.com', NULL, NULL, '(425 ) 308-8967', NULL, 'Snohomish-Monroe ', 'Washington area', NULL, NULL, 'Website', 'Facebook', 'https://www.facebook.com/kate.triplett.1	Looking for a GOOD, LOCAL (ie Snohomish-Monroe Washington area) web designer. Need a new site for our business, already have the domain and hosting. Fresh site for a new product line, I’m not conversant enough with Wordpress to do this myself.', NULL, 'Rush hours', '01:35:00', 'Weekdays', 31, 31, NULL, 0, NULL, '2025-11-26 20:35:31', '2025-11-26 20:35:31'),
 (152, 'Herman Whitney', 'Russo Gentry Associates', 'Soluta nobis dolor r', 'dawigom@mailinator.com', 'suvuto@mailinator.com', 'Cumque magni nostrum', '+1 (121) 564-1828', '535', 'Veniam aliquip quam', 'Iusto aut accusantiu', 'Voluptatem At sunt', '68401', 'Sed labore occaecat ', 'Bark Scrapped', 'Nemo cupiditate iure', '$100-500', 'Rush hours', NULL, 'Weekend', 1, 1, NULL, 0, NULL, '1983-05-04 04:41:00', '2025-11-27 00:03:29'),
-(153, 'Lila Padilla', 'West Roth Co', 'Quo sit aute qui qui', 'homydasuqo@mailinator.com', 'vucine@mailinator.com', 'Ratione est dolorib', '+1 (843) 477-1951', '664', 'Eius cumque aut omni', 'Qui deleniti qui ips', 'Sint nulla est saepe', '54013', 'Repudiandae laborios', 'Facebook', 'Dolor iusto facilis ', '0.00', 'Rush hours', NULL, 'Weekend', 1, 1, NULL, 0, NULL, '1972-01-28 03:22:00', '2025-11-26 23:58:59');
+(153, 'Lila Padilla', 'West Roth Co', 'Quo sit aute qui qui', 'homydasuqo@mailinator.com', 'vucine@mailinator.com', 'Ratione est dolorib', '+1 (843) 477-1951', '664', 'Eius cumque aut omni', 'Qui deleniti qui ips', 'Sint nulla est saepe', '54013', 'Repudiandae laborios', 'Facebook', 'Dolor iusto facilis ', '0.00', 'Rush hours', NULL, 'Weekend', 1, 1, NULL, 0, NULL, '1972-01-28 03:22:00', '2025-11-26 23:58:59'),
+(154, 'Colleen Hudson', 'Bird Carney Traders', 'Quasi autem voluptat', 'vupiqeton@mailinator.com', 'dohefuge@mailinator.com', 'Enim tempore nisi m', '+1 (497) 378-3481', '287', 'Laborum Quas sequi ', 'Veritatis consequatu', 'In est aliquid corru', '74487', 'Necessitatibus quam ', 'Bark Picked', 'Quibusdam ducimus v', 'Tempora cillum id se', 'Normal hours', NULL, 'Weekend', 34, 34, NULL, 0, NULL, '2016-10-02 10:38:00', '2025-12-12 15:07:30'),
+(155, 'Anastasia Love', 'Mcgee and Weiss Trading', 'Non qui vero adipisi', 'liraqoteg@mailinator.com', 'kuqaci@mailinator.com', 'Saepe ex enim quasi ', '+1 (864) 125-8624', '477', 'Non asperiores dolor', 'Excepturi optio asp', 'Ad nihil dicta sit v', '81486', 'Dolore quam nostrud ', 'Linkedin', 'Irure neque cum quis', 'Est elit sequi quia', 'Rush hours', NULL, 'Weekdays', 34, 34, NULL, 0, NULL, '2008-02-10 02:20:00', '2025-12-12 15:27:02'),
+(156, 'Hermione Leon', 'Hansen Hayes Plc', 'Provident fuga Qui', 'teguvabico@mailinator.com', 'gyfuzucale@mailinator.com', 'Quos dolorem libero ', '+1 (198) 607-3724', '301', 'Exercitation dolorum', 'Sit eum libero earu', 'Iusto error id fugit', '75911', 'Irure distinctio Et', 'Linkedin', 'Omnis omnis debitis ', 'Temporibus est reru', 'Rush hours', NULL, 'Weekdays', 1, 1, NULL, 0, NULL, '1971-12-15 16:14:00', '2025-12-15 13:49:49');
 
 -- --------------------------------------------------------
 
@@ -525,6 +529,13 @@ CREATE TABLE `lead_documents` (
   `uploaded_by` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lead_documents`
+--
+
+INSERT INTO `lead_documents` (`id`, `lead_id`, `file_name`, `file_path`, `file_size`, `file_type`, `uploaded_by`, `created_at`) VALUES
+(8, 155, 'agreement-104.pdf', 'uploads/leads/155/agreement-104-1765553222505-984978387.pdf', 212346, 'application/pdf', 34, '2025-12-12 15:27:02');
 
 -- --------------------------------------------------------
 
@@ -636,7 +647,18 @@ INSERT INTO `lead_tracking` (`id`, `user_id`, `lead_id`, `action`, `created_at`)
 (258, 31, 150, 'created', '2025-11-26 20:34:26'),
 (259, 31, 151, 'created', '2025-11-26 20:35:31'),
 (260, 1, 152, 'created', '2025-11-26 23:54:42'),
-(261, 1, 153, 'created', '2025-11-26 23:58:59');
+(261, 1, 153, 'created', '2025-11-26 23:58:59'),
+(262, 31, 143, 'converted', '2025-12-12 14:41:23'),
+(263, 7, 143, 'converted', '2025-12-12 14:41:23'),
+(264, 7, 139, 'converted', '2025-12-12 14:48:32'),
+(265, 18, 139, 'converted', '2025-12-12 14:48:32'),
+(266, 7, 144, 'converted', '2025-12-12 14:56:19'),
+(267, 31, 144, 'converted', '2025-12-12 14:56:19'),
+(268, 34, 154, 'created', '2025-12-12 15:07:30'),
+(269, 34, 155, 'created', '2025-12-12 15:27:02'),
+(270, 1, 156, 'created', '2025-12-15 13:49:49'),
+(271, 1, 157, 'created', '2025-12-15 13:50:41'),
+(272, 1, 157, 'converted', '2025-12-15 13:56:26');
 
 -- --------------------------------------------------------
 
@@ -805,7 +827,12 @@ INSERT INTO `monthly_lead_stats` (`id`, `user_id`, `year`, `month`, `leads_added
 (55, 18, 2025, 11, 8, 0, '2025-11-14 20:15:50', '2025-11-26 18:50:49'),
 (56, 1, 2025, 11, 3, 0, '2025-11-24 20:52:54', '2025-11-26 23:58:59'),
 (57, 31, 2025, 11, 17, 0, '2025-11-25 17:24:55', '2025-11-26 20:35:31'),
-(58, 21, 2025, 11, 1, 0, '2025-11-26 18:55:34', '2025-11-26 18:55:34');
+(58, 21, 2025, 11, 1, 0, '2025-11-26 18:55:34', '2025-11-26 18:55:34'),
+(59, 7, 2025, 12, 0, 3, '2025-12-12 14:41:23', '2025-12-12 14:56:19'),
+(60, 31, 2025, 12, 0, 2, '2025-12-12 14:41:23', '2025-12-12 14:56:19'),
+(61, 18, 2025, 12, 0, 1, '2025-12-12 14:48:32', '2025-12-12 14:48:32'),
+(62, 34, 2025, 12, 2, 0, '2025-12-12 15:07:30', '2025-12-12 15:27:02'),
+(63, 1, 2025, 12, 2, 1, '2025-12-15 13:49:49', '2025-12-15 13:56:26');
 
 -- --------------------------------------------------------
 
@@ -861,6 +888,15 @@ CREATE TABLE `payment_installments` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `payment_installments`
+--
+
+INSERT INTO `payment_installments` (`id`, `sale_id`, `installment_number`, `amount`, `due_date`, `paid_amount`, `status`, `paid_at`, `notes`, `created_at`, `updated_at`) VALUES
+(40, 103, 1, 250.00, '2025-12-13', 0.00, 'pending', NULL, NULL, '2025-12-12 14:48:32', '2025-12-12 14:48:32'),
+(41, 103, 2, 250.00, '2026-01-14', 0.00, 'pending', NULL, NULL, '2025-12-12 14:48:32', '2025-12-12 14:48:32'),
+(42, 104, 1, 788.00, '2025-12-12', 0.00, 'pending', NULL, NULL, '2025-12-12 14:56:19', '2025-12-12 14:56:19');
+
 -- --------------------------------------------------------
 
 --
@@ -912,7 +948,10 @@ INSERT INTO `payment_transactions` (`id`, `sale_id`, `installment_id`, `recurrin
 (120, 98, NULL, NULL, 1000.00, 'zelle', 'Initial payment for sale 98', 'Initial payment received at sale creation', 8, 8, '2025-10-21 23:59:44', NULL),
 (121, 99, NULL, NULL, 1000.00, 'wire', 'Initial payment for sale 99', 'Initial payment received at sale creation', 1, 1, '2025-10-22 22:01:08', NULL),
 (122, 100, NULL, NULL, 500.00, 'wire', 'Initial payment for sale 100', 'Initial payment received at sale creation', 1, 1, '2025-10-22 22:15:44', NULL),
-(123, 101, NULL, NULL, 500.00, 'wire', 'Initial payment for sale 101', 'Initial payment received at sale creation', 8, 8, '2025-11-12 17:50:13', NULL);
+(123, 101, NULL, NULL, 500.00, 'wire', 'Initial payment for sale 101', 'Initial payment received at sale creation', 8, 8, '2025-11-12 17:50:13', NULL),
+(124, 102, NULL, NULL, 500.00, 'zelle', 'Initial payment for sale 102', 'Initial payment received at sale creation', 7, 7, '2025-12-12 14:41:23', NULL),
+(125, 103, NULL, NULL, 500.00, 'wire', 'Initial payment for sale 103', 'Initial payment received at sale creation', 7, 7, '2025-12-12 14:48:32', NULL),
+(126, 104, NULL, NULL, 61.00, 'stripe', 'Initial payment for sale 104', 'Initial payment received at sale creation', 7, 7, '2025-12-12 14:56:19', NULL);
 
 -- --------------------------------------------------------
 
@@ -931,6 +970,7 @@ CREATE TABLE `permissions` (
 --
 
 INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
+(171, 'admin_dashboard', 'view'),
 (75, 'assignments', 'create'),
 (78, 'assignments', 'delete'),
 (76, 'assignments', 'read'),
@@ -961,6 +1001,9 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (101, 'departments', 'read'),
 (102, 'departments', 'update'),
 (104, 'departments', 'view'),
+(178, 'department_leader_dashboard', 'view'),
+(176, 'front_sales_manager_dashboard', 'view'),
+(173, 'front_seller_dashboard', 'view'),
 (1, 'leads', 'create'),
 (4, 'leads', 'delete'),
 (2, 'leads', 'read'),
@@ -971,6 +1014,7 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (131, 'lead_notes', 'read'),
 (132, 'lead_notes', 'update'),
 (134, 'lead_notes', 'view'),
+(172, 'lead_scraper_dashboard', 'view'),
 (158, 'notifications', 'delete'),
 (156, 'notifications', 'read'),
 (157, 'notifications', 'update'),
@@ -990,6 +1034,7 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (153, 'production', 'manage'),
 (150, 'production', 'read'),
 (151, 'production', 'update'),
+(177, 'production_head_dashboard', 'view'),
 (95, 'projects', 'create'),
 (98, 'projects', 'delete'),
 (96, 'projects', 'read'),
@@ -1042,11 +1087,13 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (51, 'teams', 'read'),
 (52, 'teams', 'update'),
 (54, 'teams', 'view'),
+(179, 'team_member_dashboard', 'view'),
 (144, 'todos', 'create'),
 (147, 'todos', 'delete'),
 (145, 'todos', 'read'),
 (146, 'todos', 'update'),
 (148, 'todos', 'view'),
+(174, 'upseller_dashboard', 'view'),
 (91, 'upseller_performance', 'create'),
 (94, 'upseller_performance', 'delete'),
 (92, 'upseller_performance', 'read'),
@@ -1062,6 +1109,7 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (82, 'upseller_teams', 'read'),
 (83, 'upseller_teams', 'update'),
 (80, 'upseller_teams', 'view'),
+(175, 'upsell_manager_dashboard', 'view'),
 (9, 'users', 'create'),
 (12, 'users', 'delete'),
 (10, 'users', 'read'),
@@ -1441,6 +1489,15 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (1, 168),
 (1, 169),
 (1, 170),
+(1, 171),
+(1, 172),
+(1, 173),
+(1, 174),
+(1, 175),
+(1, 176),
+(1, 177),
+(1, 178),
+(1, 179),
 (2, 1),
 (2, 2),
 (2, 3),
@@ -1462,6 +1519,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (2, 161),
 (2, 162),
 (2, 164),
+(2, 172),
 (3, 1),
 (3, 2),
 (3, 3),
@@ -1520,6 +1578,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (3, 161),
 (3, 162),
 (3, 164),
+(3, 173),
 (4, 1),
 (4, 2),
 (4, 3),
@@ -1587,6 +1646,8 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (4, 161),
 (4, 162),
 (4, 164),
+(4, 171),
+(4, 176),
 (5, 5),
 (5, 6),
 (5, 7),
@@ -1649,7 +1710,6 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (5, 135),
 (5, 136),
 (5, 137),
-(5, 138),
 (5, 139),
 (5, 144),
 (5, 145),
@@ -1663,6 +1723,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (5, 161),
 (5, 162),
 (5, 164),
+(5, 174),
 (6, 5),
 (6, 6),
 (6, 7),
@@ -1707,6 +1768,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (6, 161),
 (6, 162),
 (6, 164),
+(6, 175),
 (7, 96),
 (7, 97),
 (7, 105),
@@ -1775,6 +1837,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (8, 161),
 (8, 162),
 (8, 164),
+(8, 177),
 (9, 96),
 (9, 105),
 (9, 106),
@@ -1805,6 +1868,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (9, 161),
 (9, 162),
 (9, 164),
+(9, 178),
 (10, 106),
 (10, 107),
 (10, 109),
@@ -1825,6 +1889,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (10, 161),
 (10, 162),
 (10, 164),
+(10, 179),
 (11, 105),
 (11, 106),
 (11, 107),
@@ -1852,6 +1917,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (11, 161),
 (11, 162),
 (11, 164),
+(11, 178),
 (12, 106),
 (12, 107),
 (12, 109),
@@ -1868,6 +1934,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (12, 161),
 (12, 162),
 (12, 164),
+(12, 179),
 (13, 105),
 (13, 106),
 (13, 107),
@@ -1895,6 +1962,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (13, 161),
 (13, 162),
 (13, 164),
+(13, 178),
 (14, 106),
 (14, 107),
 (14, 109),
@@ -1911,6 +1979,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (14, 161),
 (14, 162),
 (14, 164),
+(14, 179),
 (15, 105),
 (15, 106),
 (15, 107),
@@ -1938,6 +2007,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (15, 161),
 (15, 162),
 (15, 164),
+(15, 178),
 (16, 106),
 (16, 107),
 (16, 109),
@@ -1954,6 +2024,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (16, 161),
 (16, 162),
 (16, 164),
+(16, 179),
 (17, 105),
 (17, 106),
 (17, 107),
@@ -1981,6 +2052,7 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (17, 161),
 (17, 162),
 (17, 164),
+(17, 178),
 (18, 106),
 (18, 107),
 (18, 109),
@@ -1996,7 +2068,8 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (18, 160),
 (18, 161),
 (18, 162),
-(18, 164);
+(18, 164),
+(18, 179);
 
 -- --------------------------------------------------------
 
@@ -2046,7 +2119,10 @@ INSERT INTO `sales` (`id`, `customer_id`, `customer_name`, `customer_email`, `cu
 (98, 98, 'Camden Graves', 'lefi@mailinator.com', '+1 (822) 203-3275', 2000.00, 2000.00, 2000.00, 3000.00, 1000.00, 'one_time', 'zelle', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Clemons and Mcneil Inc - Amet sunt minim com - Et sunt inventore n', '[{\"id\":1761091184597,\"name\":\"Webdesign\",\"details\":\"Design\"}]', 'Design', 'agreement-65.pdf', 'C:\\Users\\MT\\Desktop\\crm\\server\\uploads\\sales\\agreement-65-1761091184626-843143283.pdf', 9030, 'application/pdf', '2025-10-21 23:59:44', 8, '2025-10-21 23:59:44', '2025-10-22 22:18:18', NULL, NULL, 'partial'),
 (99, 99, 'Chastity Mack', 'ranukuqine@mailinator.com', '+1 (243) 355-6826', 3000.00, 3000.00, 3000.00, 500.00, 2000.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Osborn and Tillman LLC - Animi explicabo Ve - Quam laudantium err', '[{\"id\":1761170468089,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Fresh website', NULL, NULL, NULL, NULL, NULL, 1, '2025-10-22 22:01:08', '2025-10-22 22:26:58', NULL, NULL, 'partial'),
 (100, 100, 'Molly Marquez', 'fovokazaky@mailinator.com', '+1 (757) 208-3131', 1000.00, 1000.00, 1000.00, 1000.00, 500.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Stevens and Berg Plc - Voluptatem dolore pr - Velit magna cumque', '[{\"id\":1761171344201,\"name\":\"Website\",\"details\":\"Fresh website\"}]', 'Fresh website', NULL, NULL, NULL, NULL, NULL, 1, '2025-10-22 22:15:44', '2025-10-22 22:47:46', NULL, NULL, 'partial'),
-(101, 101, 'Clio Jensen', 'qinyfo@mailinator.com', '+1 (562) 433-2837', 1000.00, 1000.00, 1000.00, 500.00, 500.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Powell Cox Plc - In sit deserunt et  - Similique velit tem', '[{\"id\":1762969813707,\"name\":\"Webdesign\",\"details\":\"Design\"}]', 'Design', NULL, NULL, NULL, NULL, NULL, 8, '2025-11-12 17:50:13', '2025-11-12 17:50:13', NULL, NULL, 'partial');
+(101, 101, 'Clio Jensen', 'qinyfo@mailinator.com', '+1 (562) 433-2837', 1000.00, 1000.00, 1000.00, 500.00, 500.00, 'one_time', 'wire', 'american_digital_agency', 'liberty_web_studio', 'Converted from lead: Powell Cox Plc - In sit deserunt et  - Similique velit tem', '[{\"id\":1762969813707,\"name\":\"Webdesign\",\"details\":\"Design\"}]', 'Design', NULL, NULL, NULL, NULL, NULL, 8, '2025-11-12 17:50:13', '2025-11-12 17:50:13', NULL, NULL, 'partial'),
+(102, 102, 'Xenia S', 'xeniasapanidi@gmail.com', '442074904332', 500.00, 500.00, 500.00, 500.00, 0.00, '', 'zelle', 'american_digital_agency', 'others', 'Aut nihil dolores ex', '[{\"id\":1765550483721,\"name\":\"Quynn Willis\",\"details\":\"Aut enim quidem inve\"}]', 'Aut enim quidem inve', NULL, NULL, NULL, NULL, NULL, 7, '2025-12-12 14:41:23', '2025-12-12 14:54:40', NULL, NULL, 'completed'),
+(103, 103, 'Lauren Stinson ', 'Lms@shopcozy101.com', '(313) 330-8842', 1000.00, 1000.00, 1000.00, 500.00, 500.00, 'installments', 'wire', 'american_digital_agency', 'liberty_web_studio', NULL, NULL, NULL, 'agreement-104.pdf', 'C:\\Users\\MT\\Desktop\\crm\\server\\uploads\\sales\\agreement-104-1765551651227-542735973.pdf', 212346, 'application/pdf', '2025-12-12 15:00:51', 7, '2025-12-12 14:48:32', '2025-12-12 15:00:51', NULL, NULL, 'partial'),
+(104, 104, 'Akaash Nazir', 'akaashbusiness@outlook.com', NULL, 849.00, 849.00, 849.00, 500.00, 349.00, 'installments', 'stripe', 'oscs', 'liberty_web_studio', 'Sunt sed eum in off', '[{\"id\":1765551379405,\"name\":\"Riley Puckett\",\"details\":\"Sit fugit dolore ci\"}]', 'Sit fugit dolore ci', 'life-coaching_agreement.pdf', 'C:\\Users\\MT\\Desktop\\crm\\server\\uploads\\sales\\life-coaching_agreement-1765551379450-957771691.pdf', 212346, 'application/pdf', '2025-12-12 14:56:19', 7, '2025-12-12 14:56:19', '2025-12-12 15:01:31', '2025-12-12', NULL, 'partial');
 
 -- --------------------------------------------------------
 
@@ -2071,7 +2147,9 @@ CREATE TABLE `targets` (
 
 INSERT INTO `targets` (`id`, `user_id`, `target_value`, `target_month`, `target_year`, `created_by`, `created_at`, `updated_at`) VALUES
 (14, 7, 10, 10, 2025, 30, '2025-10-15 23:29:10', '2025-10-15 23:29:10'),
-(15, 29, 15, 10, 2025, 30, '2025-10-15 23:29:22', '2025-10-15 23:29:22');
+(15, 29, 15, 10, 2025, 30, '2025-10-15 23:29:22', '2025-10-15 23:29:22'),
+(16, 21, 10, 12, 2025, 9, '2025-12-08 20:47:20', '2025-12-08 20:47:20'),
+(17, 7, 10, 12, 2025, 30, '2025-12-12 15:03:33', '2025-12-12 15:03:33');
 
 -- --------------------------------------------------------
 
@@ -2433,7 +2511,8 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`, `role_id`)
 (29, 'Sales2', 'sales2@example.com', '$2b$10$KPHIK37jnSi7GjuOQ3/HHOpKcqW.U3lRupSNkNV.7IoV3bHumJ.P.', '2025-10-15 18:32:12', 3),
 (30, 'Front Manager', 'frontmanager@example.com', '$2b$10$2BEBgA/7TRKJ.KEyZJPYY.S6qy4J5gkfmeudVWx9TLUPxPRV7hVim', '2025-10-15 23:28:40', 4),
 (31, 'Ghazali Khan', 'ghazalikhan@crm.com', '$2b$10$oGEVvQzLBsYmV4U0M.V3eekdNyif9ZVFt220TqkU6lgadj7GfAPim', '2025-10-27 19:07:08', 2),
-(32, 'Production Head', 'productionhead@example.com', '$2b$10$Swk0ArqZ/TkrwQCLWdIYW.0SzLiOc.pRCeQxQBfw.miLst6KPynem', '2025-10-27 19:09:41', 8);
+(32, 'Production Head', 'productionhead@example.com', '$2b$10$Swk0ArqZ/TkrwQCLWdIYW.0SzLiOc.pRCeQxQBfw.miLst6KPynem', '2025-10-27 19:09:41', 8),
+(34, 'lead scraper', 'leads@example.com', '$2b$10$EgbFG128Q84WIx31iiv3xOrcrimZJcbRuFsQ.mkofPws7OSakdxy.', '2025-12-12 15:07:00', 2);
 
 -- --------------------------------------------------------
 
@@ -3028,7 +3107,7 @@ ALTER TABLE `chargeback_refund_audit`
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
 
 --
 -- AUTO_INCREMENT for table `customer_assignments`
@@ -3076,7 +3155,7 @@ ALTER TABLE `invoices`
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=154;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=158;
 
 --
 -- AUTO_INCREMENT for table `lead_clicks`
@@ -3088,7 +3167,7 @@ ALTER TABLE `lead_clicks`
 -- AUTO_INCREMENT for table `lead_documents`
 --
 ALTER TABLE `lead_documents`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `lead_notes`
@@ -3106,7 +3185,7 @@ ALTER TABLE `lead_schedules`
 -- AUTO_INCREMENT for table `lead_tracking`
 --
 ALTER TABLE `lead_tracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=262;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=273;
 
 --
 -- AUTO_INCREMENT for table `messages`
@@ -3142,7 +3221,7 @@ ALTER TABLE `message_threads`
 -- AUTO_INCREMENT for table `monthly_lead_stats`
 --
 ALTER TABLE `monthly_lead_stats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- AUTO_INCREMENT for table `notifications`
@@ -3154,7 +3233,7 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT for table `payment_installments`
 --
 ALTER TABLE `payment_installments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT for table `payment_recurring`
@@ -3166,13 +3245,13 @@ ALTER TABLE `payment_recurring`
 -- AUTO_INCREMENT for table `payment_transactions`
 --
 ALTER TABLE `payment_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=124;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=128;
 
 --
 -- AUTO_INCREMENT for table `permissions`
 --
 ALTER TABLE `permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=171;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=180;
 
 --
 -- AUTO_INCREMENT for table `pinned_messages`
@@ -3226,13 +3305,13 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
 
 --
 -- AUTO_INCREMENT for table `targets`
 --
 ALTER TABLE `targets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `task_activity_logs`
@@ -3322,7 +3401,7 @@ ALTER TABLE `upseller_team_members`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- Constraints for dumped tables

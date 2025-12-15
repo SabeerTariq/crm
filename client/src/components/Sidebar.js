@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { usePermissions } from '../hooks/usePermissions';
 import { useUserBoards } from '../hooks/useUserBoards';
-import { hasLeadScraperRole, hasSalesRole, hasUpsellerRole, hasUpsellerManagerRole, hasFrontSalesManagerRole, hasProductionHeadRole, hasProductionLeadRole, hasProductionMemberRole, isAdmin } from '../utils/roleUtils';
+import { isAdmin } from '../utils/roleUtils';
 import { getUserName, getUserRole } from '../utils/userUtils';
 import './Sidebar.css';
 
@@ -204,47 +204,47 @@ export default function Sidebar() {
 
       {/* Navigation Menu */}
       <ul className="sidebar-menu">
-        {isAdmin() && (
+        {hasPermission('admin_dashboard', 'view') && (
           <li className={`menu-item ${isActive('/dashboard') ? 'active' : ''}`}>
             <Link to="/dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-tachometer-alt menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Main Dashboard</span>}
+              {!isCollapsed && <span className="menu-text">Admin Dashboard</span>}
             </Link>
           </li>
         )}
-        {hasLeadScraperRole() && (
+        {hasPermission('lead_scraper_dashboard', 'view') && (
           <li className={`menu-item ${isActive('/lead-scraper-dashboard') ? 'active' : ''}`}>
             <Link to="/lead-scraper-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-chart-line menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Dashboard</span>}
+              {!isCollapsed && <span className="menu-text">Lead Scraper Dashboard</span>}
             </Link>
           </li>
         )}
-        {hasSalesRole() && (
+        {hasPermission('front_seller_dashboard', 'view') && (
           <li className={`menu-item ${isActive('/front-seller-dashboard') ? 'active' : ''}`}>
             <Link to="/front-seller-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-briefcase menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Dashboard</span>}
+              {!isCollapsed && <span className="menu-text">Front Seller Dashboard</span>}
             </Link>
           </li>
         )}
-        {hasUpsellerRole() && (
+        {hasPermission('upseller_dashboard', 'view') && (
           <li className={`menu-item ${isActive('/upseller-dashboard') ? 'active' : ''}`}>
             <Link to="/upseller-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-bullseye menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Dashboard</span>}
+              {!isCollapsed && <span className="menu-text">Upseller Dashboard</span>}
             </Link>
           </li>
         )}
-        {hasUpsellerManagerRole() && (
+        {hasPermission('upsell_manager_dashboard', 'view') && (
           <li className={`menu-item ${isActive('/upsell-manager-dashboard') ? 'active' : ''}`}>
             <Link to="/upsell-manager-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-chart-line menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Manager Dashboard</span>}
+              {!isCollapsed && <span className="menu-text">Upseller Manager Dashboard</span>}
             </Link>
           </li>
         )}
-        {hasFrontSalesManagerRole() && (
+        {hasPermission('front_sales_manager_dashboard', 'view') && (
           <li className={`menu-item ${isActive('/front-sales-manager-dashboard') ? 'active' : ''}`}>
             <Link to="/front-sales-manager-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-users-cog menu-icon"></i>
@@ -252,15 +252,15 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
-        {hasProductionHeadRole() && (
+        {hasPermission('production_head_dashboard', 'view') && (
           <li className={`menu-item ${isActive('/production-head-dashboard') ? 'active' : ''}`}>
             <Link to="/production-head-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-cogs menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Production Dashboard</span>}
+              {!isCollapsed && <span className="menu-text">Production Head Dashboard</span>}
             </Link>
           </li>
         )}
-        {hasProductionLeadRole() && (
+        {hasPermission('department_leader_dashboard', 'view') && (
           <li className={`menu-item ${isActive('/production-head-dashboard') || isActive('/department-leader-dashboard') ? 'active' : ''}`}>
             <Link to="/production-head-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-user-tie menu-icon"></i>
@@ -268,7 +268,7 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
-        {hasProductionMemberRole() && (
+        {hasPermission('team_member_dashboard', 'view') && (
           <li className={`menu-item ${isActive('/team-member-dashboard') ? 'active' : ''}`}>
             <Link to="/team-member-dashboard" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-tasks menu-icon"></i>
@@ -280,7 +280,7 @@ export default function Sidebar() {
           <li className={`menu-item ${isActive('/teams') ? 'active' : ''}`}>
             <Link to="/teams" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-users-cog menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Teams</span>}
+              {!isCollapsed && <span className="menu-text">Sales Teams</span>}
             </Link>
           </li>
         )}
@@ -288,7 +288,7 @@ export default function Sidebar() {
           <li className={`menu-item ${isActive('/targets') ? 'active' : ''}`}>
             <Link to="/targets" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-bullseye menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Targets</span>}
+              {!isCollapsed && <span className="menu-text">Sales Targets</span>}
             </Link>
           </li>
         )}
@@ -296,7 +296,7 @@ export default function Sidebar() {
           <li className={`menu-item ${isActive('/performance') ? 'active' : ''}`}>
             <Link to="/performance" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-chart-bar menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Performance</span>}
+              {!isCollapsed && <span className="menu-text">Sales Performance</span>}
             </Link>
           </li>
         )}

@@ -400,7 +400,7 @@ class CustomerAssignmentService {
         FROM customers c
         LEFT JOIN customer_assignments ca ON c.id = ca.customer_id AND ca.status = 'active'
         WHERE ca.id IS NULL
-        ORDER BY c.name ASC
+        ORDER BY c.converted_at DESC
       `;
       
       db.query(sql, (err, results) => {
@@ -466,7 +466,7 @@ class CustomerAssignmentService {
         LEFT JOIN customer_assignments ca ON c.id = ca.customer_id AND ca.status = 'active'
         LEFT JOIN users u ON ca.upseller_id = u.id
         LEFT JOIN users creator ON ca.created_by = creator.id
-        ORDER BY c.name ASC
+        ORDER BY c.converted_at DESC
       `;
       
       db.query(sql, (err, results) => {

@@ -40,7 +40,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/dashboard" element={
-          <ProtectedRoute module="users" action="read">
+          <ProtectedRoute module="admin_dashboard" action="view">
             <Dashboard />
           </ProtectedRoute>
         } />
@@ -79,14 +79,46 @@ function App() {
             <Roles />
           </ProtectedRoute>
         } />
-        <Route path="/lead-scraper-dashboard" element={<LeadScraperDashboard />} />
-        <Route path="/front-seller-dashboard" element={<FrontSellerDashboard />} />
-        <Route path="/upseller-dashboard" element={<UpsellerDashboard />} />
-        <Route path="/upsell-manager-dashboard" element={<UpsellManagerDashboard />} />
-        <Route path="/front-sales-manager-dashboard" element={<FrontSalesManagerDashboard />} />
-        <Route path="/production-head-dashboard" element={<ProductionHeadDashboard />} />
-        <Route path="/department-leader-dashboard/:departmentId" element={<DepartmentLeaderDashboard />} />
-        <Route path="/team-member-dashboard" element={<TeamMemberDashboard />} />
+        <Route path="/lead-scraper-dashboard" element={
+          <ProtectedRoute module="lead_scraper_dashboard" action="view">
+            <LeadScraperDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/front-seller-dashboard" element={
+          <ProtectedRoute module="front_seller_dashboard" action="view">
+            <FrontSellerDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/upseller-dashboard" element={
+          <ProtectedRoute module="upseller_dashboard" action="view">
+            <UpsellerDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/upsell-manager-dashboard" element={
+          <ProtectedRoute module="upsell_manager_dashboard" action="view">
+            <UpsellManagerDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/front-sales-manager-dashboard" element={
+          <ProtectedRoute module="front_sales_manager_dashboard" action="view">
+            <FrontSalesManagerDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/production-head-dashboard" element={
+          <ProtectedRoute module="production_head_dashboard" action="view">
+            <ProductionHeadDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/department-leader-dashboard/:departmentId" element={
+          <ProtectedRoute module="department_leader_dashboard" action="view">
+            <DepartmentLeaderDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/team-member-dashboard" element={
+          <ProtectedRoute module="team_member_dashboard" action="view">
+            <TeamMemberDashboard />
+          </ProtectedRoute>
+        } />
         <Route path="/upseller-teams" element={
           <ProtectedRoute module="upseller_teams" action="view">
             <UpsellerTeams />
