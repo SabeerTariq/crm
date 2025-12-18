@@ -286,7 +286,7 @@ export default function ScheduleList() {
                   <div>Lead Details</div>
                   <div>Schedule</div>
                   <div>Status</div>
-                  <div>Created By</div>
+                  <div>Scheduled By</div>
                   <div>Actions</div>
                 </div>
 
@@ -366,12 +366,21 @@ export default function ScheduleList() {
                         </span>
                       </div>
 
-                      {/* Created By */}
+                      {/* Created By / Scheduled By */}
                       <div style={{
                         fontSize: '14px',
                         color: '#6b7280'
                       }}>
-                        {lead.created_by_name || 'Unknown'}
+                        {lead.scheduled_by_name || lead.created_by_name || 'Unknown'}
+                        {lead.scheduled_by_name && lead.created_by_name && lead.scheduled_by_name !== lead.created_by_name && (
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#9ca3af',
+                            marginTop: '2px'
+                          }}>
+                            Created: {lead.created_by_name}
+                          </div>
+                        )}
                       </div>
 
                       {/* Actions */}

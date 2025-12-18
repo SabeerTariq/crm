@@ -8,6 +8,7 @@ export default function Targets() {
   const [users, setUsers] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTarget, setEditingTarget] = useState(null);
+  const [editingTargetValue, setEditingTargetValue] = useState({});
   const [formData, setFormData] = useState({
     user_id: '',
     target_value: ''
@@ -68,6 +69,13 @@ export default function Targets() {
   const submitTarget = async (e) => {
     e.preventDefault();
     
+    // Validate target value
+    const targetValue = parseFloat(formData.target_value);
+    if (isNaN(targetValue) || targetValue <= 0) {
+      setError('Target value must be a number greater than 0');
+      return;
+    }
+    
     try {
       const token = localStorage.getItem('token');
       
@@ -83,10 +91,65 @@ export default function Targets() {
       
       resetForm();
       fetchTargets();
+      setError(null);
     } catch (err) {
       console.error('Error saving target:', err);
       setError(err.response?.data?.message || 'Failed to save target');
     }
+  };
+
+  const handleInlineEdit = (target) => {
+    setEditingTargetValue({
+      ...editingTargetValue,
+      [target.user_id]: target.target_value
+    });
+  };
+
+  const handleInlineSave = async (target) => {
+    const newValue = editingTargetValue[target.user_id];
+    
+    // Validate target value
+    const targetValue = parseFloat(newValue);
+    if (isNaN(targetValue) || targetValue <= 0) {
+      setError('Target value must be a number greater than 0');
+      return;
+    }
+    
+    try {
+      setError(null);
+      const token = localStorage.getItem('token');
+      
+      if (target.id) {
+        // Update existing target
+        await api.put(`/targets/${target.id}`, { target_value: targetValue }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        // Create new target
+        await api.post('/targets', { 
+          user_id: target.user_id, 
+          target_value: targetValue 
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      
+      // Clear editing state
+      const newEditingState = { ...editingTargetValue };
+      delete newEditingState[target.user_id];
+      setEditingTargetValue(newEditingState);
+      
+      fetchTargets();
+    } catch (err) {
+      console.error('Error saving target:', err);
+      setError(err.response?.data?.message || 'Failed to save target');
+    }
+  };
+
+  const handleInlineCancel = (target) => {
+    const newEditingState = { ...editingTargetValue };
+    delete newEditingState[target.user_id];
+    setEditingTargetValue(newEditingState);
   };
 
   const editTarget = (target) => {
@@ -272,7 +335,8 @@ export default function Targets() {
                     name="target_value"
                     value={formData.target_value}
                     onChange={handleFormChange}
-                    min="1"
+                    min="0.01"
+                    step="0.01"
                     required
                     placeholder="e.g., 10"
                     style={{
@@ -349,68 +413,137 @@ export default function Targets() {
               {targets.length === 0 ? (
                 <tr>
                   <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                    No targets set for {currentMonth}
+                    No sales users found
                   </td>
                 </tr>
               ) : (
-                targets.map(target => (
-                  <tr key={target.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px' }}>
-                      <div>
-                        <div style={{ fontWeight: '500' }}>{target.user_name}</div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{target.user_email}</div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px', fontWeight: '600' }}>
-                      {target.target_value} customers
-                    </td>
-                    <td style={{ padding: '12px', fontWeight: '600' }}>
-                      {target.actual_conversions} customers
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{
-                          width: '100px',
-                          height: '8px',
-                          backgroundColor: '#e5e7eb',
-                          borderRadius: '4px',
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{
-                            width: `${Math.min(target.progress_percentage, 100)}%`,
-                            height: '100%',
-                            backgroundColor: getProgressColor(target.progress_percentage),
-                            transition: 'width 0.3s ease'
-                          }} />
+                targets.map(target => {
+                  const isEditing = editingTargetValue.hasOwnProperty(target.user_id);
+                  const displayValue = isEditing ? editingTargetValue[target.user_id] : target.target_value;
+                  
+                  return (
+                    <tr key={target.user_id || target.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '12px' }}>
+                        <div>
+                          <div style={{ fontWeight: '500' }}>{target.user_name}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{target.user_email}</div>
                         </div>
-                        <span style={{
-                          color: getProgressColor(target.progress_percentage),
-                          fontWeight: '600',
-                          fontSize: '14px'
-                        }}>
-                          {target.progress_percentage}%
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        {hasPermission('targets', 'update') && (
-                          <button
-                            onClick={() => editTarget(target)}
-                            style={{
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                          >
-                            Edit
-                          </button>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {isEditing ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={displayValue}
+                              onChange={(e) => setEditingTargetValue({
+                                ...editingTargetValue,
+                                [target.user_id]: e.target.value
+                              })}
+                              style={{
+                                width: '80px',
+                                padding: '4px 8px',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '4px',
+                                fontSize: '14px'
+                              }}
+                              autoFocus
+                            />
+                            <span style={{ fontSize: '12px', color: '#6b7280' }}>customers</span>
+                            <button
+                              onClick={() => handleInlineSave(target)}
+                              style={{
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => handleInlineCancel(target)}
+                              style={{
+                                backgroundColor: '#6b7280',
+                                color: 'white',
+                                border: 'none',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: '600' }}>{target.target_value} customers</span>
+                            {!target.has_target && (
+                              <span style={{ 
+                                fontSize: '11px', 
+                                color: '#6b7280', 
+                                fontStyle: 'italic',
+                                padding: '2px 6px',
+                                backgroundColor: '#f3f4f6',
+                                borderRadius: '4px'
+                              }}>
+                                (default)
+                              </span>
+                            )}
+                            {hasPermission('targets', 'update') && (
+                              <button
+                                onClick={() => handleInlineEdit(target)}
+                                style={{
+                                  backgroundColor: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '11px'
+                                }}
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
                         )}
-                        {hasPermission('targets', 'delete') && (
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: '600' }}>
+                        {target.actual_conversions} customers
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '100px',
+                            height: '8px',
+                            backgroundColor: '#e5e7eb',
+                            borderRadius: '4px',
+                            overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              width: `${Math.min(target.progress_percentage, 100)}%`,
+                              height: '100%',
+                              backgroundColor: getProgressColor(target.progress_percentage),
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </div>
+                          <span style={{
+                            color: getProgressColor(target.progress_percentage),
+                            fontWeight: '600',
+                            fontSize: '14px'
+                          }}>
+                            {target.progress_percentage}%
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        {hasPermission('targets', 'delete') && target.id && (
                           <button
                             onClick={() => deleteTarget(target.id)}
                             style={{
@@ -426,10 +559,10 @@ export default function Targets() {
                             Delete
                           </button>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -1018,7 +1018,7 @@ export default function Sales() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
-                    width: '100%',
+                    width: '90%',
                     padding: '12px 16px 12px 44px',
                     border: '1px solid #d1d5db',
             borderRadius: '8px',
@@ -1088,95 +1088,118 @@ export default function Sales() {
           {/* Advanced Filters */}
           {showFilters && (
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px',
-            padding: '20px',
-              backgroundColor: '#f8fafc',
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb'
+              borderTop: '2px solid #e2e8f0',
+              paddingTop: '20px',
+              marginTop: '20px'
             }}>
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#374151', 
-                  marginBottom: '6px' 
-                }}>
-                  Payment Type
-                </label>
-                <select
-                  value={filters.paymentType}
-                  onChange={(e) => setFilters({ ...filters, paymentType: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#ffffff'
-                  }}
-                >
-                  <option value="">All Types</option>
-                  <option value="fully_paid">Fully Paid</option>
-                  <option value="installment">Installment</option>
-                  <option value="recurring">Recurring</option>
-                </select>
-              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '20px',
+                marginBottom: '20px'
+              }}>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Payment Type
+                  </label>
+                  <select
+                    value={filters.paymentType}
+                    onChange={(e) => setFilters({ ...filters, paymentType: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#ffffff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  >
+                    <option value="">All Types</option>
+                    <option value="fully_paid">Fully Paid</option>
+                    <option value="installment">Installment</option>
+                    <option value="recurring">Recurring</option>
+                  </select>
+                </div>
 
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#374151', 
-                  marginBottom: '6px' 
-                }}>
-                  Payment Source
-                </label>
-                <select
-                  value={filters.paymentSource}
-                  onChange={(e) => setFilters({ ...filters, paymentSource: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#ffffff'
-                  }}
-                >
-                  <option value="">All Sources</option>
-                  <option value="wire">Wire Transfer</option>
-                  <option value="check">Check</option>
-                  <option value="cash">Cash</option>
-                  <option value="credit_card">Credit Card</option>
-                </select>
-              </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Payment Source
+                  </label>
+                  <select
+                    value={filters.paymentSource}
+                    onChange={(e) => setFilters({ ...filters, paymentSource: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#ffffff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  >
+                    <option value="">All Sources</option>
+                    <option value="wire">Wire Transfer</option>
+                    <option value="check">Check</option>
+                    <option value="cash">Cash</option>
+                    <option value="credit_card">Credit Card</option>
+                  </select>
+                </div>
 
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#374151', 
-                  marginBottom: '6px' 
-                }}>
-                  Brand
-                </label>
-                <select
-                  value={filters.brand}
-                  onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#ffffff'
-                  }}
-                >
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Brand
+                  </label>
+                  <select
+                    value={filters.brand}
+                    onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#ffffff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  >
                   <option value="">All Brands</option>
                   <option value="american_digital_agency">American Digital Agency</option>
                   <option value="american_digital_publishers">American Digital Publishers</option>
@@ -1197,54 +1220,69 @@ export default function Sales() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#374151', 
-                  marginBottom: '6px' 
-                }}>
-                  Date From
-                </label>
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#ffffff'
-                  }}
-                />
-              </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Date From
+                  </label>
+                  <input
+                    type="date"
+                    value={filters.dateFrom}
+                    onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#ffffff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                </div>
 
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#374151', 
-                  marginBottom: '6px' 
-                }}>
-                  Date To
-                </label>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#ffffff'
-                  }}
-                />
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Date To
+                  </label>
+                  <input
+                    type="date"
+                    value={filters.dateTo}
+                    onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#ffffff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                </div>
               </div>
 
               <div style={{ 

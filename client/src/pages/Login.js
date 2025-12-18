@@ -26,6 +26,8 @@ export default function Login() {
         redirectUrl = '/lead-scraper-dashboard';
       } else if (user.role_id === 3) { // Sales
         redirectUrl = '/front-seller-dashboard';
+      } else if (user.role_id === 4) { // Front Sales Manager
+        redirectUrl = '/front-sales-manager-dashboard';
       } else if (user.role_id === 5) { // Upseller
         redirectUrl = '/upseller-dashboard';
       } else if (user.role_id === 8) { // Production Head

@@ -8,6 +8,7 @@ export default function UpsellerTargets() {
   const [users, setUsers] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTarget, setEditingTarget] = useState(null);
+  const [editingTargetValue, setEditingTargetValue] = useState({});
   const [formData, setFormData] = useState({
     user_id: '',
     target_value: ''
@@ -68,6 +69,13 @@ export default function UpsellerTargets() {
   const submitTarget = async (e) => {
     e.preventDefault();
     
+    // Validate target value
+    const targetValue = parseFloat(formData.target_value);
+    if (isNaN(targetValue) || targetValue <= 0) {
+      setError('Target value must be a number greater than 0');
+      return;
+    }
+    
     try {
       const token = localStorage.getItem('token');
       
@@ -83,10 +91,65 @@ export default function UpsellerTargets() {
       
       resetForm();
       fetchTargets();
+      setError(null);
     } catch (err) {
       console.error('Error saving upseller target:', err);
       setError(err.response?.data?.message || 'Failed to save cash in target');
     }
+  };
+
+  const handleInlineEdit = (target) => {
+    setEditingTargetValue({
+      ...editingTargetValue,
+      [target.user_id]: target.target_value
+    });
+  };
+
+  const handleInlineSave = async (target) => {
+    const newValue = editingTargetValue[target.user_id];
+    
+    // Validate target value
+    const targetValue = parseFloat(newValue);
+    if (isNaN(targetValue) || targetValue <= 0) {
+      setError('Target value must be a number greater than 0');
+      return;
+    }
+    
+    try {
+      setError(null);
+      const token = localStorage.getItem('token');
+      
+      if (target.id) {
+        // Update existing target
+        await api.put(`/upseller-targets/${target.id}`, { target_value: targetValue }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        // Create new target
+        await api.post('/upseller-targets', { 
+          user_id: target.user_id, 
+          target_value: targetValue 
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      
+      // Clear editing state
+      const newEditingState = { ...editingTargetValue };
+      delete newEditingState[target.user_id];
+      setEditingTargetValue(newEditingState);
+      
+      fetchTargets();
+    } catch (err) {
+      console.error('Error saving upseller target:', err);
+      setError(err.response?.data?.message || 'Failed to save cash in target');
+    }
+  };
+
+  const handleInlineCancel = (target) => {
+    const newEditingState = { ...editingTargetValue };
+    delete newEditingState[target.user_id];
+    setEditingTargetValue(newEditingState);
   };
 
   const editTarget = (target) => {
@@ -370,68 +433,139 @@ export default function UpsellerTargets() {
               {targets.length === 0 ? (
                 <tr>
                   <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                    No cash in targets set for {currentMonth}
+                    No upseller users found
                   </td>
                 </tr>
               ) : (
-                targets.map(target => (
-                  <tr key={target.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px' }}>
-                      <div>
-                        <div style={{ fontWeight: '500' }}>{target.user_name}</div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{target.user_email}</div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px', fontWeight: '600' }}>
-                      ${parseFloat(target.target_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: '12px', fontWeight: '600' }}>
-                      ${parseFloat(target.actual_cash_in || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{
-                          width: '100px',
-                          height: '8px',
-                          backgroundColor: '#e5e7eb',
-                          borderRadius: '4px',
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{
-                            width: `${Math.min(target.progress_percentage, 100)}%`,
-                            height: '100%',
-                            backgroundColor: getProgressColor(target.progress_percentage),
-                            transition: 'width 0.3s ease'
-                          }} />
+                targets.map(target => {
+                  const isEditing = editingTargetValue.hasOwnProperty(target.user_id);
+                  const displayValue = isEditing ? editingTargetValue[target.user_id] : target.target_value;
+                  
+                  return (
+                    <tr key={target.user_id || target.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '12px' }}>
+                        <div>
+                          <div style={{ fontWeight: '500' }}>{target.user_name}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{target.user_email}</div>
                         </div>
-                        <span style={{
-                          color: getProgressColor(target.progress_percentage),
-                          fontWeight: '600',
-                          fontSize: '14px'
-                        }}>
-                          {target.progress_percentage}%
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        {hasPermission('upseller_targets', 'update') && (
-                          <button
-                            onClick={() => editTarget(target)}
-                            style={{
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                          >
-                            Edit
-                          </button>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {isEditing ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '14px', color: '#6b7280' }}>$</span>
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={displayValue}
+                              onChange={(e) => setEditingTargetValue({
+                                ...editingTargetValue,
+                                [target.user_id]: e.target.value
+                              })}
+                              style={{
+                                width: '100px',
+                                padding: '4px 8px',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '4px',
+                                fontSize: '14px'
+                              }}
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleInlineSave(target)}
+                              style={{
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => handleInlineCancel(target)}
+                              style={{
+                                backgroundColor: '#6b7280',
+                                color: 'white',
+                                border: 'none',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: '600' }}>
+                              ${parseFloat(target.target_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            {!target.has_target && (
+                              <span style={{ 
+                                fontSize: '11px', 
+                                color: '#6b7280', 
+                                fontStyle: 'italic',
+                                padding: '2px 6px',
+                                backgroundColor: '#f3f4f6',
+                                borderRadius: '4px'
+                              }}>
+                                (default)
+                              </span>
+                            )}
+                            {hasPermission('upseller_targets', 'update') && (
+                              <button
+                                onClick={() => handleInlineEdit(target)}
+                                style={{
+                                  backgroundColor: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '11px'
+                                }}
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
                         )}
-                        {hasPermission('upseller_targets', 'delete') && (
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: '600' }}>
+                        ${parseFloat(target.actual_cash_in || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '100px',
+                            height: '8px',
+                            backgroundColor: '#e5e7eb',
+                            borderRadius: '4px',
+                            overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              width: `${Math.min(target.progress_percentage, 100)}%`,
+                              height: '100%',
+                              backgroundColor: getProgressColor(target.progress_percentage),
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </div>
+                          <span style={{
+                            color: getProgressColor(target.progress_percentage),
+                            fontWeight: '600',
+                            fontSize: '14px'
+                          }}>
+                            {target.progress_percentage}%
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        {hasPermission('upseller_targets', 'delete') && target.id && (
                           <button
                             onClick={() => deleteTarget(target.id)}
                             style={{
@@ -447,10 +581,10 @@ export default function UpsellerTargets() {
                             Delete
                           </button>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

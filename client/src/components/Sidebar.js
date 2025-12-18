@@ -296,7 +296,7 @@ export default function Sidebar() {
           <li className={`menu-item ${isActive('/performance') ? 'active' : ''}`}>
             <Link to="/performance" className="menu-link" onClick={handleMenuClick}>
               <i className="fas fa-chart-bar menu-icon"></i>
-              {!isCollapsed && <span className="menu-text">Sales Performance</span>}
+              {!isCollapsed && <span className="menu-text">Sales Team Performance</span>}
             </Link>
           </li>
         )}

@@ -16,6 +16,13 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
   const { search, source, createdBy, startDate, endDate, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
   
+  // Debug: Log the raw query object
+  console.log('=== LEADS API REQUEST ===');
+  console.log('Full query object:', JSON.stringify(req.query, null, 2));
+  console.log('Source parameter type:', typeof source);
+  console.log('Source parameter value:', source);
+  console.log('Is source an array?', Array.isArray(source));
+  
   // Check if user is admin
   const isAdmin = req.user.role_id === 1;
   
@@ -30,10 +37,60 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
     queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
   }
   
-  // Filter by source
-  if (source) {
-    whereConditions.push('l.source = ?');
-    queryParams.push(source);
+  // Filter by source (supports multiple sources)
+  // Express by default doesn't parse multiple query params as array
+  // We need to manually extract all source values from the query string
+  let sources = [];
+  
+  // Method 1: Check if Express parsed it as an array
+  if (req.query.source) {
+    if (Array.isArray(req.query.source)) {
+      sources = req.query.source.filter(s => s && typeof s === 'string' && s.trim() !== '').map(s => s.trim());
+    } else if (typeof req.query.source === 'string' && req.query.source.trim() !== '') {
+      sources = [req.query.source.trim()];
+    }
+  }
+  
+  // Method 2: Manually parse from URL if not already an array (Express default behavior)
+  if (sources.length === 0 || (sources.length === 1 && req.url.includes('source='))) {
+    // Extract all source parameters from the URL
+    const url = req.originalUrl || req.url;
+    const queryString = url.split('?')[1] || '';
+    if (queryString) {
+      const params = new URLSearchParams(queryString);
+      const allSources = params.getAll('source'); // getAll returns array of all values
+      if (allSources.length > 0) {
+        sources = allSources.filter(s => s && s.trim() !== '').map(s => s.trim());
+      }
+    }
+  }
+  
+  console.log('Processing source filter - Raw req.query.source:', req.query.source);
+  console.log('Processing source filter - URL:', req.originalUrl || req.url);
+  console.log('Processing source filter - Parsed sources:', sources);
+  
+  // Debug: Check what source values actually exist in database
+  if (sources.length > 0) {
+    db.query('SELECT DISTINCT source, COUNT(*) as count FROM leads WHERE source IS NOT NULL AND source != "" GROUP BY source ORDER BY count DESC LIMIT 10', (err, sourceResults) => {
+      if (!err && sourceResults) {
+        console.log('Available sources in database:', sourceResults.map(r => ({ source: r.source, count: r.count })));
+      }
+    });
+  }
+  
+  if (sources.length > 0) {
+    // Use case-insensitive matching with TRIM to handle whitespace
+    // Apply LOWER and TRIM to the column, and compare with trimmed lowercase values
+    const trimmedLowerSources = sources.map(s => s.trim().toLowerCase());
+    const placeholders = trimmedLowerSources.map(() => '?').join(',');
+    whereConditions.push(`LOWER(TRIM(COALESCE(l.source, ''))) IN (${placeholders})`);
+    queryParams.push(...trimmedLowerSources);
+    console.log('✓ Source filter applied:', sources);
+    console.log('✓ Source filter (normalized to lowercase):', trimmedLowerSources);
+    console.log('✓ Source filter SQL:', `LOWER(TRIM(COALESCE(l.source, ''))) IN (${placeholders})`);
+    console.log('✓ Source filter params to bind:', trimmedLowerSources);
+  } else {
+    console.log('No source filter provided or empty');
   }
   
   // Filter by created by
@@ -82,22 +139,29 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
       // Build final query
       const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
       
+      console.log('Final WHERE clause:', whereClause);
+      console.log('Query params:', queryParams);
+      
       const sql = `
         SELECT l.*, 
                u1.name as created_by_name,
-               GROUP_CONCAT(DISTINCT u2.name ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as scheduled_by_names,
-               GROUP_CONCAT(DISTINCT ls.schedule_date ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_dates,
-               GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times,
+               (SELECT GROUP_CONCAT(DISTINCT u2.name ORDER BY ls.scheduled_at DESC SEPARATOR ', ')
+                FROM lead_schedules ls
+                LEFT JOIN users u2 ON ls.scheduled_by = u2.id
+                WHERE ls.lead_id = l.id AND ls.scheduled_by = ?) as scheduled_by_names,
+               (SELECT GROUP_CONCAT(DISTINCT ls.schedule_date ORDER BY ls.scheduled_at DESC SEPARATOR ', ')
+                FROM lead_schedules ls
+                WHERE ls.lead_id = l.id AND ls.scheduled_by = ?) as schedule_dates,
+               (SELECT GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ')
+                FROM lead_schedules ls
+                WHERE ls.lead_id = l.id AND ls.scheduled_by = ?) as schedule_times,
                (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'email') as email_clicks,
                (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'phone') as phone_clicks,
                (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'business_email') as business_email_clicks,
                (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'business_phone') as business_phone_clicks
         FROM leads l
         LEFT JOIN users u1 ON l.created_by = u1.id
-        LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
-        LEFT JOIN users u2 ON ls.scheduled_by = u2.id
         ${whereClause}
-        GROUP BY l.id
         ORDER BY l.created_at DESC
         LIMIT ? OFFSET ?
       `;
@@ -106,30 +170,36 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
         SELECT COUNT(DISTINCT l.id) as total
         FROM leads l
         LEFT JOIN users u1 ON l.created_by = u1.id
-        LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
-        LEFT JOIN users u2 ON ls.scheduled_by = u2.id
         ${whereClause}
       `;
       
-      // Add userId parameters for schedule filtering, click counts (4 times for each click type), and pagination
-      queryParams.push(userId, userId, userId, userId, userId, parseInt(limit), offset);
+      // Add userId parameters for schedule subqueries (3 times), click counts (4 times), and pagination
+      queryParams.push(userId, userId, userId, userId, userId, userId, userId, parseInt(limit), offset);
+      
+      // For count query, we only need filter params (no subqueries or pagination)
+      const countQueryParams = [...queryParams]; // Just the filter params
       
       // Execute both queries
       Promise.all([
         new Promise((resolve, reject) => {
-          db.query(sql, queryParams, (err, results) => {
+          db.query(sql, finalQueryParams, (err, results) => {
             if (err) reject(err);
             else resolve(results);
           });
         }),
         new Promise((resolve, reject) => {
-          db.query(countSql, queryParams.slice(0, -2), (err, results) => {
+          db.query(countSql, countQueryParams, (err, results) => {
             if (err) reject(err);
             else resolve(results[0].total);
           });
         })
       ])
       .then(([leads, total]) => {
+        console.log(`Returning ${leads.length} leads out of ${total} total`);
+        if (sources.length > 0) {
+          console.log('Sample lead sources from results:', leads.slice(0, 5).map(l => ({ id: l.id, name: l.name, source: l.source })));
+          console.log('All unique sources in results:', [...new Set(leads.map(l => l.source))]);
+        }
         res.json({
           leads,
           pagination: {
@@ -149,22 +219,29 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
     // Admin can see all leads
     const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
     
+    console.log('Admin query - Final WHERE clause:', whereClause);
+    console.log('Admin query - Query params:', queryParams);
+    
     const sql = `
       SELECT l.*, 
              u1.name as created_by_name,
-             GROUP_CONCAT(DISTINCT u2.name ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as scheduled_by_names,
-             GROUP_CONCAT(DISTINCT ls.schedule_date ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_dates,
-             GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ') as schedule_times,
+             (SELECT GROUP_CONCAT(DISTINCT u2.name ORDER BY ls.scheduled_at DESC SEPARATOR ', ')
+              FROM lead_schedules ls
+              LEFT JOIN users u2 ON ls.scheduled_by = u2.id
+              WHERE ls.lead_id = l.id AND ls.scheduled_by = ?) as scheduled_by_names,
+             (SELECT GROUP_CONCAT(DISTINCT ls.schedule_date ORDER BY ls.scheduled_at DESC SEPARATOR ', ')
+              FROM lead_schedules ls
+              WHERE ls.lead_id = l.id AND ls.scheduled_by = ?) as schedule_dates,
+             (SELECT GROUP_CONCAT(DISTINCT ls.schedule_time ORDER BY ls.scheduled_at DESC SEPARATOR ', ')
+              FROM lead_schedules ls
+              WHERE ls.lead_id = l.id AND ls.scheduled_by = ?) as schedule_times,
              (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'email') as email_clicks,
              (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'phone') as phone_clicks,
              (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'business_email') as business_email_clicks,
              (SELECT COUNT(*) FROM lead_clicks WHERE lead_id = l.id AND user_id = ? AND click_type = 'business_phone') as business_phone_clicks
       FROM leads l
       LEFT JOIN users u1 ON l.created_by = u1.id
-      LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
-      LEFT JOIN users u2 ON ls.scheduled_by = u2.id
       ${whereClause}
-      GROUP BY l.id
       ORDER BY l.created_at DESC
       LIMIT ? OFFSET ?
     `;
@@ -173,30 +250,67 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
       SELECT COUNT(DISTINCT l.id) as total
       FROM leads l
       LEFT JOIN users u1 ON l.created_by = u1.id
-      LEFT JOIN lead_schedules ls ON l.id = ls.lead_id AND ls.scheduled_by = ?
-      LEFT JOIN users u2 ON ls.scheduled_by = u2.id
       ${whereClause}
     `;
     
-    // Add userId parameters for schedule filtering, click counts (4 times for each click type), and pagination
-    queryParams.push(req.user.id, req.user.id, req.user.id, req.user.id, req.user.id, parseInt(limit), offset);
+    // Build final query params
+    // IMPORTANT: Parameters are bound in SQL order, not array order!
+    // SQL order: scheduled_by_names (1st), schedule_dates (2nd), schedule_times (3rd),
+    //            email_clicks (4th), phone_clicks (5th), business_email_clicks (6th),
+    //            business_phone_clicks (7th), WHERE clause (8th), LIMIT (9th), OFFSET (10th)
+    // So params must be: [userId x7, ...filterParams, limit, offset]
+    const finalQueryParams = [
+      req.user.id,     // For scheduled_by_names subquery (appears 1st in SQL)
+      req.user.id,     // For schedule_dates subquery (appears 2nd in SQL)
+      req.user.id,     // For schedule_times subquery (appears 3rd in SQL)
+      req.user.id,     // For email_clicks (appears 4th in SQL)
+      req.user.id,     // For phone_clicks (appears 5th in SQL)
+      req.user.id,     // For business_email_clicks (appears 6th in SQL)
+      req.user.id,     // For business_phone_clicks (appears 7th in SQL)
+      ...queryParams,  // Filter params (search, source, createdBy, dates, etc.) - appears 8th in SQL
+      parseInt(limit), // LIMIT - appears 9th in SQL
+      offset           // OFFSET - appears 10th in SQL
+    ];
+    
+    // For count query, we only need filter params (no subqueries)
+    const countQueryParams = [...queryParams];
+    
+    console.log('Admin - Main query params count:', finalQueryParams.length);
+    console.log('Admin - Main query params:', finalQueryParams);
+    console.log('Admin - Count query params count:', countQueryParams.length);
+    console.log('Admin - Count query params:', countQueryParams);
     
     // Execute both queries
     Promise.all([
       new Promise((resolve, reject) => {
-        db.query(sql, queryParams, (err, results) => {
-          if (err) reject(err);
-          else resolve(results);
+        db.query(sql, finalQueryParams, (err, results) => {
+          if (err) {
+            console.error('Admin - Main query error:', err);
+            reject(err);
+          } else {
+            console.log('Admin - Main query returned', results.length, 'rows');
+            resolve(results);
+          }
         });
       }),
       new Promise((resolve, reject) => {
-        db.query(countSql, queryParams.slice(0, -2), (err, results) => {
-          if (err) reject(err);
-          else resolve(results[0].total);
+        db.query(countSql, countQueryParams, (err, results) => {
+          if (err) {
+            console.error('Admin - Count query error:', err);
+            reject(err);
+          } else {
+            console.log('Admin - Count query returned total:', results[0].total);
+            resolve(results[0].total);
+          }
         });
       })
     ])
     .then(([leads, total]) => {
+      console.log(`Admin - Returning ${leads.length} leads out of ${total} total`);
+      if (sources.length > 0) {
+        console.log('Admin - Sample lead sources from results:', leads.slice(0, 5).map(l => ({ id: l.id, name: l.name, source: l.source })));
+        console.log('Admin - All unique sources in results:', [...new Set(leads.map(l => l.source))]);
+      }
       res.json({
         leads,
         pagination: {
@@ -217,11 +331,14 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
 // Get converted leads (customers that were converted from leads)
 router.get('/converted', auth, authorize('leads','read'), (req, res) => {
   const isAdmin = req.user.role_id === 1;
+  const isFrontManager = req.user.role_id === 4; // Front Manager role
   const userId = req.user.id;
   
   // Get converted customers (customers with converted_at timestamp)
   // Include information about who converted them and when
-  const sql = isAdmin ? `
+  // Admin and Front Manager can see all converted leads
+  // Regular users see converted leads from leads they created (using lead_tracking)
+  const sql = (isAdmin || isFrontManager) ? `
     SELECT 
       c.id,
       c.name,
@@ -245,7 +362,7 @@ router.get('/converted', auth, authorize('leads','read'), (req, res) => {
     ORDER BY c.converted_at DESC
     LIMIT 100
   ` : `
-    SELECT 
+    SELECT DISTINCT
       c.id,
       c.name,
       c.company_name,
@@ -264,13 +381,31 @@ router.get('/converted', auth, authorize('leads','read'), (req, res) => {
     FROM customers c
     LEFT JOIN users u1 ON c.created_by = u1.id
     LEFT JOIN users u2 ON c.assigned_to = u2.id
-    WHERE c.converted_at IS NOT NULL 
-      AND (c.created_by = ? OR c.assigned_to = ?)
+    WHERE c.converted_at IS NOT NULL
+      AND (
+        -- Customers from leads created by this user (matched via lead_tracking)
+        c.id IN (
+          SELECT DISTINCT c2.id
+          FROM lead_tracking lt_created
+          INNER JOIN lead_tracking lt_converted ON lt_created.lead_id = lt_converted.lead_id 
+            AND lt_converted.action = 'converted'
+            AND lt_converted.user_id = ?
+          INNER JOIN customers c2 ON (
+            c2.converted_at >= DATE_SUB(lt_converted.created_at, INTERVAL 1 HOUR)
+            AND c2.converted_at <= DATE_ADD(lt_converted.created_at, INTERVAL 1 HOUR)
+          )
+          WHERE lt_created.action = 'created'
+            AND lt_created.user_id = ?
+        )
+        OR
+        -- Customers directly converted/assigned to this user (fallback)
+        (c.created_by = ? OR c.assigned_to = ?)
+      )
     ORDER BY c.converted_at DESC
     LIMIT 100
   `;
   
-  const queryParams = isAdmin ? [] : [userId, userId];
+  const queryParams = (isAdmin || isFrontManager) ? [] : [userId, userId, userId, userId];
   
   db.query(sql, queryParams, (err, results) => {
     if (err) {
@@ -816,26 +951,36 @@ router.post('/import-csv', auth, authorize('leads', 'create'), async (req, res) 
 // Get Scheduled Leads for Current User
 router.get('/scheduled', auth, authorize('leads', 'read'), async (req, res) => {
   const userId = req.user.id;
+  const isAdmin = req.user.role_id === 1;
+  const isFrontManager = req.user.role_id === 4; // Front Manager role
   const { page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;
   
   try {
-    // Get scheduled leads for the current user
+    // Admin and Front Manager can see all scheduled leads, others see only their own
+    const whereClause = (isAdmin || isFrontManager) ? '' : 'WHERE ls.scheduled_by = ?';
+    const queryParams = (isAdmin || isFrontManager) ? [parseInt(limit), offset] : [userId, parseInt(limit), offset];
+    const countParams = (isAdmin || isFrontManager) ? [] : [userId];
+    
+    // Get scheduled leads
     const scheduledLeads = await new Promise((resolve, reject) => {
       db.query(`
         SELECT l.*, 
                u1.name as created_by_name,
+               u2.name as scheduled_by_name,
                ls.schedule_date,
                ls.schedule_time,
                ls.scheduled_at,
-               ls.id as schedule_id
+               ls.id as schedule_id,
+               ls.scheduled_by
         FROM leads l
         JOIN lead_schedules ls ON l.id = ls.lead_id
         LEFT JOIN users u1 ON l.created_by = u1.id
-        WHERE ls.scheduled_by = ?
+        LEFT JOIN users u2 ON ls.scheduled_by = u2.id
+        ${whereClause}
         ORDER BY ls.schedule_date ASC, ls.schedule_time ASC
         LIMIT ? OFFSET ?
-      `, [userId, parseInt(limit), offset], (err, results) => {
+      `, queryParams, (err, results) => {
         if (err) return reject(err);
         resolve(results);
       });
@@ -847,8 +992,8 @@ router.get('/scheduled', auth, authorize('leads', 'read'), async (req, res) => {
         SELECT COUNT(*) as total
         FROM leads l
         JOIN lead_schedules ls ON l.id = ls.lead_id
-        WHERE ls.scheduled_by = ?
-      `, [userId], (err, results) => {
+        ${whereClause}
+      `, countParams, (err, results) => {
         if (err) return reject(err);
         resolve(results[0].total);
       });

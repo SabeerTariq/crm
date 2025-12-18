@@ -17,7 +17,7 @@ export default function Leads() {
   });
   const [filters, setFilters] = useState({
     search: '',
-    source: '',
+    source: [],
     createdBy: '',
     startDate: '',
     endDate: ''
@@ -73,6 +73,7 @@ export default function Leads() {
   const [leadDocuments, setLeadDocuments] = useState({});
   const [convertedLeads, setConvertedLeads] = useState([]);
   const [loadingConvertedLeads, setLoadingConvertedLeads] = useState(false);
+  const [convertedLeadsSearchEmail, setConvertedLeadsSearchEmail] = useState('');
   const { hasPermission, loading: permissionsLoading } = usePermissions();
 
   // Helper function to check if current user has scheduled this lead
@@ -802,14 +803,34 @@ export default function Leads() {
     const token = localStorage.getItem('token');
     setLoading(true);
     try {
+      // Build query params, only including non-empty filter values
       const queryParams = new URLSearchParams({
         page: page.toString(),
-        limit: pagination.limit.toString(),
-        ...filters
+        limit: pagination.limit.toString()
       });
       
-      const response = await api.get(`/leads?${queryParams}`, {
+      // Add filters only if they have values
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.source && filters.source.length > 0) {
+        filters.source.forEach(source => queryParams.append('source', source));
+        console.log('Frontend - Sending source filters:', filters.source);
+        console.log('Frontend - Query string:', queryParams.toString());
+      }
+      if (filters.createdBy) queryParams.append('createdBy', filters.createdBy);
+      if (filters.startDate) queryParams.append('startDate', filters.startDate);
+      if (filters.endDate) queryParams.append('endDate', filters.endDate);
+      
+      const url = `/leads?${queryParams}`;
+      console.log('Frontend - Full API URL:', url);
+      
+      const response = await api.get(url, {
         headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('Frontend - Response received:', {
+        leadsCount: response.data.leads?.length || 0,
+        total: response.data.pagination?.total || 0,
+        sampleSources: response.data.leads?.slice(0, 3).map(l => l.source) || []
       });
       
       setLeads(response.data.leads);
@@ -856,6 +877,20 @@ export default function Leads() {
       [name]: value
     }));
   };
+  
+  // Auto-apply filters when source, createdBy, startDate, or endDate changes
+  useEffect(() => {
+    // Only auto-apply if filters panel is open (to avoid applying on initial load)
+    if (showFilters) {
+      const timer = setTimeout(() => {
+        setPagination(prev => ({ ...prev, page: 1 }));
+        loadLeads(1);
+      }, 300); // Debounce to avoid too many API calls
+      
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filters.source), filters.createdBy, filters.startDate, filters.endDate, showFilters]);
 
   const handleSearch = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
@@ -865,7 +900,7 @@ export default function Leads() {
   const clearFilters = () => {
     setFilters({
       search: '',
-      source: '',
+      source: [],
       createdBy: '',
       startDate: '',
       endDate: ''
@@ -1014,20 +1049,24 @@ export default function Leads() {
               <button 
                 onClick={() => setShowFilters(!showFilters)}
                 style={{
-                  backgroundColor: '#6b7280',
-                  color: 'white',
+                  backgroundColor: showFilters ? '#3b82f6' : '#f3f4f6',
+                  color: showFilters ? 'white' : '#374151',
                   border: 'none',
-                  padding: '10px 16px',
+                  padding: '12px 16px',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '14px',
                   fontWeight: '500',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '8px',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                🔍 Filters
+                <i className="fas fa-filter"></i>
+                Filters
+                <i className={`fas fa-chevron-${showFilters ? 'up' : 'down'}`} style={{ fontSize: '12px' }}></i>
               </button>
               {hasPermission('leads', 'create') && (
                 <button 
@@ -1167,29 +1206,106 @@ export default function Leads() {
           {/* Advanced Filters */}
           {showFilters && (
             <div style={{
-              borderTop: '1px solid #e2e8f0',
-              paddingTop: '20px'
+              borderTop: '2px solid #e2e8f0',
+              paddingTop: '20px',
+              marginTop: '20px'
             }}>
               <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                gap: '16px',
+                gap: '20px',
                 marginBottom: '20px'
               }}>
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontSize: '14px', 
+                    marginBottom: '8px', 
+                    fontSize: '13px', 
                     fontWeight: '600', 
-                    color: '#374151' 
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
                   }}>
                     Source
                   </label>
+                  
+                  {/* Selected Source Tags */}
+                  {filters.source.length > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                      marginBottom: '12px',
+                      padding: '8px',
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      minHeight: '40px'
+                    }}>
+                      {filters.source.map((selectedSource, index) => (
+                        <span
+                          key={index}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            borderRadius: '20px',
+                            fontSize: '13px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          {selectedSource}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilters(prev => ({
+                                ...prev,
+                                source: prev.source.filter((_, i) => i !== index)
+                              }));
+                            }}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.3)',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '18px',
+                              height: '18px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              color: 'white',
+                              fontSize: '14px',
+                              fontWeight: 'bold',
+                              padding: 0,
+                              lineHeight: 1
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Source Selection Dropdown */}
                   <select
                     name="source"
-                    value={filters.source}
-                    onChange={handleFilterChange}
+                    value=""
+                    onChange={(e) => {
+                      const selectedValue = e.target.value;
+                      if (selectedValue && !filters.source.includes(selectedValue)) {
+                        setFilters(prev => ({
+                          ...prev,
+                          source: [...prev.source, selectedValue]
+                        }));
+                      }
+                      e.target.value = ''; // Reset dropdown
+                    }}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -1197,23 +1313,54 @@ export default function Leads() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       outline: 'none',
-                      backgroundColor: '#ffffff'
+                      backgroundColor: '#ffffff',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   >
-                    <option value="">All Sources</option>
-                    {filterOptions.sources.map(source => (
-                      <option key={source} value={source}>{source}</option>
-                    ))}
+                    <option value="">Select a source to add...</option>
+                    {filterOptions.sources
+                      .filter(source => !filters.source.includes(source))
+                      .map(source => (
+                        <option key={source} value={source}>{source}</option>
+                      ))}
                   </select>
+                  
+                  {filters.source.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFilters(prev => ({ ...prev, source: [] }))}
+                      style={{
+                        marginTop: '8px',
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+                    >
+                      Clear All Sources
+                    </button>
+                  )}
                 </div>
 
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontSize: '14px', 
+                    marginBottom: '8px', 
+                    fontSize: '13px', 
                     fontWeight: '600', 
-                    color: '#374151' 
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
                   }}>
                     Created By
                   </label>
@@ -1228,8 +1375,12 @@ export default function Leads() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       outline: 'none',
-                      backgroundColor: '#ffffff'
+                      backgroundColor: '#ffffff',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   >
                     <option value="">All Users</option>
                     {filterOptions.users.map(user => (
@@ -1241,10 +1392,12 @@ export default function Leads() {
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontSize: '14px', 
+                    marginBottom: '8px', 
+                    fontSize: '13px', 
                     fontWeight: '600', 
-                    color: '#374151' 
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
                   }}>
                     Start Date
                   </label>
@@ -1260,18 +1413,24 @@ export default function Leads() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       outline: 'none',
-                      backgroundColor: '#ffffff'
+                      backgroundColor: '#ffffff',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   />
                 </div>
 
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontSize: '14px', 
+                    marginBottom: '8px', 
+                    fontSize: '13px', 
                     fontWeight: '600', 
-                    color: '#374151' 
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
                   }}>
                     End Date
                   </label>
@@ -1287,8 +1446,12 @@ export default function Leads() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       outline: 'none',
-                      backgroundColor: '#ffffff'
+                      backgroundColor: '#ffffff',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   />
                 </div>
               </div>
@@ -3115,7 +3278,7 @@ export default function Leads() {
               {/* Table Header */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr' : '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr 1fr',
+                gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr 1fr' : '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr 1fr 1fr',
                 gap: '12px',
                 padding: '20px',
                 backgroundColor: '#f8fafc',
@@ -3132,6 +3295,7 @@ export default function Leads() {
                 <div style={{ display: 'flex', alignItems: 'center' }}>Email (Clicks)</div>
                 <div style={{ display: 'flex', alignItems: 'center' }}>Phone (Clicks)</div>
                 <div style={{ display: 'flex', alignItems: 'center' }}>Date</div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>Source</div>
                 {!hasLeadScraperRole() && <div style={{ display: 'flex', alignItems: 'center' }}>Scheduled By</div>}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Actions</div>
               </div>
@@ -3140,7 +3304,7 @@ export default function Leads() {
               {leads.map((lead, index) => (
                 <div key={lead.id} style={{
                   display: 'grid',
-                  gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr' : '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr 1fr',
+                  gridTemplateColumns: hasLeadScraperRole() ? '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr 1fr' : '1.5fr 1.5fr 1.2fr 1.2fr 1fr 1fr 1fr 1fr',
                   gap: '12px',
                   padding: '16px 20px',
                   borderBottom: index < leads.length - 1 ? '1px solid #f3f4f6' : 'none',
@@ -3265,6 +3429,18 @@ export default function Leads() {
                     minHeight: '20px'
                   }}>
                     {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'}
+                  </div>
+                  <div style={{
+                    fontSize: '13px',
+                    color: '#6b7280',
+                    display: 'flex',
+                    alignItems: 'center',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    minHeight: '20px'
+                  }}>
+                    {lead.source || 'N/A'}
                   </div>
                   {!hasLeadScraperRole() && (
                     <div style={{
@@ -3570,33 +3746,103 @@ export default function Leads() {
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
         }}>
           <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
             marginBottom: '20px',
             paddingBottom: '16px',
             borderBottom: '2px solid #e2e8f0'
           }}>
-            <h2 style={{
-              margin: 0,
-              color: '#1f2937',
-              fontSize: '24px',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              Converted Leads
-            </h2>
             <div style={{
-              fontSize: '14px',
-              color: '#6b7280',
-              backgroundColor: '#f3f4f6',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontWeight: '500'
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px'
             }}>
-              {loadingConvertedLeads ? 'Loading...' : `${convertedLeads.length} converted`}
+              <h2 style={{
+                margin: 0,
+                color: '#1f2937',
+                fontSize: '24px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                Converted Leads
+              </h2>
+              <div style={{
+                fontSize: '14px',
+                color: '#6b7280',
+                backgroundColor: '#f3f4f6',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontWeight: '500'
+              }}>
+                {loadingConvertedLeads ? 'Loading...' : `${convertedLeads.filter(lead => 
+                  !convertedLeadsSearchEmail || 
+                  (lead.email && lead.email.toLowerCase().includes(convertedLeadsSearchEmail.toLowerCase()))
+                ).length} converted`}
+              </div>
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'center'
+            }}>
+              <div style={{
+                position: 'relative',
+                flex: '1',
+                maxWidth: '400px'
+              }}>
+                <input
+                  type="text"
+                  placeholder="Search by email..."
+                  value={convertedLeadsSearchEmail}
+                  onChange={(e) => setConvertedLeadsSearchEmail(e.target.value)}
+                  style={{
+                    width: '90%',
+                    padding: '10px 16px 10px 40px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                />
+                <span style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#6b7280',
+                  fontSize: '16px'
+                }}>
+                  🔍
+                </span>
+                {convertedLeadsSearchEmail && (
+                  <button
+                    onClick={() => setConvertedLeadsSearchEmail('')}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#6b7280',
+                      cursor: 'pointer',
+                      fontSize: '18px',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -3608,34 +3854,44 @@ export default function Leads() {
             }}>
               Loading converted leads...
             </div>
-          ) : convertedLeads.length === 0 ? (
-            <div style={{
-              padding: '40px',
-              textAlign: 'center',
-              color: '#6b7280'
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-              <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>No converted leads</h3>
-              <p style={{ margin: '0' }}>
-                No leads have been converted to customers yet.
-              </p>
-            </div>
-          ) : (
-            <div style={{
-              maxHeight: '500px',
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              border: '1px solid #e5e7eb',
-              borderRadius: '12px',
-              backgroundColor: '#f9fafb'
-            }}>
+          ) : (() => {
+            const filteredConvertedLeads = convertedLeads.filter(lead => 
+              !convertedLeadsSearchEmail || 
+              (lead.email && lead.email.toLowerCase().includes(convertedLeadsSearchEmail.toLowerCase()))
+            );
+            
+            return filteredConvertedLeads.length === 0 ? (
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr',
-                gap: '12px',
-                padding: '16px'
+                padding: '40px',
+                textAlign: 'center',
+                color: '#6b7280'
               }}>
-                {convertedLeads.map((convertedLead, index) => (
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+                <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
+                  {convertedLeadsSearchEmail ? 'No matching converted leads' : 'No converted leads'}
+                </h3>
+                <p style={{ margin: '0' }}>
+                  {convertedLeadsSearchEmail 
+                    ? `No converted leads found matching "${convertedLeadsSearchEmail}"`
+                    : 'No leads have been converted to customers yet.'}
+                </p>
+              </div>
+            ) : (
+              <div style={{
+                maxHeight: '500px',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                backgroundColor: '#f9fafb'
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr',
+                  gap: '12px',
+                  padding: '16px'
+                }}>
+                  {filteredConvertedLeads.map((convertedLead, index) => (
                   <div
                     key={convertedLead.id}
                     style={{
@@ -3925,10 +4181,11 @@ export default function Leads() {
                       </div>
                     )}
                   </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* CSV Import Modal */}

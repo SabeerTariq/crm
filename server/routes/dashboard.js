@@ -72,6 +72,158 @@ router.get('/monthly-history', auth, checkLeadScraperRole, async (req, res) => {
   }
 });
 
+// Get converted leads for a specific lead scraper
+router.get('/scraper-converted-leads', auth, checkLeadScraperRole, async (req, res) => {
+  try {
+    const scraperId = req.user.id;
+    
+    // Find customers that were converted from leads created by this scraper
+    // Strategy: Find all 'converted' tracking records where this scraper is the original creator
+    // Match customers by conversion timestamp (within 1 hour window) to account for processing time
+    // Note: This uses conversion tracking where the original creator gets credit for the conversion
+    const sql = `
+      SELECT DISTINCT
+        c.id,
+        c.name,
+        c.company_name,
+        c.email,
+        c.phone,
+        c.city,
+        c.state,
+        c.source,
+        c.service_required,
+        c.notes,
+        c.converted_at,
+        u1.name as created_by_name,
+        u2.name as assigned_to_name,
+        COALESCE(SUM(s.unit_price), 0) as total_sale_amount,
+        COALESCE(SUM(s.cash_in), 0) as total_received,
+        COALESCE(SUM(s.remaining), 0) as total_remaining,
+        COUNT(DISTINCT s.id) as sales_count
+      FROM lead_tracking lt_created
+      INNER JOIN lead_tracking lt_converted ON lt_created.lead_id = lt_converted.lead_id 
+        AND lt_converted.action = 'converted'
+        AND lt_converted.user_id = ?
+      INNER JOIN customers c ON (
+        c.converted_at >= DATE_SUB(lt_converted.created_at, INTERVAL 1 HOUR)
+        AND c.converted_at <= DATE_ADD(lt_converted.created_at, INTERVAL 1 HOUR)
+      )
+      LEFT JOIN users u1 ON c.created_by = u1.id
+      LEFT JOIN users u2 ON c.assigned_to = u2.id
+      LEFT JOIN sales s ON s.customer_id = c.id
+      WHERE lt_created.action = 'created'
+        AND lt_created.user_id = ?
+        AND c.converted_at IS NOT NULL
+      GROUP BY c.id, c.name, c.company_name, c.email, c.phone, c.city, c.state, 
+               c.source, c.service_required, c.notes, c.converted_at, 
+               u1.name, u2.name
+      ORDER BY c.converted_at DESC
+      LIMIT 200
+    `;
+    
+    db.query(sql, [scraperId, scraperId], (err, results) => {
+      if (err) {
+        console.error('Error fetching scraper converted leads:', err);
+        return res.status(500).json({ message: 'Failed to fetch converted leads' });
+      }
+      
+      res.json({
+        success: true,
+        data: results.map(customer => ({
+          id: customer.id,
+          name: customer.name,
+          companyName: customer.company_name,
+          email: customer.email,
+          phone: customer.phone,
+          city: customer.city,
+          state: customer.state,
+          source: customer.source,
+          serviceRequired: customer.service_required,
+          notes: customer.notes,
+          convertedAt: customer.converted_at,
+          createdByName: customer.created_by_name,
+          assignedToName: customer.assigned_to_name,
+          totalSaleAmount: parseFloat(customer.total_sale_amount || 0),
+          totalReceived: parseFloat(customer.total_received || 0),
+          totalRemaining: parseFloat(customer.total_remaining || 0),
+          salesCount: parseInt(customer.sales_count || 0)
+        }))
+      });
+    });
+  } catch (error) {
+    console.error('Error fetching scraper converted leads:', error);
+    res.status(500).json({ message: 'Failed to fetch converted leads' });
+  }
+});
+
+// Get all scrapers performance (Admin only)
+router.get('/all-scrapers-performance', auth, async (req, res) => {
+  try {
+    // Only admin can access this endpoint
+    if (req.user.role_id !== 1) {
+      return res.status(403).json({ message: 'Access denied. Admin role required.' });
+    }
+
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+
+    // Get all lead scrapers (role_id = 2) with their performance
+    const sql = `
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.created_at,
+        COALESCE(SUM(mls.leads_added), 0) as total_leads_added,
+        COALESCE(SUM(mls.leads_converted), 0) as total_leads_converted,
+        COALESCE(SUM(CASE WHEN mls.year = ? AND mls.month = ? THEN mls.leads_added ELSE 0 END), 0) as current_month_leads_added,
+        COALESCE(SUM(CASE WHEN mls.year = ? AND mls.month = ? THEN mls.leads_converted ELSE 0 END), 0) as current_month_leads_converted,
+        CASE 
+          WHEN COALESCE(SUM(mls.leads_added), 0) > 0 
+          THEN ROUND((COALESCE(SUM(mls.leads_converted), 0) / COALESCE(SUM(mls.leads_added), 0)) * 100, 2)
+          ELSE 0 
+        END as overall_conversion_rate,
+        CASE 
+          WHEN COALESCE(SUM(CASE WHEN mls.year = ? AND mls.month = ? THEN mls.leads_added ELSE 0 END), 0) > 0 
+          THEN ROUND((COALESCE(SUM(CASE WHEN mls.year = ? AND mls.month = ? THEN mls.leads_converted ELSE 0 END), 0) / COALESCE(SUM(CASE WHEN mls.year = ? AND mls.month = ? THEN mls.leads_added ELSE 0 END), 0)) * 100, 2)
+          ELSE 0 
+        END as current_month_conversion_rate
+      FROM users u
+      LEFT JOIN monthly_lead_stats mls ON u.id = mls.user_id
+      WHERE u.role_id = 2
+      GROUP BY u.id, u.name, u.email, u.created_at
+      ORDER BY current_month_leads_added DESC, total_leads_added DESC
+    `;
+
+    db.query(sql, [currentYear, currentMonth, currentYear, currentMonth, currentYear, currentMonth, currentYear, currentMonth, currentYear, currentMonth], (err, results) => {
+      if (err) {
+        console.error('Error fetching all scrapers performance:', err);
+        return res.status(500).json({ message: 'Failed to fetch scrapers performance' });
+      }
+
+      res.json({
+        success: true,
+        data: results.map(scraper => ({
+          id: scraper.id,
+          name: scraper.name,
+          email: scraper.email,
+          createdAt: scraper.created_at,
+          totalLeadsAdded: parseInt(scraper.total_leads_added) || 0,
+          totalLeadsConverted: parseInt(scraper.total_leads_converted) || 0,
+          currentMonthLeadsAdded: parseInt(scraper.current_month_leads_added) || 0,
+          currentMonthLeadsConverted: parseInt(scraper.current_month_leads_converted) || 0,
+          overallConversionRate: parseFloat(scraper.overall_conversion_rate) || 0,
+          currentMonthConversionRate: parseFloat(scraper.current_month_conversion_rate) || 0
+        }))
+      });
+    });
+  } catch (error) {
+    console.error('Error fetching all scrapers performance:', error);
+    res.status(500).json({ message: 'Failed to fetch scrapers performance' });
+  }
+});
+
 // FRONT SELLER DASHBOARD ENDPOINTS
 
 // Get front seller dashboard statistics

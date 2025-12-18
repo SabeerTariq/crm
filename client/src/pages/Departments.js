@@ -358,7 +358,7 @@ const Departments = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
-                width: '100%',
+                width: '90%',
                 padding: '12px 12px 12px 40px',
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',

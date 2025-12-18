@@ -488,7 +488,7 @@ const Projects = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
-                  width: '100%',
+                  width: '90%',
                   padding: '12px 12px 12px 40px',
                   border: '1px solid #d1d5db',
                   borderRadius: '8px',
@@ -513,11 +513,14 @@ const Projects = () => {
                 alignItems: 'center',
                 gap: '8px',
                 fontSize: '14px',
-                fontWeight: '500'
+                fontWeight: '500',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
               }}
             >
               <i className="fas fa-filter"></i>
               Filters
+              <i className={`fas fa-chevron-${showFilters ? 'up' : 'down'}`} style={{ fontSize: '12px' }}></i>
             </button>
             {(searchTerm || Object.values(filters).some(f => f)) && (
               <button
@@ -547,83 +550,127 @@ const Projects = () => {
 
           {/* Advanced Filters */}
           {showFilters && (
-            <div style={{ 
-              borderTop: '1px solid #e5e7eb', 
-              paddingTop: '16px',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px'
+            <div style={{
+              borderTop: '2px solid #e2e8f0',
+              paddingTop: '20px',
+              marginTop: '20px'
             }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                  Status
-                </label>
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="">All Statuses</option>
-                  <option value="planning">Planning</option>
-                  <option value="active">Active</option>
-                  <option value="on_hold">On Hold</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                  Priority
-                </label>
-                <select
-                  value={filters.priority}
-                  onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="">All Priorities</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                  Customer
-                </label>
-                <select
-                  value={filters.customer}
-                  onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="">All Customers</option>
-                  {customers.map(customer => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '20px',
+                marginBottom: '20px'
+              }}>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Status
+                  </label>
+                  <select
+                    value={filters.status}
+                    onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="planning">Planning</option>
+                    <option value="active">Active</option>
+                    <option value="on_hold">On Hold</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Priority
+                  </label>
+                  <select
+                    value={filters.priority}
+                    onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  >
+                    <option value="">All Priorities</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Customer
+                  </label>
+                  <select
+                    value={filters.customer}
+                    onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  >
+                    <option value="">All Customers</option>
+                    {customers.map(customer => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           )}

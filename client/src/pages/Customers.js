@@ -239,7 +239,7 @@ export default function Customers() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
-                    width: '100%',
+                    width: '90%',
                     padding: '12px 16px 12px 44px',
                     border: '1px solid #d1d5db',
                     borderRadius: '8px',
@@ -309,122 +309,153 @@ export default function Customers() {
           {/* Advanced Filters */}
           {showFilters && (
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px',
-            padding: '20px', 
-              backgroundColor: '#f8fafc',
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb'
+              borderTop: '2px solid #e2e8f0',
+              paddingTop: '20px',
+              marginTop: '20px'
             }}>
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#374151', 
-                  marginBottom: '6px' 
-                }}>
-                  Source
-                </label>
-                <select
-                  value={filters.source}
-                  onChange={(e) => setFilters({ ...filters, source: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#ffffff'
-                  }}
-                >
-                  <option value="">All Sources</option>
-                  <option value="website">Website</option>
-                  <option value="referral">Referral</option>
-                  <option value="social_media">Social Media</option>
-                  <option value="cold_call">Cold Call</option>
-                  <option value="email">Email</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '20px',
+                marginBottom: '20px'
+              }}>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Source
+                  </label>
+                  <select
+                    value={filters.source}
+                    onChange={(e) => setFilters({ ...filters, source: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#ffffff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  >
+                    <option value="">All Sources</option>
+                    <option value="website">Website</option>
+                    <option value="referral">Referral</option>
+                    <option value="social_media">Social Media</option>
+                    <option value="cold_call">Cold Call</option>
+                    <option value="email">Email</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
 
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#374151', 
-                  marginBottom: '6px' 
-                }}>
-                  Outstanding Balance
-                </label>
-                <select
-                  value={filters.hasOutstanding}
-                  onChange={(e) => setFilters({ ...filters, hasOutstanding: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#ffffff'
-                  }}
-                >
-                  <option value="">All Customers</option>
-                  <option value="yes">Has Outstanding Balance</option>
-                  <option value="no">Fully Paid</option>
-                </select>
-              </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Outstanding Balance
+                  </label>
+                  <select
+                    value={filters.hasOutstanding}
+                    onChange={(e) => setFilters({ ...filters, hasOutstanding: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#ffffff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  >
+                    <option value="">All Customers</option>
+                    <option value="yes">Has Outstanding Balance</option>
+                    <option value="no">Fully Paid</option>
+                  </select>
+                </div>
 
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#374151', 
-                  marginBottom: '6px' 
-                }}>
-                  Converted From
-                </label>
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#ffffff'
-                  }}
-                />
-              </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Converted From
+                  </label>
+                  <input
+                    type="date"
+                    value={filters.dateFrom}
+                    onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#ffffff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                </div>
 
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#374151', 
-                  marginBottom: '6px' 
-                }}>
-                  Converted To
-                </label>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#ffffff'
-                  }}
-                />
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Converted To
+                  </label>
+                  <input
+                    type="date"
+                    value={filters.dateTo}
+                    onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#ffffff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                </div>
               </div>
 
               <div style={{ 
