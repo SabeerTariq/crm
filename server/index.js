@@ -31,6 +31,7 @@ const productionRoutes = require('./routes/production');
 const notificationRoutes = require('./routes/notifications');
 const chatRoutes = require('./routes/chat');
 const backupRoutes = require('./routes/backup');
+const brandRoutes = require('./routes/brands');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/production', productionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/brands', brandRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

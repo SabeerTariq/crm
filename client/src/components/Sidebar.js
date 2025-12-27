@@ -332,6 +332,14 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
+        {hasPermission('leads', 'view') && (
+          <li className={`menu-item ${isActive('/converted-leads') ? 'active' : ''}`}>
+            <Link to="/converted-leads" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-check-circle menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Converted Leads</span>}
+            </Link>
+          </li>
+        )}
         {hasPermission('schedule-list', 'view') && (
           <li className={`menu-item ${isActive('/schedule-list') ? 'active' : ''}`}>
             <Link to="/schedule-list" className="menu-link" onClick={handleMenuClick}>

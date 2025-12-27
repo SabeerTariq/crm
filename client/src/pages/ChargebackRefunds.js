@@ -127,9 +127,7 @@ const ChargebackRefunds = () => {
       
       // Auto-set amount based on type
       if (name === 'type') {
-        if (value === 'retained') {
-          newData.amount = 0;
-        } else if (value === 'chargeback') {
+        if (value === 'chargeback') {
           newData.amount = newData.amount_received || 0;
         } else if (value === 'refund') {
           newData.amount = newData.refund_amount || 0;
@@ -644,13 +642,7 @@ const ChargebackRefunds = () => {
                     >
                       <option value="chargeback">Chargeback</option>
                       <option value="refund">Refund</option>
-                      <option value="retained">Retained (Dispute Resolution)</option>
                     </select>
-                    {formData.type === 'retained' && (
-                      <small style={{color: '#666'}}>
-                        Retained: Customer dispute resolved, amount will be set to 0
-                      </small>
-                    )}
                   </div>
                   <div className="form-group">
                     <label>Amount Received from Customer</label>
@@ -693,13 +685,8 @@ const ChargebackRefunds = () => {
                       step="0.01"
                       min="0"
                       required
-                      disabled={formData.type === 'retained' || formData.type === 'refund'}
+                      disabled={formData.type === 'refund'}
                     />
-                    {formData.type === 'retained' && (
-                      <small style={{color: '#666'}}>
-                        Amount automatically set to 0 for retained customers
-                      </small>
-                    )}
                     {formData.type === 'refund' && (
                       <small style={{color: '#666'}}>
                         Amount automatically set to refund amount

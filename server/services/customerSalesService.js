@@ -48,6 +48,25 @@ class CustomerSalesService {
             // Get all recurring payments for this customer
             const recurringPayments = await this.getAllRecurringPaymentsForCustomer(customerId);
             
+            // Get customer assignment information (including upsell manager notes)
+            const CustomerAssignmentService = require('./customerAssignmentService');
+            let assignmentInfo = null;
+            try {
+              const assignments = await CustomerAssignmentService.getCustomerAssignments(customerId, 'active');
+              if (assignments.length > 0) {
+                assignmentInfo = {
+                  upseller_name: assignments[0].upseller_name,
+                  upseller_email: assignments[0].upseller_email,
+                  assigned_date: assignments[0].assigned_date,
+                  notes: assignments[0].notes,
+                  created_by_name: assignments[0].created_by_name
+                };
+              }
+            } catch (assignmentError) {
+              console.error('Error fetching assignment info:', assignmentError);
+              // Continue without assignment info
+            }
+            
             // Calculate totals
             const totals = this.calculateCustomerTotals(salesResults);
             
@@ -61,7 +80,8 @@ class CustomerSalesService {
               payment_history: paymentHistory,
               remaining_payments: remainingPayments,
               installments: installments,
-              recurring_payments: recurringPayments
+              recurring_payments: recurringPayments,
+              assignment: assignmentInfo
             });
           } catch (error) {
             reject(error);

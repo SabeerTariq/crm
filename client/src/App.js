@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
+import ConvertedLeads from './pages/ConvertedLeads';
 import ScheduleList from './pages/ScheduleList';
 import Customers from './pages/Customers';
 import CustomerSalesProfile from './pages/CustomerSalesProfile';
@@ -47,6 +48,11 @@ function App() {
         <Route path="/leads" element={
           <ProtectedRoute module="leads">
             <Leads />
+          </ProtectedRoute>
+        } />
+        <Route path="/converted-leads" element={
+          <ProtectedRoute module="leads">
+            <ConvertedLeads />
           </ProtectedRoute>
         } />
         <Route path="/schedule-list" element={

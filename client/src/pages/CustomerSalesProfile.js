@@ -256,6 +256,34 @@ export default function CustomerSalesProfile() {
               <strong>Notes:</strong> {profile.customer.notes}
             </div>
           )}
+          {profile.assignment && (
+            <div style={{ marginTop: '15px', padding: '12px', backgroundColor: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+              <div style={{ marginBottom: '8px' }}>
+                <strong style={{ color: '#1e40af' }}>Assigned to Upseller:</strong> {profile.assignment.upseller_name}
+                {profile.assignment.upseller_email && (
+                  <span style={{ color: '#6b7280', fontSize: '14px', marginLeft: '8px' }}>
+                    ({profile.assignment.upseller_email})
+                  </span>
+                )}
+              </div>
+              {profile.assignment.assigned_date && (
+                <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+                  Assigned on: {formatDate(profile.assignment.assigned_date)}
+                  {profile.assignment.created_by_name && (
+                    <span> by {profile.assignment.created_by_name}</span>
+                  )}
+                </div>
+              )}
+              {profile.assignment.notes && (
+                <div style={{ marginTop: '8px', padding: '8px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #dbeafe' }}>
+                  <strong style={{ color: '#1e40af', fontSize: '13px' }}>Upsell Manager Note:</strong>
+                  <div style={{ marginTop: '4px', color: '#374151', fontSize: '14px' }}>
+                    {profile.assignment.notes}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Payment History */}
@@ -493,6 +521,70 @@ export default function CustomerSalesProfile() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* All Agreements */}
+        <div style={{ marginBottom: '30px' }}>
+          <h3 style={{ margin: '0 0 20px 0', color: '#1f2937' }}>All Agreements</h3>
+          {profile.sales && profile.sales.filter(sale => sale.agreement_file_name).length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
+              No agreements found
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '15px' }}>
+              {profile.sales && profile.sales
+                .filter(sale => sale.agreement_file_name)
+                .map((sale) => (
+                  <div key={sale.id} style={{ 
+                    padding: '20px', 
+                    backgroundColor: 'white', 
+                    borderRadius: '8px', 
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 5px 0', color: '#1f2937' }}>
+                          Sale #{sale.id} - {sale.services ? JSON.parse(sale.services).map(s => s.name).join(', ') : 'N/A'}
+                        </h4>
+                        <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                          Agreement: {sale.agreement_file_name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
+                          Created: {formatDate(sale.created_at)} {sale.created_by_name ? `by ${sale.created_by_name}` : ''}
+                          {sale.agreement_uploaded_at && ` | Uploaded: ${formatDate(sale.agreement_uploaded_at)}`}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => downloadAgreement(sale.id)}
+                        style={{
+                          backgroundColor: '#8b5cf6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontWeight: '500'
+                        }}
+                        title={`Download: ${sale.agreement_file_name}`}
+                      >
+                        📄 Download Agreement
+                      </button>
+                    </div>
+                    {sale.service_details && (
+                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Service Details</div>
+                        <div style={{ fontSize: '14px', color: '#374151' }}>{sale.service_details}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
             </div>
           )}
         </div>

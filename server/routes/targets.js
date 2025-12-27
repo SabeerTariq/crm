@@ -147,25 +147,35 @@ router.post('/', auth, authorize('targets', 'create'), (req, res) => {
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
   
-  // Check if target already exists for this user and month
-  const checkSql = 'SELECT id FROM targets WHERE user_id = ? AND target_year = ? AND target_month = ?';
+  // Use INSERT ... ON DUPLICATE KEY UPDATE to atomically handle create/update
+  // This prevents race conditions where multiple requests could create duplicates
+  const insertSql = `
+    INSERT INTO targets (user_id, target_value, target_year, target_month, created_by) 
+    VALUES (?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE 
+      target_value = VALUES(target_value),
+      updated_at = CURRENT_TIMESTAMP
+  `;
   
-  db.query(checkSql, [user_id, currentYear, currentMonth], (err, results) => {
-    if (err) return res.status(500).json(err);
+  db.query(insertSql, [user_id, targetValue, currentYear, currentMonth, req.user.id], (err, result) => {
+    if (err) {
+      console.error('Error saving target:', err);
+      return res.status(500).json({ message: 'Error saving target' });
+    }
     
-    if (results.length > 0) {
-      // Update existing target
-      const updateSql = 'UPDATE targets SET target_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-      db.query(updateSql, [targetValue, results[0].id], (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.json({ message: 'Target updated successfully', targetId: results[0].id });
-      });
+    // Check if it was an insert or update
+    if (result.affectedRows === 1 && result.insertId > 0) {
+      // New target created
+      res.json({ message: 'Target created successfully', targetId: result.insertId });
     } else {
-      // Create new target
-      const insertSql = 'INSERT INTO targets (user_id, target_value, target_year, target_month, created_by) VALUES (?, ?, ?, ?, ?)';
-      db.query(insertSql, [user_id, targetValue, currentYear, currentMonth, req.user.id], (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.json({ message: 'Target created successfully', targetId: result.insertId });
+      // Existing target updated
+      // Get the target ID
+      const getTargetSql = 'SELECT id FROM targets WHERE user_id = ? AND target_year = ? AND target_month = ?';
+      db.query(getTargetSql, [user_id, currentYear, currentMonth], (err, targetResults) => {
+        if (err) {
+          return res.status(500).json({ message: 'Target updated but error fetching target ID' });
+        }
+        res.json({ message: 'Target updated successfully', targetId: targetResults[0]?.id });
       });
     }
   });

@@ -280,17 +280,8 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
       console.warn('⚠️ No customer ID provided, skipping customer totals update');
     }
     
-    // Auto-generate invoice for the sale
-    try {
-      console.log(`📄 Creating invoice for sale ID: ${saleId}`);
-      const invoiceResult = await InvoiceService.createInvoiceFromSale(saleId, req.user.id);
-      console.log('✅ Invoice created:', invoiceResult);
-    } catch (invoiceError) {
-      console.error('❌ Error creating invoice:', invoiceError);
-      // Continue with sale creation even if invoice creation fails
-    }
-    
     // If converting a lead, create customer and delete lead
+    // Note: Invoice creation will happen after lead conversion if needed
     console.log('Lead conversion check:', { convert_lead, lead_id, customer_id });
     if (convert_lead && lead_id) {
       console.log('Starting lead conversion process for lead_id:', lead_id);
@@ -343,6 +334,14 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
                 console.error('Error updating customer totals:', err);
               });
               
+              // Create invoice now that customer exists
+              InvoiceService.createInvoiceFromSale(saleId, req.user.id).then(invoiceResult => {
+                console.log('✅ Invoice created after lead conversion:', invoiceResult);
+              }).catch(invoiceError => {
+                console.error('❌ Error creating invoice after lead conversion:', invoiceError);
+                // Continue even if invoice creation fails
+              });
+              
               // Track lead conversion for the converter (sales person)
               StatsService.trackLeadConverted(converterUserId, lead_id).catch(err => {
                 console.error('Error tracking lead conversion for converter:', err);
@@ -381,6 +380,20 @@ router.post('/', auth, authorize('sales','create'), salesUpload.single('agreemen
         res.status(500).json({ message: 'Error converting lead' });
       }
     } else {
+      // Not a lead conversion - create invoice if customer_id exists
+      if (customerId) {
+        try {
+          console.log(`📄 Creating invoice for sale ID: ${saleId}`);
+          const invoiceResult = await InvoiceService.createInvoiceFromSale(saleId, req.user.id);
+          console.log('✅ Invoice created:', invoiceResult);
+        } catch (invoiceError) {
+          console.error('❌ Error creating invoice:', invoiceError);
+          // Continue with sale creation even if invoice creation fails
+        }
+      } else {
+        console.log('⚠️ No customer ID, skipping invoice creation');
+      }
+      
       res.json({ message: 'Sale added successfully', saleId: result.insertId });
     }
   });

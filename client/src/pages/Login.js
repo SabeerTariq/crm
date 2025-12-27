@@ -30,6 +30,8 @@ export default function Login() {
         redirectUrl = '/front-sales-manager-dashboard';
       } else if (user.role_id === 5) { // Upseller
         redirectUrl = '/upseller-dashboard';
+      } else if (user.role_id === 6) { // Upsell Manager
+        redirectUrl = '/upsell-manager-dashboard';
       } else if (user.role_id === 8) { // Production Head
         redirectUrl = '/production-head-dashboard';
       } else if ([9, 11, 13, 15, 17].includes(user.role_id)) { // Department Leaders

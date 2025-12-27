@@ -9,6 +9,7 @@ export default function Sales() {
   const [filteredSales, setFilteredSales] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [leads, setLeads] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
@@ -341,6 +342,29 @@ export default function Sales() {
       const url = editingSale ? `/sales/${editingSale.id}` : '/sales';
       const method = editingSale ? 'put' : 'post';
       
+      // If "other" brand is selected, save the custom brand to the database first
+      let brandToUse = formData.brand || 'liberty_web_studio';
+      if (formData.brand === 'other' && formData.custom_brand && formData.custom_brand.trim()) {
+        try {
+          // Save the new brand to the database
+          const brandResponse = await api.post('/brands', {
+            name: formData.custom_brand.trim()
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          // Use the normalized brand name from the response
+          brandToUse = brandResponse.data.brand.name;
+          
+          // Reload brands list to include the new brand
+          await loadBrands();
+        } catch (brandError) {
+          console.error('Error saving brand:', brandError);
+          // If brand already exists or there's an error, normalize the name and use it
+          brandToUse = formData.custom_brand.trim().toLowerCase().replace(/\s+/g, '_');
+        }
+      }
+      
       // Always include current service if it has a name (whether button was clicked or not)
       const allServices = [...services];
       if (currentService.name.trim()) {
@@ -365,7 +389,7 @@ export default function Sales() {
         payment_type: formData.payment_type || 'fully_paid',
         payment_source: formData.payment_source || 'wire',
         payment_company: formData.payment_company || 'american_digital_agency',
-        brand: formData.brand === 'other' && formData.custom_brand ? formData.custom_brand : (formData.brand || 'liberty_web_studio')
+        brand: brandToUse
       };
       
       // When creating a new sale, add lead-related fields if converting a lead
@@ -577,6 +601,20 @@ export default function Sales() {
     applyFilters();
   }, [applyFilters]);
 
+  const loadBrands = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await api.get('/brands', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.brands) {
+        setBrands(response.data.brands);
+      }
+    } catch (error) {
+      console.error('Error loading brands:', error);
+    }
+  };
+
   const loadCustomers = async (searchTerm = '') => {
     const token = localStorage.getItem('token');
     try {
@@ -738,6 +776,7 @@ export default function Sales() {
     }
     
     loadSales();
+    loadBrands();
     
     // Load customers only if user can work with customers
     if (canWorkWithCustomers) {
@@ -1129,7 +1168,7 @@ export default function Sales() {
                   >
                     <option value="">All Types</option>
                     <option value="fully_paid">Fully Paid</option>
-                    <option value="installment">Installment</option>
+                    <option value="installments">Installments</option>
                     <option value="recurring">Recurring</option>
                   </select>
                 </div>
@@ -1201,22 +1240,11 @@ export default function Sales() {
                     onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   >
                   <option value="">All Brands</option>
-                  <option value="american_digital_agency">American Digital Agency</option>
-                  <option value="american_digital_publishers">American Digital Publishers</option>
-                  <option value="the_web_sense">The Web Sense</option>
-                  <option value="the_tech_designers">The Tech Designers</option>
-                  <option value="elite_pro_website">Elite Pro Website</option>
-                  <option value="design_lord">Design Lord</option>
-                  <option value="web_designs_library">Web Designs Library</option>
-                  <option value="web_harmony">Web Harmony</option>
-                  <option value="logic_works">Logic Works</option>
-                  <option value="liberty_web_studio">Liberty Web Studio</option>
-                  <option value="american_brand_designer">American Brand Designer</option>
-                  <option value="pixels_and_the_beast">Pixels and the Beast</option>
-                  <option value="american_book_studio">American Book Studio</option>
-                  <option value="smart_web_designers">Smart Web Designers</option>
-                  <option value="web_designs_lab">Web Designs Lab</option>
-                  <option value="my_american_logo">My American Logo</option>
+                  {brands.map(brand => (
+                    <option key={brand.id} value={brand.name}>
+                      {brand.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -1992,22 +2020,11 @@ export default function Sales() {
                       required 
                       style={inputStyle}
                     >
-                      <option value="american_digital_agency">American Digital Agency</option>
-                      <option value="american_digital_publishers">American Digital Publishers</option>
-                      <option value="the_web_sense">The Web Sense</option>
-                      <option value="the_tech_designers">The Tech Designers</option>
-                      <option value="elite_pro_website">Elite Pro Website</option>
-                      <option value="design_lord">Design Lord</option>
-                      <option value="web_designs_library">Web Designs Library</option>
-                      <option value="web_harmony">Web Harmony</option>
-                      <option value="logic_works">Logic Works</option>
-                      <option value="liberty_web_studio">Liberty Web Studio</option>
-                      <option value="american_brand_designer">American Brand Designer</option>
-                      <option value="pixels_and_the_beast">Pixels and the Beast</option>
-                      <option value="american_book_studio">American Book Studio</option>
-                      <option value="smart_web_designers">Smart Web Designers</option>
-                      <option value="web_designs_lab">Web Designs Lab</option>
-                      <option value="my_american_logo">My American Logo</option>
+                      {brands.map(brand => (
+                        <option key={brand.id} value={brand.name}>
+                          {brand.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </option>
+                      ))}
                       <option value="other">Other</option>
                     </select>
                     {formData.brand === 'other' && (

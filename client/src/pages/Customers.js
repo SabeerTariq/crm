@@ -8,7 +8,9 @@ import PageLayout from '../components/PageLayout';
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const [agreements, setAgreements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAgreements, setLoadingAgreements] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     source: '',
@@ -38,7 +40,57 @@ export default function Customers() {
       console.error('Error fetching customers:', error);
     })
     .finally(() => setLoading(false));
+    
+    // Load agreements
+    loadAgreements();
   }, [hasPermission]);
+
+  const loadAgreements = async () => {
+    try {
+      setLoadingAgreements(true);
+      const token = localStorage.getItem('token');
+      const response = await api.get('/customers/agreements', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAgreements(response.data || []);
+    } catch (error) {
+      console.error('Error fetching agreements:', error);
+    } finally {
+      setLoadingAgreements(false);
+    }
+  };
+
+  const downloadAgreement = async (saleId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get(`/sales/${saleId}/agreement`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `agreement-${saleId}.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading agreement:', error);
+      alert('Error downloading agreement file');
+    }
+  };
 
   // Filter and search functionality
   const applyFilters = useCallback(() => {
@@ -683,6 +735,196 @@ export default function Customers() {
                 </div>
               </div>
             ))
+        )}
+      </div>
+
+      {/* All Agreements Section */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        border: '2px solid #e2e8f0',
+        borderRadius: '16px',
+        padding: '24px',
+        marginTop: '30px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      }}>
+        <h2 style={{
+          margin: '0 0 20px 0',
+          color: '#1f2937',
+          fontSize: '24px',
+          fontWeight: '600'
+        }}>
+          All Agreements
+        </h2>
+        {loadingAgreements ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+            Loading agreements...
+          </div>
+        ) : agreements.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
+            <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>No agreements found</h3>
+            <p style={{ margin: '0' }}>No agreement documents have been uploaded yet.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {agreements.map((agreement, index) => (
+              <div
+                key={agreement.sale_id}
+                style={{
+                  backgroundColor: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}
+              >
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '16px',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      marginBottom: '4px'
+                    }}>
+                      Customer
+                    </div>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: '#1f2937'
+                    }}>
+                      {agreement.customer_name || 'N/A'}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#6b7280',
+                      marginTop: '4px'
+                    }}>
+                      {agreement.customer_email || 'N/A'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      marginBottom: '4px'
+                    }}>
+                      Agreement
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#374151'
+                    }}>
+                      {agreement.agreement_file_name}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#6b7280',
+                      marginTop: '4px'
+                    }}>
+                      Sale #{agreement.sale_id}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      marginBottom: '4px'
+                    }}>
+                      Services
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#374151'
+                    }}>
+                      {agreement.services ? JSON.parse(agreement.services).map(s => s.name).join(', ') : 'N/A'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      marginBottom: '4px'
+                    }}>
+                      Uploaded
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#374151'
+                    }}>
+                      {agreement.agreement_uploaded_at 
+                        ? new Date(agreement.agreement_uploaded_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })
+                        : 'N/A'}
+                    </div>
+                    {agreement.created_by_name && (
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        marginTop: '4px'
+                      }}>
+                        by {agreement.created_by_name}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => downloadAgreement(agreement.sale_id)}
+                      style={{
+                        backgroundColor: '#8b5cf6',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      title={`Download: ${agreement.agreement_file_name}`}
+                    >
+                      📄 Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </PageLayout>

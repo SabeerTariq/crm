@@ -173,16 +173,16 @@ router.get('/', auth, authorize('leads','read'), (req, res) => {
         ${whereClause}
       `;
       
+      // Save WHERE clause params for count query (before adding subquery/pagination params)
+      const countQueryParams = [...queryParams];
+      
       // Add userId parameters for schedule subqueries (3 times), click counts (4 times), and pagination
       queryParams.push(userId, userId, userId, userId, userId, userId, userId, parseInt(limit), offset);
-      
-      // For count query, we only need filter params (no subqueries or pagination)
-      const countQueryParams = [...queryParams]; // Just the filter params
       
       // Execute both queries
       Promise.all([
         new Promise((resolve, reject) => {
-          db.query(sql, finalQueryParams, (err, results) => {
+          db.query(sql, queryParams, (err, results) => {
             if (err) reject(err);
             else resolve(results);
           });

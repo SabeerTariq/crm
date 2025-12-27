@@ -3,6 +3,8 @@ import PageLayout from '../components/PageLayout';
 import UpcomingPayments from '../components/UpcomingPayments';
 import { getUserName } from '../utils/userUtils';
 import { usePermissions } from '../hooks/usePermissions';
+import { isAdmin } from '../utils/roleUtils';
+import api from '../services/api';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -11,12 +13,19 @@ export default function Dashboard() {
     totalCustomers: 0,
     pendingPayments: 0
   });
+  const [allScrapersPerformance, setAllScrapersPerformance] = useState([]);
+  const [loadingScrapersPerformance, setLoadingScrapersPerformance] = useState(false);
   const [loading, setLoading] = useState(true);
   const { hasPermission, loading: permissionsLoading } = usePermissions();
 
   useEffect(() => {
     if (hasPermission('sales', 'read')) {
       loadDashboardStats();
+    }
+    
+    // Load all scrapers performance if admin
+    if (isAdmin()) {
+      loadAllScrapersPerformance();
     }
   }, [hasPermission]);
 
@@ -34,6 +43,24 @@ export default function Dashboard() {
       console.error('Error loading dashboard stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAllScrapersPerformance = async () => {
+    try {
+      setLoadingScrapersPerformance(true);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const response = await api.get('/dashboard/all-scrapers-performance', { headers });
+      
+      if (response.data.success) {
+        setAllScrapersPerformance(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading all scrapers performance:', error);
+    } finally {
+      setLoadingScrapersPerformance(false);
     }
   };
 
@@ -187,6 +214,222 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* All Scrapers Performance Section - Admin Only */}
+        {isAdmin() && (
+          <div style={{
+            backgroundColor: '#ffffff',
+            border: '2px solid #e2e8f0',
+            borderRadius: '16px',
+            padding: '40px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            marginTop: '30px'
+          }}>
+            <div style={{ marginBottom: '30px' }}>
+              <h2 style={{ 
+                margin: '0 0 8px 0', 
+                color: '#1f2937',
+                fontSize: '24px',
+                fontWeight: '600'
+              }}>
+                Lead Scraper Performance
+              </h2>
+              <p style={{ 
+                color: '#6b7280',
+                margin: '0',
+                fontSize: '16px'
+              }}>
+                Overview of all lead scrapers' performance metrics
+              </p>
+            </div>
+
+            {loadingScrapersPerformance ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                Loading scrapers performance...
+              </div>
+            ) : allScrapersPerformance.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                No scrapers found
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '14px'
+                }}>
+                  <thead>
+                    <tr style={{
+                      backgroundColor: '#f9fafb',
+                      borderBottom: '2px solid #e5e7eb'
+                    }}>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'left',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '2px solid #e5e7eb'
+                      }}>Scraper</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '2px solid #e5e7eb'
+                      }}>Current Month</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '2px solid #e5e7eb'
+                      }}>Leads Added</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '2px solid #e5e7eb'
+                      }}>Leads Converted</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '2px solid #e5e7eb'
+                      }}>Conversion Rate</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '2px solid #e5e7eb'
+                      }}>All Time Total</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '2px solid #e5e7eb'
+                      }}>All Time Converted</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#374151',
+                        borderBottom: '2px solid #e5e7eb'
+                      }}>Overall Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allScrapersPerformance.map((scraper, index) => (
+                      <tr key={scraper.id} style={{
+                        borderBottom: '1px solid #f3f4f6',
+                        backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb'
+                      }}>
+                        <td style={{
+                          padding: '16px',
+                          fontWeight: '500',
+                          color: '#1f2937'
+                        }}>
+                          <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                            {scraper.name}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            {scraper.email}
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: '16px',
+                          textAlign: 'center',
+                          color: '#374151'
+                        }}>
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: scraper.currentMonthLeadsAdded > 0 ? '#dbeafe' : '#f3f4f6',
+                            color: scraper.currentMonthLeadsAdded > 0 ? '#1e40af' : '#6b7280',
+                            fontWeight: '600',
+                            fontSize: '14px'
+                          }}>
+                            {scraper.currentMonthLeadsAdded}
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: '16px',
+                          textAlign: 'center',
+                          color: '#3b82f6',
+                          fontWeight: '600',
+                          fontSize: '16px'
+                        }}>
+                          {scraper.totalLeadsAdded.toLocaleString()}
+                        </td>
+                        <td style={{
+                          padding: '16px',
+                          textAlign: 'center',
+                          color: '#16a34a',
+                          fontWeight: '600',
+                          fontSize: '16px'
+                        }}>
+                          {scraper.totalLeadsConverted.toLocaleString()}
+                        </td>
+                        <td style={{
+                          padding: '16px',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: scraper.currentMonthConversionRate >= 10 ? '#d1fae5' : scraper.currentMonthConversionRate >= 5 ? '#fef3c7' : '#fee2e2',
+                            color: scraper.currentMonthConversionRate >= 10 ? '#065f46' : scraper.currentMonthConversionRate >= 5 ? '#92400e' : '#991b1b',
+                            fontWeight: '600',
+                            fontSize: '14px'
+                          }}>
+                            {scraper.currentMonthConversionRate.toFixed(1)}%
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: '16px',
+                          textAlign: 'center',
+                          color: '#374151',
+                          fontWeight: '500'
+                        }}>
+                          {scraper.totalLeadsAdded.toLocaleString()}
+                        </td>
+                        <td style={{
+                          padding: '16px',
+                          textAlign: 'center',
+                          color: '#374151',
+                          fontWeight: '500'
+                        }}>
+                          {scraper.totalLeadsConverted.toLocaleString()}
+                        </td>
+                        <td style={{
+                          padding: '16px',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: scraper.overallConversionRate >= 10 ? '#d1fae5' : scraper.overallConversionRate >= 5 ? '#fef3c7' : '#fee2e2',
+                            color: scraper.overallConversionRate >= 10 ? '#065f46' : scraper.overallConversionRate >= 5 ? '#92400e' : '#991b1b',
+                            fontWeight: '600',
+                            fontSize: '14px'
+                          }}>
+                            {scraper.overallConversionRate.toFixed(1)}%
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
     </PageLayout>
   );
 }

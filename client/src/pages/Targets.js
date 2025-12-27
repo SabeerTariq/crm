@@ -16,6 +16,7 @@ export default function Targets() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentMonth, setCurrentMonth] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const { hasPermission, loading: permissionsLoading } = usePermissions();
 
   useEffect(() => {
@@ -69,6 +70,11 @@ export default function Targets() {
   const submitTarget = async (e) => {
     e.preventDefault();
     
+    // Prevent double submission
+    if (submitting) {
+      return;
+    }
+    
     // Validate target value
     const targetValue = parseFloat(formData.target_value);
     if (isNaN(targetValue) || targetValue <= 0) {
@@ -76,6 +82,7 @@ export default function Targets() {
       return;
     }
     
+    setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
       
@@ -95,6 +102,8 @@ export default function Targets() {
     } catch (err) {
       console.error('Error saving target:', err);
       setError(err.response?.data?.message || 'Failed to save target');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -106,6 +115,11 @@ export default function Targets() {
   };
 
   const handleInlineSave = async (target) => {
+    // Prevent double submission
+    if (submitting) {
+      return;
+    }
+    
     const newValue = editingTargetValue[target.user_id];
     
     // Validate target value
@@ -115,6 +129,7 @@ export default function Targets() {
       return;
     }
     
+    setSubmitting(true);
     try {
       setError(null);
       const token = localStorage.getItem('token');
@@ -143,6 +158,8 @@ export default function Targets() {
     } catch (err) {
       console.error('Error saving target:', err);
       setError(err.response?.data?.message || 'Failed to save target');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -360,17 +377,19 @@ export default function Targets() {
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   type="submit"
+                  disabled={submitting}
                   style={{
-                    backgroundColor: '#3b82f6',
+                    backgroundColor: submitting ? '#9ca3af' : '#3b82f6',
                     color: 'white',
                     border: 'none',
                     padding: '10px 20px',
                     borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    opacity: submitting ? 0.6 : 1
                   }}
                 >
-                  {editingTarget ? 'Update Target' : 'Set Target'}
+                  {submitting ? 'Saving...' : (editingTarget ? 'Update Target' : 'Set Target')}
                 </button>
                 <button
                   type="button"
@@ -453,17 +472,19 @@ export default function Targets() {
                             <span style={{ fontSize: '12px', color: '#6b7280' }}>customers</span>
                             <button
                               onClick={() => handleInlineSave(target)}
+                              disabled={submitting}
                               style={{
-                                backgroundColor: '#10b981',
+                                backgroundColor: submitting ? '#9ca3af' : '#10b981',
                                 color: 'white',
                                 border: 'none',
                                 padding: '4px 8px',
                                 borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
+                                cursor: submitting ? 'not-allowed' : 'pointer',
+                                fontSize: '12px',
+                                opacity: submitting ? 0.6 : 1
                               }}
                             >
-                              Save
+                              {submitting ? 'Saving...' : 'Save'}
                             </button>
                             <button
                               onClick={() => handleInlineCancel(target)}

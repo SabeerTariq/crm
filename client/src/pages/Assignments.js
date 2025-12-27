@@ -261,16 +261,6 @@ export default function Assignments() {
         <div className="assignments-container">
       <div className="assignments-header">
         <h1>Customer Assignments</h1>
-        {!isUpseller && (
-          <div className="header-actions">
-            <button 
-              className="btn btn-primary"
-              onClick={() => setShowAssignModal(true)}
-            >
-              Assign Customer
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Statistics Cards for Upsellers */}
@@ -333,59 +323,153 @@ export default function Assignments() {
             <p>No {activeTab === 'unassigned' ? 'unassigned' : 'assigned'} customers found.</p>
           </div>
         ) : (
-          <table className="customers-table">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Total Sales</th>
-                <th>Total Paid</th>
-                <th>Remaining</th>
-                <th>Last Payment</th>
-                {!isUpseller && <th>Assigned To</th>}
-                {!isUpseller && <th>Status</th>}
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop Table View */}
+            <div className="customers-table-wrapper">
+              <table className="customers-table">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Total Sales</th>
+                    <th>Total Paid</th>
+                    <th>Remaining</th>
+                    <th>Last Payment</th>
+                    {!isUpseller && <th>Assigned To</th>}
+                    {!isUpseller && <th>Status</th>}
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCustomers.map((customer) => (
+                    <tr key={customer.id}>
+                      <td>
+                        <div className="customer-info">
+                          <strong>{customer.name}</strong>
+                        </div>
+                      </td>
+                      <td>{customer.email}</td>
+                      <td>{customer.phone}</td>
+                      <td>${customer.total_sales || 0}</td>
+                      <td>${customer.total_paid || 0}</td>
+                      <td>${customer.total_remaining || 0}</td>
+                      <td>
+                        {customer.last_payment_date 
+                          ? new Date(customer.last_payment_date).toLocaleDateString()
+                          : 'Never'
+                        }
+                      </td>
+                      {!isUpseller && (
+                        <td>
+                          {customer.assigned_to ? (
+                            <span className="assigned-to">{customer.assigned_to}</span>
+                          ) : (
+                            <span className="unassigned">Unassigned</span>
+                          )}
+                        </td>
+                      )}
+                      {!isUpseller && (
+                        <td>
+                          {customer.status && (
+                            <span className={`status ${customer.status}`}>
+                              {customer.status}
+                            </span>
+                          )}
+                        </td>
+                      )}
+                      <td>
+                        <div className="action-buttons">
+                          {!isUpseller && (
+                            <>
+                              {!customer.assigned_to ? (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  onClick={() => {
+                                    setSelectedCustomer(customer);
+                                    setAssignForm({
+                                      customer_id: customer.id,
+                                      upseller_id: '',
+                                      notes: ''
+                                    });
+                                    setShowAssignModal(true);
+                                  }}
+                                >
+                                  Assign
+                                </button>
+                              ) : (
+                                <button
+                                  className="btn btn-sm btn-warning"
+                                  onClick={() => handleReassignCustomer(customer)}
+                                >
+                                  Reassign
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="customers-cards">
               {filteredCustomers.map((customer) => (
-                <tr key={customer.id}>
-                  <td>
-                    <div className="customer-info">
-                      <strong>{customer.name}</strong>
+                <div key={customer.id} className="customer-card">
+                  <div className="customer-card-header">
+                    <div>
+                      <div className="customer-card-name">{customer.name}</div>
+                      <div className="customer-card-email">{customer.email}</div>
                     </div>
-                  </td>
-                  <td>{customer.email}</td>
-                  <td>{customer.phone}</td>
-                  <td>${customer.total_sales || 0}</td>
-                  <td>${customer.total_paid || 0}</td>
-                  <td>${customer.total_remaining || 0}</td>
-                  <td>
-                    {customer.last_payment_date 
-                      ? new Date(customer.last_payment_date).toLocaleDateString()
-                      : 'Never'
-                    }
-                  </td>
-                  {!isUpseller && (
-                    <td>
-                      {customer.assigned_to ? (
-                        <span className="assigned-to">{customer.assigned_to}</span>
-                      ) : (
-                        <span className="unassigned">Unassigned</span>
-                      )}
-                    </td>
-                  )}
-                  {!isUpseller && (
-                    <td>
-                      {customer.status && (
-                        <span className={`status ${customer.status}`}>
-                          {customer.status}
+                    {!isUpseller && customer.status && (
+                      <span className={`status ${customer.status}`}>
+                        {customer.status}
+                      </span>
+                    )}
+                  </div>
+                  <div className="customer-card-body">
+                    <div className="customer-card-field">
+                      <span className="customer-card-label">Phone</span>
+                      <span className="customer-card-value">{customer.phone || 'N/A'}</span>
+                    </div>
+                    <div className="customer-card-field">
+                      <span className="customer-card-label">Total Sales</span>
+                      <span className="customer-card-value">${customer.total_sales || 0}</span>
+                    </div>
+                    <div className="customer-card-field">
+                      <span className="customer-card-label">Total Paid</span>
+                      <span className="customer-card-value">${customer.total_paid || 0}</span>
+                    </div>
+                    <div className="customer-card-field">
+                      <span className="customer-card-label">Remaining</span>
+                      <span className="customer-card-value">${customer.total_remaining || 0}</span>
+                    </div>
+                    <div className="customer-card-field">
+                      <span className="customer-card-label">Last Payment</span>
+                      <span className="customer-card-value">
+                        {customer.last_payment_date 
+                          ? new Date(customer.last_payment_date).toLocaleDateString()
+                          : 'Never'
+                        }
+                      </span>
+                    </div>
+                    {!isUpseller && (
+                      <div className="customer-card-field">
+                        <span className="customer-card-label">Assigned To</span>
+                        <span className="customer-card-value">
+                          {customer.assigned_to ? (
+                            <span className="assigned-to">{customer.assigned_to}</span>
+                          ) : (
+                            <span className="unassigned">Unassigned</span>
+                          )}
                         </span>
-                      )}
-                    </td>
-                  )}
-                  <td>
+                      </div>
+                    )}
+                  </div>
+                  <div className="customer-card-actions">
                     <div className="action-buttons">
                       {!isUpseller && (
                         <>
@@ -415,11 +499,11 @@ export default function Assignments() {
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 
