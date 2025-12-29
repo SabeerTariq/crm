@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions';
-import { getUserName } from '../utils/userUtils';
+import { getUserName, getUserId } from '../utils/userUtils';
 import { hasLeadScraperRole } from '../utils/roleUtils';
 import api from '../services/api';
 import PageLayout from '../components/PageLayout';
@@ -32,6 +32,7 @@ export default function Leads() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [showCsvImportModal, setShowCsvImportModal] = useState(false);
+  const [showFollowUpsModal, setShowFollowUpsModal] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
   const [csvPreview, setCsvPreview] = useState([]);
   const [importing, setImporting] = useState(false);
@@ -44,6 +45,15 @@ export default function Leads() {
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [followUps, setFollowUps] = useState([]);
+  const [loadingFollowUps, setLoadingFollowUps] = useState(false);
+  const [leadFollowUps, setLeadFollowUps] = useState({}); // Track which leads are in follow-up menu
+  const [showFollowUpForm, setShowFollowUpForm] = useState(false);
+  const [followUpFormData, setFollowUpFormData] = useState({
+    lead_id: null,
+    note: '',
+    follow_up_date: ''
+  });
   const [formData, setFormData] = useState({
     name: '',
     company_name: '',
@@ -543,6 +553,114 @@ export default function Leads() {
     setLeadNotes([]);
     setNewNote('');
   };
+
+  // Follow-up functions
+  const loadFollowUps = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    setLoadingFollowUps(true);
+    try {
+      const response = await api.get('/follow-ups', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setFollowUps(response.data);
+      
+      // Build a map of which leads are in follow-up menu for current user
+      const userFollowUps = {};
+      const currentUserId = getUserId();
+      response.data.forEach(fu => {
+        if (fu.user_id === currentUserId) {
+          userFollowUps[fu.lead_id] = true;
+        }
+      });
+      setLeadFollowUps(userFollowUps);
+    } catch (error) {
+      console.error('Error fetching follow-ups:', error);
+      setFollowUps([]);
+    } finally {
+      setLoadingFollowUps(false);
+    }
+  }, []);
+
+  const handleAddToFollowUp = async (lead) => {
+    setFollowUpFormData({
+      lead_id: lead.id,
+      note: '',
+      follow_up_date: ''
+    });
+    setShowFollowUpForm(true);
+  };
+
+  const handleRemoveFromFollowUp = async (leadId) => {
+    if (!window.confirm('Are you sure you want to remove this lead from your follow-up menu?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await api.delete(`/follow-ups/lead/${leadId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Lead removed from follow-up menu successfully');
+      await loadFollowUps();
+    } catch (error) {
+      console.error('Error removing follow-up:', error);
+      alert('Error removing follow-up');
+    }
+  };
+
+  const handleSubmitFollowUp = async (e) => {
+    e.preventDefault();
+    if (!followUpFormData.lead_id) {
+      alert('Lead ID is required');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await api.post('/follow-ups', {
+        lead_id: followUpFormData.lead_id,
+        note: followUpFormData.note || null,
+        follow_up_date: followUpFormData.follow_up_date || null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Lead added to follow-up menu successfully');
+      setShowFollowUpForm(false);
+      setFollowUpFormData({
+        lead_id: null,
+        note: '',
+        follow_up_date: ''
+      });
+      await loadFollowUps();
+    } catch (error) {
+      console.error('Error adding follow-up:', error);
+      alert(error.response?.data?.message || 'Error adding follow-up');
+    }
+  };
+
+  const openFollowUpsModal = async () => {
+    setShowFollowUpsModal(true);
+    await loadFollowUps();
+  };
+
+  const closeFollowUpsModal = () => {
+    setShowFollowUpsModal(false);
+    setFollowUps([]);
+  };
+
+  const closeFollowUpForm = () => {
+    setShowFollowUpForm(false);
+    setFollowUpFormData({
+      lead_id: null,
+      note: '',
+      follow_up_date: ''
+    });
+  };
+
+  // Load follow-ups on component mount
+  useEffect(() => {
+    loadFollowUps();
+  }, [loadFollowUps]);
 
   const closeCsvImportModal = () => {
     setShowCsvImportModal(false);
@@ -1088,6 +1206,26 @@ export default function Leads() {
                   }}
                 >
                   📊 Import CSV
+                </button>
+              )}
+              {hasPermission('follow_ups', 'read') && (
+                <button 
+                  onClick={openFollowUpsModal}
+                  style={{
+                    backgroundColor: '#8b5cf6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  📋 Follow-ups ({followUps.length})
                 </button>
               )}
             </div>
@@ -3652,6 +3790,61 @@ export default function Leads() {
                             <span>🔄</span> Convert
                           </button>
                         )}
+                        {hasPermission('follow_ups', 'create') && (
+                          <>
+                            {leadFollowUps[lead.id] ? (
+                              <button
+                                onClick={() => {
+                                  handleRemoveFromFollowUp(lead.id);
+                                  setOpenDropdownId(null);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '8px 16px',
+                                  border: 'none',
+                                  backgroundColor: 'transparent',
+                                  color: '#374151',
+                                  cursor: 'pointer',
+                                  fontSize: '14px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  transition: 'background-color 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                              >
+                                <span>❌</span> Remove from Follow-up
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  handleAddToFollowUp(lead);
+                                  setOpenDropdownId(null);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '8px 16px',
+                                  border: 'none',
+                                  backgroundColor: 'transparent',
+                                  color: '#374151',
+                                  cursor: 'pointer',
+                                  fontSize: '14px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  transition: 'background-color 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                              >
+                                <span>➕</span> Add to Follow-up
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -3966,6 +4159,474 @@ export default function Leads() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Follow-ups Modal */}
+        {showFollowUpsModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}>
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              padding: '32px',
+              width: '90%',
+              maxWidth: '1200px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            }}>
+              {/* Modal Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '24px',
+                paddingBottom: '16px',
+                borderBottom: '2px solid #f3f4f6'
+              }}>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  margin: 0
+                }}>
+                  Follow-ups ({followUps.length})
+                </h2>
+                <button 
+                  onClick={closeFollowUpsModal}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Follow-ups List */}
+              {loadingFollowUps ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                  Loading follow-ups...
+                </div>
+              ) : followUps.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px',
+                  color: '#6b7280',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '8px'
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+                  <p style={{ margin: 0, fontSize: '16px' }}>No follow-ups yet</p>
+                  <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>Add leads to your follow-up menu to see them here</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {followUps.map((followUp) => (
+                    <div key={followUp.id} style={{
+                      backgroundColor: '#f9fafb',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      border: '1px solid #e5e7eb',
+                      transition: 'box-shadow 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
+                    >
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '2fr 1fr 1fr 1fr',
+                        gap: '16px',
+                        alignItems: 'start'
+                      }}>
+                        {/* Lead Info */}
+                        <div>
+                          <div style={{
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: '#1f2937',
+                            marginBottom: '8px'
+                          }}>
+                            {followUp.lead_name || 'Unknown Lead'}
+                          </div>
+                          {followUp.company_name && (
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#6b7280',
+                              marginBottom: '4px'
+                            }}>
+                              {followUp.company_name}
+                            </div>
+                          )}
+                          <div style={{
+                            fontSize: '13px',
+                            color: '#9ca3af',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                          }}>
+                            {followUp.email && <span>📧 {followUp.email}</span>}
+                            {followUp.phone && <span>📞 {followUp.phone}</span>}
+                            {followUp.source && <span>📍 {followUp.source}</span>}
+                          </div>
+                        </div>
+
+                        {/* User Info */}
+                        <div>
+                          <div style={{
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            color: '#6b7280',
+                            marginBottom: '4px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            Added By
+                          </div>
+                          <div style={{
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            color: '#1f2937',
+                            marginBottom: '4px'
+                          }}>
+                            {followUp.user_full_name || followUp.user_name || 'Unknown User'}
+                          </div>
+                          {followUp.user_email && (
+                            <div style={{
+                              fontSize: '13px',
+                              color: '#6b7280'
+                            }}>
+                              {followUp.user_email}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Follow-up Date & Status */}
+                        <div>
+                          <div style={{
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            color: '#6b7280',
+                            marginBottom: '4px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            Follow-up Date
+                          </div>
+                          <div style={{
+                            fontSize: '14px',
+                            color: '#1f2937',
+                            marginBottom: '8px'
+                          }}>
+                            {followUp.follow_up_date ? new Date(followUp.follow_up_date).toLocaleDateString() : 'Not set'}
+                          </div>
+                          <div style={{
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            color: '#6b7280',
+                            marginBottom: '4px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            Status
+                          </div>
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            backgroundColor: followUp.status === 'completed' ? '#d1fae5' : followUp.status === 'cancelled' ? '#fee2e2' : '#dbeafe',
+                            color: followUp.status === 'completed' ? '#065f46' : followUp.status === 'cancelled' ? '#991b1b' : '#1e40af'
+                          }}>
+                            {followUp.status || 'pending'}
+                          </div>
+                        </div>
+
+                        {/* Note & Actions */}
+                        <div>
+                          <div style={{
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            color: '#6b7280',
+                            marginBottom: '4px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            Note
+                          </div>
+                          <div style={{
+                            fontSize: '14px',
+                            color: '#374151',
+                            marginBottom: '12px',
+                            minHeight: '40px',
+                            lineHeight: '1.5'
+                          }}>
+                            {followUp.note || 'No note'}
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#9ca3af',
+                            marginBottom: '8px'
+                          }}>
+                            {new Date(followUp.created_at).toLocaleString()}
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => {
+                                handleViewLead({ id: followUp.lead_id, name: followUp.lead_name });
+                                closeFollowUpsModal();
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#3b82f6',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '500'
+                              }}
+                            >
+                              View Lead
+                            </button>
+                            {getUserId() === followUp.user_id && (
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm('Are you sure you want to remove this follow-up?')) {
+                                    await handleRemoveFromFollowUp(followUp.lead_id);
+                                    await loadFollowUps();
+                                  }
+                                }}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#ef4444',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Close Button */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginTop: '24px',
+                paddingTop: '16px',
+                borderTop: '1px solid #e5e7eb'
+              }}>
+                <button 
+                  onClick={closeFollowUpsModal}
+                  style={{
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Follow-up Form Modal */}
+        {showFollowUpForm && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              padding: '32px',
+              width: '90%',
+              maxWidth: '600px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '24px',
+                paddingBottom: '16px',
+                borderBottom: '2px solid #f3f4f6'
+              }}>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  margin: 0
+                }}>
+                  Add to Follow-up Menu
+                </h2>
+                <button 
+                  onClick={closeFollowUpForm}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitFollowUp}>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#374151'
+                  }}>
+                    Note (Optional)
+                  </label>
+                  <textarea
+                    value={followUpFormData.note}
+                    onChange={(e) => setFollowUpFormData({ ...followUpFormData, note: e.target.value })}
+                    placeholder="Enter a note about this follow-up..."
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      resize: 'vertical',
+                      minHeight: '100px',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#374151'
+                  }}>
+                    Follow-up Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={followUpFormData.follow_up_date}
+                    onChange={(e) => setFollowUpFormData({ ...followUpFormData, follow_up_date: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '12px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={closeFollowUpForm}
+                    style={{
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      transition: 'background-color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      backgroundColor: '#8b5cf6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      transition: 'background-color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#7c3aed'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#8b5cf6'}
+                  >
+                    Add to Follow-up
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

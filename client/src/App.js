@@ -25,6 +25,7 @@ import Targets from './pages/Targets';
 import Performance from './pages/Performance';
 import Payments from './pages/Payments';
 import Assignments from './pages/Assignments';
+import FollowUps from './pages/FollowUps';
 import Projects from './pages/Projects';
 import ProjectDetails from './pages/ProjectDetails';
 import Departments from './pages/Departments';
@@ -163,6 +164,11 @@ function App() {
         <Route path="/assignments" element={
           <ProtectedRoute module="assignments">
             <Assignments />
+          </ProtectedRoute>
+        } />
+        <Route path="/follow-ups" element={
+          <ProtectedRoute module="follow_ups" action="view">
+            <FollowUps />
           </ProtectedRoute>
         } />
         <Route path="/projects" element={

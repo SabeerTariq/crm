@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 27, 2025 at 04:29 PM
+-- Generation Time: Dec 29, 2025 at 07:50 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -387,6 +387,31 @@ INSERT INTO `direct_message_messages` (`id`, `direct_message_id`, `user_id`, `co
 (22, 5, 32, 'hi', 'text', 1, '2025-11-12 21:36:54', 0, 0, '2025-11-12 21:36:52', '2025-11-12 21:36:54'),
 (23, 5, 32, 'hi', 'text', 1, '2025-11-12 21:36:54', 0, 0, '2025-11-12 21:36:53', '2025-11-12 21:36:54'),
 (24, 5, 32, 'hi', 'text', 1, '2025-11-12 21:36:56', 0, 0, '2025-11-12 21:36:54', '2025-11-12 21:36:56');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `follow_ups`
+--
+
+CREATE TABLE `follow_ups` (
+  `id` int(11) NOT NULL,
+  `lead_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `user_name` varchar(255) NOT NULL,
+  `note` text DEFAULT NULL,
+  `follow_up_date` date DEFAULT NULL,
+  `status` enum('pending','completed','cancelled') DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `follow_ups`
+--
+
+INSERT INTO `follow_ups` (`id`, `lead_id`, `user_id`, `user_name`, `note`, `follow_up_date`, `status`, `created_at`, `updated_at`) VALUES
+(1, 158, 8, 'Unknown User', 'Testing Note', '2025-12-30', 'pending', '2025-12-29 18:42:24', '2025-12-29 18:42:24');
 
 -- --------------------------------------------------------
 
@@ -1024,6 +1049,11 @@ INSERT INTO `permissions` (`id`, `module`, `action`) VALUES
 (102, 'departments', 'update'),
 (104, 'departments', 'view'),
 (178, 'department_leader_dashboard', 'view'),
+(180, 'follow_ups', 'create'),
+(183, 'follow_ups', 'delete'),
+(181, 'follow_ups', 'read'),
+(182, 'follow_ups', 'update'),
+(184, 'follow_ups', 'view'),
 (176, 'front_sales_manager_dashboard', 'view'),
 (173, 'front_seller_dashboard', 'view'),
 (1, 'leads', 'create'),
@@ -1344,7 +1374,7 @@ INSERT INTO `roles` (`id`, `name`, `description`, `created_at`) VALUES
 (1, 'admin', 'Full access', '2025-09-14 07:56:06'),
 (2, 'lead-scraper', NULL, '2025-09-14 08:10:10'),
 (3, 'Front Seller', '', '2025-09-14 08:27:03'),
-(4, 'front-sales-manager', NULL, '2025-09-15 20:06:21'),
+(4, 'front-sales-manager', '', '2025-09-15 20:06:21'),
 (5, 'upseller', 'Create Upsells and Manage Projects', '2025-09-16 23:29:27'),
 (6, 'upseller-manager', 'Manage Upsell Teams and Performance', '2025-09-17 05:07:43'),
 (7, 'production', '', '2025-09-23 23:28:47'),
@@ -1520,6 +1550,11 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (1, 177),
 (1, 178),
 (1, 179),
+(1, 180),
+(1, 181),
+(1, 182),
+(1, 183),
+(1, 184),
 (2, 1),
 (2, 2),
 (2, 3),
@@ -1542,6 +1577,11 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (2, 162),
 (2, 164),
 (2, 172),
+(2, 180),
+(2, 181),
+(2, 182),
+(2, 183),
+(2, 184),
 (3, 1),
 (3, 2),
 (3, 3),
@@ -1601,6 +1641,11 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (3, 162),
 (3, 164),
 (3, 173),
+(3, 180),
+(3, 181),
+(3, 182),
+(3, 183),
+(3, 184),
 (4, 1),
 (4, 2),
 (4, 3),
@@ -1667,6 +1712,11 @@ INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
 (4, 162),
 (4, 164),
 (4, 176),
+(4, 180),
+(4, 181),
+(4, 182),
+(4, 183),
+(4, 184),
 (5, 5),
 (5, 6),
 (5, 7),
@@ -2710,6 +2760,17 @@ ALTER TABLE `direct_message_messages`
   ADD KEY `idx_created_at` (`created_at`);
 
 --
+-- Indexes for table `follow_ups`
+--
+ALTER TABLE `follow_ups`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_lead_followup` (`lead_id`,`user_id`),
+  ADD KEY `idx_follow_ups_user_id` (`user_id`),
+  ADD KEY `idx_follow_ups_lead_id` (`lead_id`),
+  ADD KEY `idx_follow_ups_status` (`status`),
+  ADD KEY `idx_follow_ups_date` (`follow_up_date`);
+
+--
 -- Indexes for table `invoices`
 --
 ALTER TABLE `invoices`
@@ -3195,6 +3256,12 @@ ALTER TABLE `direct_message_messages`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
+-- AUTO_INCREMENT for table `follow_ups`
+--
+ALTER TABLE `follow_ups`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `invoices`
 --
 ALTER TABLE `invoices`
@@ -3300,7 +3367,7 @@ ALTER TABLE `payment_transactions`
 -- AUTO_INCREMENT for table `permissions`
 --
 ALTER TABLE `permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=180;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=185;
 
 --
 -- AUTO_INCREMENT for table `pinned_messages`
@@ -3535,6 +3602,13 @@ ALTER TABLE `direct_messages`
 ALTER TABLE `direct_message_messages`
   ADD CONSTRAINT `direct_message_messages_ibfk_1` FOREIGN KEY (`direct_message_id`) REFERENCES `direct_messages` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `direct_message_messages_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `follow_ups`
+--
+ALTER TABLE `follow_ups`
+  ADD CONSTRAINT `follow_ups_ibfk_1` FOREIGN KEY (`lead_id`) REFERENCES `leads` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `follow_ups_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `leads`

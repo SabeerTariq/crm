@@ -388,6 +388,14 @@ export default function Sidebar() {
             </Link>
           </li>
         )}
+        {hasPermission('follow_ups', 'view') && (
+          <li className={`menu-item ${isActive('/follow-ups') ? 'active' : ''}`}>
+            <Link to="/follow-ups" className="menu-link" onClick={handleMenuClick}>
+              <i className="fas fa-bookmark menu-icon"></i>
+              {!isCollapsed && <span className="menu-text">Follow-ups</span>}
+            </Link>
+          </li>
+        )}
         {hasPermission('projects', 'view') && (
           <li className={`menu-item ${isActive('/projects') ? 'active' : ''}`}>
             <Link to="/projects" className="menu-link" onClick={handleMenuClick}>
