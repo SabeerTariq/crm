@@ -353,10 +353,32 @@ router.get('/converted', auth, authorize('leads','read'), (req, res) => {
       c.converted_at,
       u1.name as created_by_name,
       u2.name as assigned_to_name,
-      (SELECT COUNT(*) FROM sales WHERE customer_id = c.id) as sales_count,
-      (SELECT COALESCE(SUM(cash_in), 0) FROM sales WHERE customer_id = c.id) as total_revenue,
-      (SELECT COALESCE(SUM(net_value), 0) FROM sales WHERE customer_id = c.id) as total_amount,
-      (SELECT COALESCE(SUM(remaining), 0) FROM sales WHERE customer_id = c.id) as remaining_amount
+      (SELECT COUNT(*) FROM sales s 
+       WHERE s.customer_id = c.id 
+       AND s.created_at >= DATE_SUB(c.converted_at, INTERVAL 1 HOUR)
+       AND s.created_at <= DATE_ADD(c.converted_at, INTERVAL 1 HOUR)
+      ) as sales_count,
+      (SELECT COALESCE(s.cash_in, 0) FROM sales s 
+       WHERE s.customer_id = c.id 
+       AND s.created_at >= DATE_SUB(c.converted_at, INTERVAL 1 HOUR)
+       AND s.created_at <= DATE_ADD(c.converted_at, INTERVAL 1 HOUR)
+       ORDER BY s.created_at ASC
+       LIMIT 1
+      ) as total_revenue,
+      (SELECT COALESCE(s.net_value, 0) FROM sales s 
+       WHERE s.customer_id = c.id 
+       AND s.created_at >= DATE_SUB(c.converted_at, INTERVAL 1 HOUR)
+       AND s.created_at <= DATE_ADD(c.converted_at, INTERVAL 1 HOUR)
+       ORDER BY s.created_at ASC
+       LIMIT 1
+      ) as total_amount,
+      (SELECT COALESCE(s.remaining, 0) FROM sales s 
+       WHERE s.customer_id = c.id 
+       AND s.created_at >= DATE_SUB(c.converted_at, INTERVAL 1 HOUR)
+       AND s.created_at <= DATE_ADD(c.converted_at, INTERVAL 1 HOUR)
+       ORDER BY s.created_at ASC
+       LIMIT 1
+      ) as remaining_amount
     FROM customers c
     LEFT JOIN users u1 ON c.created_by = u1.id
     LEFT JOIN users u2 ON c.assigned_to = u2.id
@@ -378,10 +400,32 @@ router.get('/converted', auth, authorize('leads','read'), (req, res) => {
       c.converted_at,
       u1.name as created_by_name,
       u2.name as assigned_to_name,
-      (SELECT COUNT(*) FROM sales WHERE customer_id = c.id) as sales_count,
-      (SELECT COALESCE(SUM(cash_in), 0) FROM sales WHERE customer_id = c.id) as total_revenue,
-      (SELECT COALESCE(SUM(net_value), 0) FROM sales WHERE customer_id = c.id) as total_amount,
-      (SELECT COALESCE(SUM(remaining), 0) FROM sales WHERE customer_id = c.id) as remaining_amount
+      (SELECT COUNT(*) FROM sales s 
+       WHERE s.customer_id = c.id 
+       AND s.created_at >= DATE_SUB(c.converted_at, INTERVAL 1 HOUR)
+       AND s.created_at <= DATE_ADD(c.converted_at, INTERVAL 1 HOUR)
+      ) as sales_count,
+      (SELECT COALESCE(s.cash_in, 0) FROM sales s 
+       WHERE s.customer_id = c.id 
+       AND s.created_at >= DATE_SUB(c.converted_at, INTERVAL 1 HOUR)
+       AND s.created_at <= DATE_ADD(c.converted_at, INTERVAL 1 HOUR)
+       ORDER BY s.created_at ASC
+       LIMIT 1
+      ) as total_revenue,
+      (SELECT COALESCE(s.net_value, 0) FROM sales s 
+       WHERE s.customer_id = c.id 
+       AND s.created_at >= DATE_SUB(c.converted_at, INTERVAL 1 HOUR)
+       AND s.created_at <= DATE_ADD(c.converted_at, INTERVAL 1 HOUR)
+       ORDER BY s.created_at ASC
+       LIMIT 1
+      ) as total_amount,
+      (SELECT COALESCE(s.remaining, 0) FROM sales s 
+       WHERE s.customer_id = c.id 
+       AND s.created_at >= DATE_SUB(c.converted_at, INTERVAL 1 HOUR)
+       AND s.created_at <= DATE_ADD(c.converted_at, INTERVAL 1 HOUR)
+       ORDER BY s.created_at ASC
+       LIMIT 1
+      ) as remaining_amount
     FROM customers c
     LEFT JOIN users u1 ON c.created_by = u1.id
     LEFT JOIN users u2 ON c.assigned_to = u2.id
