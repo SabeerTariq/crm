@@ -354,7 +354,9 @@ router.get('/converted', auth, authorize('leads','read'), (req, res) => {
       u1.name as created_by_name,
       u2.name as assigned_to_name,
       (SELECT COUNT(*) FROM sales WHERE customer_id = c.id) as sales_count,
-      (SELECT COALESCE(SUM(cash_in), 0) FROM sales WHERE customer_id = c.id) as total_revenue
+      (SELECT COALESCE(SUM(cash_in), 0) FROM sales WHERE customer_id = c.id) as total_revenue,
+      (SELECT COALESCE(SUM(net_value), 0) FROM sales WHERE customer_id = c.id) as total_amount,
+      (SELECT COALESCE(SUM(remaining), 0) FROM sales WHERE customer_id = c.id) as remaining_amount
     FROM customers c
     LEFT JOIN users u1 ON c.created_by = u1.id
     LEFT JOIN users u2 ON c.assigned_to = u2.id
@@ -377,7 +379,9 @@ router.get('/converted', auth, authorize('leads','read'), (req, res) => {
       u1.name as created_by_name,
       u2.name as assigned_to_name,
       (SELECT COUNT(*) FROM sales WHERE customer_id = c.id) as sales_count,
-      (SELECT COALESCE(SUM(cash_in), 0) FROM sales WHERE customer_id = c.id) as total_revenue
+      (SELECT COALESCE(SUM(cash_in), 0) FROM sales WHERE customer_id = c.id) as total_revenue,
+      (SELECT COALESCE(SUM(net_value), 0) FROM sales WHERE customer_id = c.id) as total_amount,
+      (SELECT COALESCE(SUM(remaining), 0) FROM sales WHERE customer_id = c.id) as remaining_amount
     FROM customers c
     LEFT JOIN users u1 ON c.created_by = u1.id
     LEFT JOIN users u2 ON c.assigned_to = u2.id

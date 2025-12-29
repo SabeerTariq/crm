@@ -421,7 +421,27 @@ export default function ConvertedLeads() {
                       </div>
                       <div style={{
                         fontSize: '14px',
-                        color: '#374151'
+                        color: '#374151',
+                        marginBottom: '4px'
+                      }}>
+                        <span style={{
+                          backgroundColor: '#dbeafe',
+                          color: '#1e40af',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          Total: ${parseFloat(lead.total_amount || 0).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          })}
+                        </span>
+                      </div>
+                      <div style={{
+                        fontSize: '14px',
+                        color: '#374151',
+                        marginBottom: '4px'
                       }}>
                         <span style={{
                           backgroundColor: '#fef3c7',
@@ -431,7 +451,25 @@ export default function ConvertedLeads() {
                           fontSize: '12px',
                           fontWeight: '600'
                         }}>
-                          Revenue: ${parseFloat(lead.total_revenue || 0).toLocaleString('en-US', {
+                          Paid: ${parseFloat(lead.total_revenue || 0).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          })}
+                        </span>
+                      </div>
+                      <div style={{
+                        fontSize: '14px',
+                        color: '#374151'
+                      }}>
+                        <span style={{
+                          backgroundColor: parseFloat(lead.remaining_amount || 0) > 0 ? '#fee2e2' : '#f0fdf4',
+                          color: parseFloat(lead.remaining_amount || 0) > 0 ? '#991b1b' : '#166534',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          Remaining: ${parseFloat(lead.remaining_amount || 0).toLocaleString('en-US', {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2
                           })}
