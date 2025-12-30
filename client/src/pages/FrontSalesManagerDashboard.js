@@ -30,6 +30,8 @@ export default function FrontSalesManagerDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('this_month');
   const [customYear, setCustomYear] = useState(new Date().getFullYear());
   const [customMonth, setCustomMonth] = useState(new Date().getMonth() + 1);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     // Check if user has front sales manager role
@@ -38,7 +40,7 @@ export default function FrontSalesManagerDashboard() {
     }
     
     loadDashboardData();
-  }, [selectedPeriod, customYear, customMonth]);
+  }, [selectedPeriod, customYear, customMonth, dateFrom, dateTo]);
 
   const loadDashboardData = async () => {
     try {
@@ -48,6 +50,14 @@ export default function FrontSalesManagerDashboard() {
       let url = `/dashboard/front-sales-manager/dashboard?period=${selectedPeriod}`;
       if (selectedPeriod === 'custom') {
         url += `&year=${customYear}&month=${customMonth}`;
+      } else if (selectedPeriod === 'date_range') {
+        if (dateFrom && dateTo) {
+          url += `&date_from=${dateFrom}&date_to=${dateTo}`;
+        } else {
+          alert('Please select both Date From and Date To');
+          setLoading(false);
+          return;
+        }
       }
       
       const response = await api.get(url, {
@@ -186,7 +196,8 @@ export default function FrontSalesManagerDashboard() {
               { value: 'this_month', label: 'This Month' },
               { value: 'this_year', label: 'This Year' },
               { value: 'all_time', label: 'All Time' },
-              { value: 'custom', label: 'Custom Month' }
+              { value: 'custom', label: 'Custom Month' },
+              { value: 'date_range', label: 'Date Range' }
             ].map((period) => (
               <button
                 key={period.value}
@@ -261,6 +272,69 @@ export default function FrontSalesManagerDashboard() {
                   })}
                 </select>
               </div>
+            </div>
+          )}
+
+          {/* Date Range Selector */}
+          {selectedPeriod === 'date_range' && (
+            <div style={{ 
+              display: 'flex', 
+              gap: '15px', 
+              justifyContent: 'center',
+              alignItems: 'flex-end'
+            }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500' }}>
+                  Date From
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    minWidth: '180px'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500' }}>
+                  Date To
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  min={dateFrom}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    minWidth: '180px'
+                  }}
+                />
+              </div>
+              <button
+                onClick={loadDashboardData}
+                disabled={!dateFrom || !dateTo}
+                style={{
+                  padding: '8px 20px',
+                  backgroundColor: (!dateFrom || !dateTo) ? '#9ca3af' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: (!dateFrom || !dateTo) ? 'not-allowed' : 'pointer',
+                  transition: 'background-color 0.2s ease'
+                }}
+              >
+                Apply
+              </button>
             </div>
           )}
 

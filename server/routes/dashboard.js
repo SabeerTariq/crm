@@ -599,7 +599,7 @@ async function getCommissionDataForFrontSeller(userId) {
 // Get front sales manager dashboard data (similar to upsell manager dashboard)
 router.get('/front-sales-manager/dashboard', auth, checkFrontSalesManagerRole, async (req, res) => {
   try {
-    const { period = 'this_month', year, month } = req.query;
+    const { period = 'this_month', year, month, date_from, date_to } = req.query;
     
     // Determine date range based on period
     let startDate, endDate, periodLabel;
@@ -634,10 +634,23 @@ router.get('/front-sales-manager/dashboard', auth, checkFrontSalesManagerRole, a
         endDate = new Date(parseInt(year), parseInt(month) - 1, new Date(parseInt(year), parseInt(month), 0).getDate(), 23, 59, 59, 999);
         periodLabel = `${new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' })} ${year}`;
         break;
+      case 'date_range':
+        if (!date_from || !date_to) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'date_from and date_to are required for date range period' 
+          });
+        }
+        startDate = new Date(date_from);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(date_to);
+        endDate.setHours(23, 59, 59, 999);
+        periodLabel = `${date_from} to ${date_to}`;
+        break;
       default:
         return res.status(400).json({ 
           success: false, 
-          message: 'Invalid period. Use: this_year, this_month, all_time, or custom' 
+          message: 'Invalid period. Use: this_year, this_month, all_time, custom, or date_range' 
         });
     }
     
@@ -768,6 +781,25 @@ router.get('/front-sales-manager/dashboard', auth, checkFrontSalesManagerRole, a
           GROUP BY t.id, t.target_value
         `;
         targetParams = [sellerId, parseInt(year), parseInt(month)];
+      } else if (period === 'date_range') {
+        // For date range, sum targets for months within the range and count achieved customers in the range
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+        targetSql = `
+          SELECT 
+            COALESCE(SUM(t.target_value), 0) as total_target,
+            COALESCE(COUNT(DISTINCT c.id), 0) as achieved
+          FROM targets t
+          LEFT JOIN customers c ON c.assigned_to = t.user_id 
+            AND c.converted_at >= ?
+            AND c.converted_at <= ?
+            AND YEAR(c.converted_at) = t.target_year 
+            AND MONTH(c.converted_at) = t.target_month
+          WHERE t.user_id = ?
+            AND CONCAT(t.target_year, '-', LPAD(t.target_month, 2, '0'), '-01') >= ?
+            AND CONCAT(t.target_year, '-', LPAD(t.target_month, 2, '0'), '-01') <= LAST_DAY(?)
+        `;
+        targetParams = [startDate, endDate, sellerId, startDateStr, endDateStr];
       } else { // all_time
         targetSql = `
           SELECT 

@@ -45,11 +45,15 @@ router.get('/for-teams', auth, authorize('teams','read'), (req, res) => {
       r.name as role_name
     FROM users u
     LEFT JOIN roles r ON u.role_id = r.id
-    WHERE r.name = 'sales'
+    WHERE r.name = 'Front Seller' OR r.id = 3
     ORDER BY u.name
   `;
   db.query(sql, (err, rows) => {
-    if (err) return res.status(500).json(err);
+    if (err) {
+      console.error('Error fetching users for teams:', err);
+      return res.status(500).json(err);
+    }
+    console.log('Users for teams query result:', rows.length, 'users found');
     res.json(rows);
   });
 });
